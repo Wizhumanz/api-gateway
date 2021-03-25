@@ -55,13 +55,15 @@ type User struct {
 }
 
 type Bot struct {
-	KEY                string `json:"KEY,omitempty"`
-	ExchangeConnection string `json:"exchangeConnection"`
-	Leverage           string `json:"leverage"`
-	RiskPerc           string `json:"riskPerc"`
-	AccSizePerc        string `json:"accSizePerc"`
-	IsActive           bool   `json:"isActive"`
-	IsArchived         bool   `json:"isArchived"`
+	KEY                string  `json:"KEY,omitempty"`
+	User               string  `json:"user"`
+	ExchangeConnection string  `json:"exchange"`
+	AccRiskPerc        float32 `json:"riskPerc,string"`
+	AccSizePerc        float32 `json:"accSizePerc,string"`
+	IsActive           bool    `json:"isActive"`
+	IsArchived         bool    `json:"isArchived"`
+	Leverage           int     `json:"leverage"`
+	WebhookUrl         string  `json:"webhookUrl"`
 }
 
 func (l User) String() string {
