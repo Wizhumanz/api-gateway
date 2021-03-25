@@ -1,6 +1,6 @@
-# Strategy Service, Anastasia Trading Bot
+# API Gateway, Anastasia Trading Bot
 
-Strategy service to call orders for Anastasia.
+API gateway to receive web app client requests and forward to other services.
 
 ## Local Dev
 
