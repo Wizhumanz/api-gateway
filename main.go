@@ -17,6 +17,8 @@ import (
 	// "strings"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/iterator"
+
 	// "cloud.google.com/go/storage"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
@@ -50,6 +52,16 @@ type User struct {
 	Email       string `json:"email"`
 	AccountType string `json:"type"`
 	Password    string `json:"password"`
+}
+
+type Bot struct {
+	KEY                string `json:"KEY,omitempty"`
+	ExchangeConnection string `json:"exchangeConnection"`
+	Leverage           string `json:"leverage"`
+	RiskPerc           string `json:"riskPerc"`
+	AccSizePerc        string `json:"accSizePerc"`
+	IsActive           bool   `json:"isActive"`
+	IsArchived         bool   `json:"isArchived"`
 }
 
 func (l User) String() string {
@@ -126,6 +138,70 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
 	// w.Write([]byte(`{"msg": "привет сука"}`))
+}
+
+func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
+	botResp := make([]Bot, 0)
+
+	authReq := loginReq{
+		Email:    r.URL.Query()["user"][0],
+		Password: r.Header.Get("auth"),
+	}
+
+	//only need to authenticate if not fetching public listings
+	if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//configs before running query
+	ctx := context.Background()
+	client, err := datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	var query *datastore.Query
+	userIDParam := r.URL.Query()["user"][0]
+	var isActiveParam = true //default
+	if len(r.URL.Query()["isActive"]) > 0 {
+		//extract correct isActive param
+		isActiveQueryStr := r.URL.Query()["isActive"][0]
+		if isActiveQueryStr == "true" {
+			isActiveParam = true
+		} else if isActiveQueryStr == "false" {
+			isActiveParam = false
+		}
+
+		query = datastore.NewQuery("Bot").
+			Filter("UserID =", userIDParam).
+			Filter("IsActive =", isActiveParam)
+	} else {
+		query = datastore.NewQuery("Bot").
+			Filter("UserID =", userIDParam)
+	}
+
+	//run query, decode listings to obj and store in slice
+	t := client.Run(ctx, query)
+	for {
+		var x Bot
+		key, err := t.Next(&x)
+		if key != nil {
+			x.KEY = key.Name
+		}
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// Handle error.
+		}
+		botResp = append(botResp, x)
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(botResp)
 }
 
 func main() {
