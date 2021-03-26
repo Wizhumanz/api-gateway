@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"context"
 	// "encoding/base64"
 	"encoding/json"
@@ -10,16 +12,13 @@ import (
 	"log"
 	"net/http"
 
-	// "net/url"
+	"net/url"
 	"os"
 	"reflect"
-
-	// "strings"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
 
-	// "cloud.google.com/go/storage"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -66,7 +65,7 @@ type Bot struct {
 	WebhookUrl         string  `json:"webhookUrl"`
 }
 
-func (l User) String() string {
+func (l Bot) String() string {
 	r := ""
 	v := reflect.ValueOf(l)
 	typeOfL := v.Type()
@@ -206,11 +205,142 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(botResp)
 }
 
+// almost identical logic with create and update (event sourcing)
+func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate Bot) {
+	var newBot Bot
+
+	// decode data
+	err := json.NewDecoder(r.Body).Decode(&newBot)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	authReq := loginReq{
+		Email:    newBot.User,
+		Password: r.Header.Get("auth"),
+	}
+	// for PUT req, user already authenticated outside this function
+	if !isPutReq && !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// if updating listing, don't allow Name change
+	if isPutReq && (newBot.Name != "") {
+		data := jsonResponse{Msg: "Name property of Bot is immutable.", Body: "Do not pass Name property in request body."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	// if updating, name field not passed in JSON body, so must fill
+	if isPutReq {
+		newBot.Name = botToUpdate.Name
+	}
+
+	// TODO: fill empty PUT listing fields
+
+	// create new bot in DB
+	ctx := context.Background()
+	//use listing ID as bucket name
+	newBotName := time.Now().Format("2006-01-02_15:04:05_-0700")
+
+	clientAdd, err := datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	kind := "Bot"
+	newBotKey := datastore.NameKey(kind, newBotName, nil)
+
+	if _, err := clientAdd.Put(ctx, newBotKey, &newBot); err != nil {
+		log.Fatalf("Failed to save Bot: %v", err)
+	}
+
+	// return
+	data := jsonResponse{
+		Msg:  "Added " + newBotKey.String(),
+		Body: newBot.String(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(data)
+}
+
+func updateBotHandler(w http.ResponseWriter, r *http.Request) {
+	//check if listing already exists to update
+	putID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //is actually Bot.Name, not __key__ in Datastore
+	if unescapeErr != nil {
+		data := jsonResponse{Msg: "Bot ID Parse Error", Body: unescapeErr.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	botsResp := make([]Bot, 0)
+
+	//auth
+	authReq := loginReq{
+		Email:    r.URL.Query()["user"][0],
+		Password: r.Header.Get("auth"),
+	}
+	if !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//get bot with ID
+	ctx := context.Background()
+	client, err := datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	query := datastore.NewQuery("Bot").
+		Filter("Name =", putID)
+	t := client.Run(ctx, query)
+	for {
+		var x Bot
+		key, err := t.Next(&x)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// Handle error.
+		}
+
+		if key != nil {
+			x.KEY = key.Name
+		}
+		botsResp = append(botsResp, x)
+	}
+
+	//return if bot to update doesn't exist
+	putIDValid := len(botsResp) > 0 && botsResp[0].User != ""
+	if !putIDValid {
+		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided Name does not exist."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	addBot(w, r, true, botsResp[len(botsResp)-1])
+}
+
+func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
+	addBot(w, r, false, Bot{}) //empty Bot struct passed just for compiler
+}
+
 func main() {
 	initRedis()
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
+	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
+	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler)
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
