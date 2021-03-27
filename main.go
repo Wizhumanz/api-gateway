@@ -52,23 +52,23 @@ type User struct {
 
 type Bot struct {
 	KEY                string  `json:"KEY,omitempty"`
-	AggregateID        int     `json:"aggrID"`
-	User               string  `json:"user"`
-	ExchangeConnection string  `json:"exchange"`
-	AccRiskPerc        float32 `json:"riskPerc,string"`
-	AccSizePerc        float32 `json:"accSizePerc,string"`
-	IsActive           bool    `json:"isActive"`
-	IsArchived         bool    `json:"isArchived"`
-	Leverage           int     `json:"leverage"`
-	WebhookUrl         string  `json:"webhookUrl"`
+	AggregateID        int     `json:"AggregateID,string"`
+	User               string  `json:"UserID"`
+	ExchangeConnection string  `json:"ExchangeConnection"`
+	AccRiskPerc        float32 `json:"AccountRiskPercPerTrade,string"`
+	AccSizePerc        float32 `json:"AccountSizePercToTrade,string"`
+	IsActive           bool    `json:"IsActive,string"`
+	IsArchived         bool    `json:"IsArchived,string"`
+	Leverage           int     `json:"Leverage,string"`
+	WebhookUrl         string  `json:"WebhookURL"`
 }
 
 type TradeAction struct {
 	KEY         string  `json:"KEY,omitempty"`
-	Action      string  `json:"action"`
-	AggregateID int     `json:"aggrID"`
-	BotID       int     `json:"bot"`
-	OrderType   int     `json:"orderType"`
+	Action      string  `json:"Action"`
+	AggregateID int     `json:"AggregateID,string"`
+	BotID       int     `json:"BotID"`
+	OrderType   int     `json:"OrderType"`
 	Size        float32 `json:"size"`
 	TimeStamp   string  `json:"timeStamp"`
 }
