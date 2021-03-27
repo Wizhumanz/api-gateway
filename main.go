@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"strconv"
+
 	// "encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -282,7 +284,7 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	}
 
 	// if updating bot, don't allow AggregateID change
-	if isPutReq && (&newBot.AggregateID != nil) {
+	if isPutReq && (newBot.AggregateID != 0) {
 		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
@@ -346,8 +348,10 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 		return
 	}
+	int, _ := strconv.Atoi(botToUpdateID)
 	query := datastore.NewQuery("Bot").
-		Filter("AggregateID =", botToUpdateID)
+		Filter("AggregateID =", int)
+	fmt.Println(query)
 	t := client.Run(ctx, query)
 	for {
 		var x Bot
