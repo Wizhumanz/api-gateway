@@ -359,7 +359,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		// 	// Handle error.
 		// }
 		if key != nil {
-			x.KEY = key.Name
+			x.KEY = fmt.Sprint(key.ID)
 		}
 		botsResp = append(botsResp, x)
 	}
