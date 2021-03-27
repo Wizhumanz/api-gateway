@@ -115,9 +115,9 @@ func authenticateUser(req loginReq) bool {
 		Filter("Email =", req.Email)
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
-	// if error != nil {
-	// 	// Handle error.
-	// }
+	if error != nil {
+		// Handle error.
+	}
 
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
@@ -152,16 +152,16 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	tradesResp := make([]TradeAction, 0)
 
-	authReq := loginReq{
-		Email:    r.URL.Query()["user"][0],
-		Password: r.Header.Get("auth"),
-	}
-	if !authenticateUser(authReq) {
-		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
+	// authReq := loginReq{
+	// 	Email:    r.URL.Query()["user"][0],
+	// 	Password: r.Header.Get("auth"),
+	// }
+	// if !authenticateUser(authReq) {
+	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+	// 	w.WriteHeader(http.StatusUnauthorized)
+	// 	json.NewEncoder(w).Encode(data)
+	// 	return
+	// }
 
 	//configs before running query
 	ctx := context.Background()
@@ -197,16 +197,16 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	botResp := make([]Bot, 0)
 
-	authReq := loginReq{
-		Email:    r.URL.Query()["user"][0],
-		Password: r.Header.Get("auth"),
-	}
-	if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
-		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
+	// authReq := loginReq{
+	// 	Email:    r.URL.Query()["user"][0],
+	// 	Password: r.Header.Get("auth"),
+	// }
+	// if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
+	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+	// 	w.WriteHeader(http.StatusUnauthorized)
+	// 	json.NewEncoder(w).Encode(data)
+	// 	return
+	// }
 
 	//configs before running query
 	ctx := context.Background()
@@ -319,16 +319,16 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	botsResp := make([]Bot, 0)
 
 	//auth
-	authReq := loginReq{
-		Email:    r.URL.Query()["user"][0],
-		Password: r.Header.Get("auth"),
-	}
-	if !authenticateUser(authReq) {
-		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
+	// authReq := loginReq{
+	// 	Email:    r.URL.Query()["user"][0],
+	// 	Password: r.Header.Get("auth"),
+	// }
+	// if !authenticateUser(authReq) {
+	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+	// 	w.WriteHeader(http.StatusUnauthorized)
+	// 	json.NewEncoder(w).Encode(data)
+	// 	return
+	// }
 
 	//get bot with aggregate ID
 	ctx := context.Background()
