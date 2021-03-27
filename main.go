@@ -55,6 +55,7 @@ type User struct {
 
 type Bot struct {
 	KEY                string  `json:"KEY,omitempty"`
+	AggregateID        int     `json:"aggrID"`
 	User               string  `json:"user"`
 	ExchangeConnection string  `json:"exchange"`
 	AccRiskPerc        float32 `json:"riskPerc,string"`
@@ -63,6 +64,16 @@ type Bot struct {
 	IsArchived         bool    `json:"isArchived"`
 	Leverage           int     `json:"leverage"`
 	WebhookUrl         string  `json:"webhookUrl"`
+}
+
+type TradeAction struct {
+	KEY         string  `json:"KEY,omitempty"`
+	Action      string  `json:"action"`
+	AggregateID int     `json:"aggrID"`
+	BotID       int     `json:"bot"`
+	OrderType   int     `json:"orderType"`
+	Size        float32 `json:"size"`
+	TimeStamp   string  `json:"timeStamp"`
 }
 
 func (l Bot) String() string {
@@ -139,6 +150,55 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
 	// w.Write([]byte(`{"msg": "привет сука"}`))
+}
+
+func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
+	tradesResp := make([]TradeAction, 0)
+
+	authReq := loginReq{
+		Email:    r.URL.Query()["user"][0],
+		Password: r.Header.Get("auth"),
+	}
+
+	//only need to authenticate if not fetching public listings
+	if !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//configs before running query
+	ctx := context.Background()
+	client, err := datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	var query *datastore.Query
+	userIDParam := r.URL.Query()["user"][0]
+
+	query = datastore.NewQuery("TradeAction").Filter("UserID =", userIDParam)
+
+	//run query, decode listings to obj and store in slice
+	t := client.Run(ctx, query)
+	for {
+		var x TradeAction
+		key, err := t.Next(&x)
+		if key != nil {
+			x.KEY = key.Name
+		}
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			// Handle error.
+		}
+		tradesResp = append(tradesResp, x)
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tradesResp)
 }
 
 func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
@@ -339,6 +399,7 @@ func main() {
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
+	router.Methods("GET").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
 	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler)
 
