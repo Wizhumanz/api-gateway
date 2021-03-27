@@ -289,7 +289,7 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	}
 
 	// if updating listing, don't allow Name change
-	if isPutReq && (newBot.Name != "") {
+	if isPutReq && (&newBot.AggregateID != nil) {
 		data := jsonResponse{Msg: "Name property of Bot is immutable.", Body: "Do not pass Name property in request body."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
@@ -297,7 +297,7 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	}
 	// if updating, name field not passed in JSON body, so must fill
 	if isPutReq {
-		newBot.Name = botToUpdate.Name
+		newBot.AggregateID = botToUpdate.AggregateID
 	}
 
 	// TODO: fill empty PUT listing fields
