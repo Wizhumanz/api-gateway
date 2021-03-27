@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"context"
 	// "encoding/base64"
 	"encoding/json"
@@ -22,7 +20,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
-	// "google.golang.org/api/iterator"
 )
 
 // API types
@@ -118,9 +115,9 @@ func authenticateUser(req loginReq) bool {
 		Filter("Email =", req.Email)
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
-	if error != nil {
-		// Handle error.
-	}
+	// if error != nil {
+	// 	// Handle error.
+	// }
 
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
@@ -159,8 +156,6 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		Email:    r.URL.Query()["user"][0],
 		Password: r.Header.Get("auth"),
 	}
-
-	//only need to authenticate if not fetching public listings
 	if !authenticateUser(authReq) {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
@@ -174,13 +169,11 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-
 	var query *datastore.Query
 	userIDParam := r.URL.Query()["user"][0]
-
 	query = datastore.NewQuery("TradeAction").Filter("UserID =", userIDParam)
 
-	//run query, decode listings to obj and store in slice
+	//run query
 	t := client.Run(ctx, query)
 	for {
 		var x TradeAction
@@ -191,9 +184,9 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		if err == iterator.Done {
 			break
 		}
-		if err != nil {
-			// Handle error.
-		}
+		// if err != nil {
+		// 	// Handle error.
+		// }
 		tradesResp = append(tradesResp, x)
 	}
 	w.WriteHeader(http.StatusOK)
@@ -208,8 +201,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		Email:    r.URL.Query()["user"][0],
 		Password: r.Header.Get("auth"),
 	}
-
-	//only need to authenticate if not fetching public listings
 	if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
@@ -224,6 +215,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
+	//build query based on passed URL params
 	var query *datastore.Query
 	userIDParam := r.URL.Query()["user"][0]
 	var isActiveParam = true //default
@@ -244,7 +236,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 			Filter("UserID =", userIDParam)
 	}
 
-	//run query, decode listings to obj and store in slice
+	//run query
 	t := client.Run(ctx, query)
 	for {
 		var x Bot
@@ -255,9 +247,9 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		if err == iterator.Done {
 			break
 		}
-		if err != nil {
-			// Handle error.
-		}
+		// if err != nil {
+		// 	// Handle error.
+		// }
 		botResp = append(botResp, x)
 	}
 	w.WriteHeader(http.StatusOK)
@@ -288,9 +280,9 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		return
 	}
 
-	// if updating listing, don't allow Name change
+	// if updating bot, don't allow AggregateID change
 	if isPutReq && (&newBot.AggregateID != nil) {
-		data := jsonResponse{Msg: "Name property of Bot is immutable.", Body: "Do not pass Name property in request body."}
+		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
 		return
@@ -300,20 +292,14 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		newBot.AggregateID = botToUpdate.AggregateID
 	}
 
-	// TODO: fill empty PUT listing fields
-
 	// create new bot in DB
 	ctx := context.Background()
-	//use listing ID as bucket name
-	newBotName := time.Now().Format("2006-01-02_15:04:05_-0700")
-
 	clientAdd, err := datastore.NewClient(ctx, googleProjectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-
 	kind := "Bot"
-	newBotKey := datastore.NameKey(kind, newBotName, nil)
+	newBotKey := datastore.IncompleteKey(kind, nil)
 
 	if _, err := clientAdd.Put(ctx, newBotKey, &newBot); err != nil {
 		log.Fatalf("Failed to save Bot: %v", err)
@@ -330,14 +316,6 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 }
 
 func updateBotHandler(w http.ResponseWriter, r *http.Request) {
-	//check if listing already exists to update
-	putID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //is actually Bot.Name, not __key__ in Datastore
-	if unescapeErr != nil {
-		data := jsonResponse{Msg: "Bot ID Parse Error", Body: unescapeErr.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
 	botsResp := make([]Bot, 0)
 
 	//auth
@@ -352,15 +330,23 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//get bot with ID
+	//get bot with aggregate ID
 	ctx := context.Background()
 	client, err := datastore.NewClient(ctx, googleProjectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
+	//check if bot already exists to update
+	botToUpdateID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
+	if unescapeErr != nil {
+		data := jsonResponse{Msg: "Bot ID Parse Error", Body: unescapeErr.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
 	query := datastore.NewQuery("Bot").
-		Filter("Name =", putID)
+		Filter("AggregateID =", botToUpdateID)
 	t := client.Run(ctx, query)
 	for {
 		var x Bot
@@ -368,10 +354,9 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		if err == iterator.Done {
 			break
 		}
-		if err != nil {
-			// Handle error.
-		}
-
+		// if err != nil {
+		// 	// Handle error.
+		// }
 		if key != nil {
 			x.KEY = key.Name
 		}
@@ -381,7 +366,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	//return if bot to update doesn't exist
 	putIDValid := len(botsResp) > 0 && botsResp[0].User != ""
 	if !putIDValid {
-		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided Name does not exist."}
+		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided ID does not exist."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
 		return
@@ -400,8 +385,9 @@ func main() {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
 	router.Methods("GET").Path("/trades").HandlerFunc(getAllTradesHandler)
+	router.Methods("GET").Path("/bots").HandlerFunc(getAllBotsHandler)
 	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
-	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler)
+	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler) //pass aggregate ID in URL
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
