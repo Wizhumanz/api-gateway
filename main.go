@@ -51,16 +51,16 @@ type User struct {
 }
 
 type Bot struct {
-	KEY                string  `json:"KEY,omitempty"`
-	AggregateID        int     `json:"AggregateID,string"`
-	User               string  `json:"UserID"`
-	ExchangeConnection string  `json:"ExchangeConnection"`
-	AccRiskPerc        float32 `json:"AccountRiskPercPerTrade,string"`
-	AccSizePerc        float32 `json:"AccountSizePercToTrade,string"`
-	IsActive           bool    `json:"IsActive,string"`
-	IsArchived         bool    `json:"IsArchived,string"`
-	Leverage           int     `json:"Leverage,string"`
-	WebhookUrl         string  `json:"WebhookURL"`
+	KEY                     string  `json:"KEY,omitempty"`
+	AggregateID             int     `json:"AggregateID,string"`
+	UserID                  string  `json:"UserID"`
+	ExchangeConnection      string  `json:"ExchangeConnection"`
+	AccountRiskPercPerTrade float32 `json:"AccountRiskPercPerTrade,string"`
+	AccountSizePercToTrade  float32 `json:"AccountSizePercToTrade,string"`
+	IsActive                bool    `json:"IsActive,string"`
+	IsArchived              bool    `json:"IsArchived,string"`
+	Leverage                int     `json:"Leverage,string"`
+	WebhookUrl              string  `json:"WebhookURL"`
 }
 
 type TradeAction struct {
@@ -242,7 +242,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		var x Bot
 		key, err := t.Next(&x)
 		if key != nil {
-			x.KEY = key.Name
+			x.KEY = fmt.Sprint(key.ID)
 		}
 		if err == iterator.Done {
 			break
@@ -250,6 +250,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		// if err != nil {
 		// 	// Handle error.
 		// }
+		fmt.Println(x.String())
 		botResp = append(botResp, x)
 	}
 	w.WriteHeader(http.StatusOK)
@@ -269,7 +270,7 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	}
 
 	authReq := loginReq{
-		Email:    newBot.User,
+		Email:    newBot.UserID,
 		Password: r.Header.Get("auth"),
 	}
 	// for PUT req, user already authenticated outside this function
@@ -364,7 +365,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//return if bot to update doesn't exist
-	putIDValid := len(botsResp) > 0 && botsResp[0].User != ""
+	putIDValid := len(botsResp) > 0 && botsResp[0].UserID != ""
 	if !putIDValid {
 		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided ID does not exist."}
 		w.WriteHeader(http.StatusBadRequest)
