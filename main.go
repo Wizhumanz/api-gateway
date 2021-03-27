@@ -115,9 +115,9 @@ func authenticateUser(req loginReq) bool {
 		Filter("Email =", req.Email)
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
-	// if error != nil {
-	// 	// Handle error.
-	// }
+	if error != nil {
+		// Handle error.
+	}
 
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
