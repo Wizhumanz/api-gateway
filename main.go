@@ -140,9 +140,20 @@ func initRedis() {
 	})
 }
 
+func setupCORS(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*") //temp
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, auth")
+}
+
 // route handlers
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	var data jsonResponse
 	w.Header().Set("Content-Type", "application/json")
 	data = jsonResponse{Msg: "Anastasia API Gateway", Body: "Ready"}
@@ -152,6 +163,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	tradesResp := make([]TradeAction, 0)
 
 	// authReq := loginReq{
@@ -197,6 +213,11 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	botResp := make([]Bot, 0)
 
 	// authReq := loginReq{
@@ -319,6 +340,11 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 }
 
 func updateBotHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	botsResp := make([]Bot, 0)
 
 	//auth
@@ -381,6 +407,11 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	addBot(w, r, false, Bot{}) //empty Bot struct passed just for compiler
 }
 
