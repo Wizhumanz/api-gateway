@@ -63,7 +63,7 @@ type Bot struct {
 	IsActive                bool    `json:"IsActive,string"`
 	IsArchived              bool    `json:"IsArchived,string"`
 	Leverage                int     `json:"Leverage,string"`
-	WebhookUrl              string  `json:"WebhookURL"`
+	WebhookURL              string  `json:"WebhookURL"`
 }
 
 type TradeAction struct {
