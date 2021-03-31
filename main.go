@@ -293,17 +293,17 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		return
 	}
 
-	authReq := loginReq{
-		Email:    newBot.UserID,
-		Password: r.Header.Get("auth"),
-	}
-	// for PUT req, user already authenticated outside this function
-	if !isPutReq && !authenticateUser(authReq) {
-		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
+	// authReq := loginReq{
+	// 	Email:    newBot.UserID,
+	// 	Password: r.Header.Get("auth"),
+	// }
+	// // for PUT req, user already authenticated outside this function
+	// if !isPutReq && !authenticateUser(authReq) {
+	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+	// 	w.WriteHeader(http.StatusUnauthorized)
+	// 	json.NewEncoder(w).Encode(data)
+	// 	return
+	// }
 
 	// if updating bot, don't allow AggregateID change
 	if isPutReq && (newBot.AggregateID != 0) {
