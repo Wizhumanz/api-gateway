@@ -54,6 +54,7 @@ type User struct {
 
 type Bot struct {
 	KEY                     string  `json:"KEY,omitempty"`
+	Name                    string  `json:"Name"`
 	AggregateID             int     `json:"AggregateID,string"`
 	UserID                  string  `json:"UserID"`
 	ExchangeConnection      string  `json:"ExchangeConnection"`
