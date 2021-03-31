@@ -312,19 +312,29 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		json.NewEncoder(w).Encode(data)
 		return
 	}
-	
+
 	// if updating, name field not passed in JSON body, so must fill
 	if isPutReq {
 		newBot.AggregateID = botToUpdate.AggregateID
 	} else {
+		// else increment aggregate ID
 		var x Bot
-		query = datastore.NewQuery("Bot")
+		ctx := context.Background()
+		client, err := datastore.NewClient(ctx, googleProjectID)
+		if err != nil {
+			log.Fatalf("Failed to create client: %v", err)
+		}
+
+		//get highest aggregate ID
+		query := datastore.NewQuery("Bot").
+			Project("AggregateID").
+			Order("-AggregateID")
 		t := client.Run(ctx, query)
 		_, error := t.Next(&x)
 		if error != nil {
 			// Handle error.
 		}
-		newBot.AggregateID = 
+		newBot.AggregateID = x.AggregateID + 1
 	}
 
 	// create new bot in DB
