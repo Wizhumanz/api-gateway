@@ -312,9 +312,19 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		json.NewEncoder(w).Encode(data)
 		return
 	}
+	
 	// if updating, name field not passed in JSON body, so must fill
 	if isPutReq {
 		newBot.AggregateID = botToUpdate.AggregateID
+	} else {
+		var x Bot
+		query = datastore.NewQuery("Bot")
+		t := client.Run(ctx, query)
+		_, error := t.Next(&x)
+		if error != nil {
+			// Handle error.
+		}
+		newBot.AggregateID = 
 	}
 
 	// create new bot in DB
