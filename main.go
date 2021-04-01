@@ -387,13 +387,13 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 
 	// create new bot in DB
 	ctx := context.Background()
+	var newBotKey *datastore.Key
 	clientAdd, err := datastore.NewClient(ctx, googleProjectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	kind := "Bot"
-	newBotKey := datastore.IncompleteKey(kind, nil)
-
+	newBotKey = datastore.IncompleteKey(kind, nil)
 	if _, err := clientAdd.Put(ctx, newBotKey, &newBot); err != nil {
 		log.Fatalf("Failed to save Bot: %v", err)
 	}
