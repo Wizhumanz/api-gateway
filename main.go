@@ -4,14 +4,12 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"crypto/rand"
 	"io"
 	"strconv"
 
 	// "encoding/base64"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -57,6 +55,7 @@ type User struct {
 	Email       string `json:"email"`
 	AccountType string `json:"type"`
 	Password    string `json:"password"`
+	EncryptKey  string `json:"encryptKey`
 }
 
 type Bot struct {
@@ -102,41 +101,13 @@ var rdb *redis.Client
 
 // helper funcs
 
-func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 2)
-	return string(bytes), err
-}
-
-func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
-func authenticateUser(req loginReq) bool {
-	// get user with email
-	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, googleProjectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+func generateEncryptKey(sz int) []byte {
+	key := make([]byte, sz)
+	_, keyErr := rand.Read(key)
+	if keyErr != nil {
+		// handle error here
 	}
-
-	var userWithEmail User
-	query := datastore.NewQuery("User").
-		Filter("Email =", req.Email)
-	t := client.Run(ctx, query)
-	_, error := t.Next(&userWithEmail)
-	if error != nil {
-		// Handle error.
-	}
-
-	// check password hash and return
-	return CheckPasswordHash(req.Password, userWithEmail.Password)
-}
-
-func createHash(key string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(key))
-	return hex.EncodeToString(hasher.Sum(nil))
+	return key
 }
 
 // encrypt string to base64 crypto using AES
@@ -208,6 +179,37 @@ func setupCORS(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*") //temp
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, auth")
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 2)
+	return string(bytes), err
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func authenticateUser(req loginReq) bool {
+	// get user with email
+	ctx := context.Background()
+	client, err := datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	var userWithEmail User
+	query := datastore.NewQuery("User").
+		Filter("Email =", req.Email)
+	t := client.Run(ctx, query)
+	_, error := t.Next(&userWithEmail)
+	if error != nil {
+		// Handle error.
+	}
+
+	// check password hash and return
+	return CheckPasswordHash(req.Password, userWithEmail.Password)
 }
 
 // route handlers
@@ -401,15 +403,22 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	}
 
 	//encrypt bot data
-	// key := make([]byte, 16)
-	// _, keyErr := rand.Read(key)
-	// if keyErr != nil {
-	// 	// handle error here
-	// }
-	// newBot.Name = encrypt(key, newBot.Name)
-	// fmt.Println(newBot.Name)
-	// decrypted := decrypt(key, newBot.Name)
-	// fmt.Println(decrypted)
+	key := generateEncryptKey(32)
+	fmt.Printf("Key = %v\n", key)
+
+	dbStrKey := string(key)
+	fmt.Println(dbStrKey)
+
+	convertedKey := []byte(dbStrKey)
+	fmt.Printf("ConvertedKey = %v\n", convertedKey)
+
+	newBot.Name = encrypt(key, newBot.Name)
+	fmt.Println(newBot.Name)
+	decrypted := decrypt(key, newBot.Name)
+	fmt.Println(decrypted)
+
+	//TEMP
+	newBot.Name = dbStrKey
 
 	// create new bot in DB
 	ctx := context.Background()
