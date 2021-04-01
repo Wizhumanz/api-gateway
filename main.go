@@ -256,16 +256,17 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tradesResp := make([]TradeAction, 0)
-	// authReq := loginReq{
-	// 	Email:    r.URL.Query()["user"][0],
-	// 	Password: r.Header.Get("auth"),
-	// }
-	// if !authenticateUser(authReq) {
-	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	json.NewEncoder(w).Encode(data)
-	// 	return
-	// }
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	if !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
 
 	//configs before running query
 	var query *datastore.Query
@@ -301,7 +302,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	botResp := make([]Bot, 0)
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
-	fmt.Println(auth)
 	authReq := loginReq{
 		ID:       r.URL.Query()["user"][0],
 		Password: auth,
@@ -365,18 +365,6 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// authReq := loginReq{
-	// 	Email:    newBot.UserID,
-	// 	Password: r.Header.Get("auth"),
-	// }
-	// // for PUT req, user already authenticated outside this function
-	// if !isPutReq && !authenticateUser(authReq) {
-	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	json.NewEncoder(w).Encode(data)
-	// 	return
-	// }
 
 	// if updating bot, don't allow AggregateID change
 	if isPutReq && (newBot.AggregateID != 0) {
@@ -443,17 +431,17 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 	botsResp := make([]Bot, 0)
 
-	//auth
-	// authReq := loginReq{
-	// 	Email:    r.URL.Query()["user"][0],
-	// 	Password: r.Header.Get("auth"),
-	// }
-	// if !authenticateUser(authReq) {
-	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	json.NewEncoder(w).Encode(data)
-	// 	return
-	// }
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	if !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
 
 	//check if bot already exists to update
 	botToUpdateID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
@@ -497,6 +485,19 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	//authenticate
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	if !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
 		return
 	}
 
