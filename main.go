@@ -46,6 +46,7 @@ func (bit *JSONBool) UnmarshalJSON(b []byte) error {
 }
 
 type loginReq struct {
+	ID       string `json:"id"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -114,6 +115,11 @@ var ctx context.Context
 // helper funcs
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func isBase64(s string) bool {
+	_, err := base64.StdEncoding.DecodeString(s)
+	return err == nil
+}
 
 func generateEncryptKey(n int) string {
 	b := make([]rune, n)
@@ -193,10 +199,21 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 func authenticateUser(req loginReq) (bool, User) {
-	// get user with email
+	// get user with id/email
 	var userWithEmail User
-	query := datastore.NewQuery("User").
-		Filter("Email =", req.Email)
+	var query *datastore.Query
+	if req.Email != "" {
+		query = datastore.NewQuery("User").
+			Filter("Email =", req.Email)
+	} else if req.ID != "" {
+		i, _ := strconv.Atoi(req.ID)
+		key := datastore.IDKey("User", int64(i), nil)
+		query = datastore.NewQuery("User").
+			Filter("__key__ =", key)
+	} else {
+		return false, User{}
+	}
+
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
 	if error != nil {
@@ -346,7 +363,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		Email:    r.URL.Query()["user"][0],
+		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
 	authSuccess, reqUser := authenticateUser(authReq)
@@ -356,8 +373,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 		return
 	}
-
-	fmt.Println(r.URL.Query()["user"][0])
 
 	//build query based on passed URL params
 	var query *datastore.Query
@@ -393,11 +408,18 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//decrypt props
-		x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
-		x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
-		x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
-		x.Name = decrypt(reqUser.EncryptKey, x.Name)
-		x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
+		if isBase64(x.AccountRiskPercPerTrade) {
+			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
+		}
+		if isBase64(x.AccountSizePercToTrade) {
+			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+		}
+		if isBase64(x.Name) {
+			x.Name = decrypt(reqUser.EncryptKey, x.Name)
+		}
+		if isBase64(x.WebhookURL) {
+			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
+		}
 
 		botResp = append(botResp, x)
 	}
