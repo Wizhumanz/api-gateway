@@ -2,9 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/md5"
+	"crypto/rand"
+	"io"
 	"strconv"
 
 	// "encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -124,6 +130,45 @@ func authenticateUser(req loginReq) bool {
 
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
+}
+
+func createHash(key string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(key))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func encrypt(data []byte, passphrase string) []byte {
+	block, _ := aes.NewCipher([]byte(createHash(passphrase)))
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		panic(err.Error())
+	}
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	return ciphertext
+}
+
+func decrypt(data []byte, passphrase string) []byte {
+	key := []byte(createHash(passphrase))
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err.Error())
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return plaintext
 }
 
 func initRedis() {
@@ -437,7 +482,14 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	initRedis()
+	// initRedis()
+
+	toEncrypt := "super secret shit"
+	pass := "1787348714348098huheuhuehudhuh131820j08u499y5hf2f04858791849013848784yfghvcjunrounf9u"
+	encrypted := encrypt([]byte(toEncrypt), pass)
+	decrypted := decrypt(encrypted, pass)
+	fmt.Println(encrypted)
+	fmt.Println(string(decrypted))
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
