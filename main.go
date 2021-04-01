@@ -46,7 +46,7 @@ func (bit *JSONBool) UnmarshalJSON(b []byte) error {
 }
 
 type loginReq struct {
-	ID       string `json:"id"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -195,16 +195,13 @@ func CheckPasswordHash(password, hash string) bool {
 func authenticateUser(req loginReq) (bool, User) {
 	// get user with email
 	var userWithEmail User
-	i, _ := strconv.Atoi(req.ID)
-	key := datastore.IDKey("User", int64(i), nil)
 	query := datastore.NewQuery("User").
-		Filter("__key__ =", key)
+		Filter("Email =", req.Email)
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
 	if error != nil {
 		// Handle error.
 	}
-
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail
 }
@@ -244,13 +241,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if authSuccess {
 		data = jsonResponse{
 			Msg:  "Successfully logged in!",
-			Body: newLoginReq.ID,
+			Body: newLoginReq.Email,
 		}
 		w.WriteHeader(http.StatusOK)
 	} else {
 		data = jsonResponse{
 			Msg:  "Authentication failed. Fuck off!",
-			Body: newLoginReq.ID,
+			Body: newLoginReq.Email,
 		}
 		w.WriteHeader(http.StatusUnauthorized)
 	}
@@ -303,7 +300,7 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	tradesResp := make([]TradeAction, 0)
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       r.URL.Query()["user"][0],
+		Email:    r.URL.Query()["user"][0],
 		Password: auth,
 	}
 	authSuccess, _ := authenticateUser(authReq)
@@ -349,7 +346,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       r.URL.Query()["user"][0],
+		Email:    r.URL.Query()["user"][0],
 		Password: auth,
 	}
 	authSuccess, reqUser := authenticateUser(authReq)
@@ -480,7 +477,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       r.URL.Query()["user"][0],
+		Email:    r.URL.Query()["user"][0],
 		Password: auth,
 	}
 	authSuccess, _ := authenticateUser(authReq)
@@ -547,7 +544,7 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 	//authenticate
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       newBot.UserID,
+		Email:    newBot.UserID,
 		Password: auth,
 	}
 	authSuccess, reqUser := authenticateUser(authReq)
