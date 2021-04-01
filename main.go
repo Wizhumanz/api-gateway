@@ -193,7 +193,6 @@ func authenticateUser(req loginReq) bool {
 	}
 
 	// check password hash and return
-	go fmt.Println(CheckPasswordHash(req.Password, userWithEmail.Password))
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
 }
 
@@ -211,6 +210,38 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
 	// w.Write([]byte(`{"msg": "привет сука"}`))
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	var newLoginReq loginReq
+	// decode data
+	err := json.NewDecoder(r.Body).Decode(&newLoginReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var data jsonResponse
+	if authenticateUser(newLoginReq) {
+		data = jsonResponse{
+			Msg:  "Successfully logged in!",
+			Body: newLoginReq.ID,
+		}
+		w.WriteHeader(http.StatusOK)
+	} else {
+		data = jsonResponse{
+			Msg:  "Authentication failed. Fuck off!",
+			Body: newLoginReq.ID,
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
 }
 
 func createNewUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -514,6 +545,7 @@ func main() {
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
+	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
 	router.Methods("POST", "OPTIONS").Path("/user").HandlerFunc(createNewUserHandler)
 	router.Methods("GET").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET").Path("/bots").HandlerFunc(getAllBotsHandler)
