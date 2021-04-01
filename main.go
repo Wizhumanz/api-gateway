@@ -442,14 +442,14 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			//find bot in existing array
 			var exBot Bot
-			for i, b := range botsResp {
-				if botsResp[i].AggregateID == b.AggregateID {
-					exBot = botsResp[i]
+			for _, b := range botsResp {
+				if b.AggregateID == x.AggregateID {
+					exBot = b
 				}
 			}
 
 			//if bot exists, append row/entry with the latest timestamp
-			if exBot.AggregateID != 0 && exBot.Timestamp != "" {
+			if exBot.AggregateID != 0 || exBot.Timestamp != "" {
 				//compare timestamps
 				layout := "2006-01-02_15:04:05_-0700"
 				existingBotTime, _ := time.Parse(layout, exBot.Timestamp)
