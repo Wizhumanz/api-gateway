@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
+	"math/rand"
 	"strconv"
+	"time"
 
 	// "encoding/base64"
 	"encoding/base64"
@@ -49,9 +51,10 @@ type loginReq struct {
 }
 
 type User struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	Password   string `json:"password"`
+	EncryptKey string
 }
 
 func (l User) String() string {
@@ -66,17 +69,17 @@ func (l User) String() string {
 }
 
 type Bot struct {
-	KEY                     string  `json:"KEY,omitempty"`
-	Name                    string  `json:"Name"`
-	AggregateID             int     `json:"AggregateID,string"`
-	UserID                  string  `json:"UserID"`
-	ExchangeConnection      string  `json:"ExchangeConnection"`
-	AccountRiskPercPerTrade float32 `json:"AccountRiskPercPerTrade,string"`
-	AccountSizePercToTrade  float32 `json:"AccountSizePercToTrade,string"`
-	IsActive                bool    `json:"IsActive,string"`
-	IsArchived              bool    `json:"IsArchived,string"`
-	Leverage                int     `json:"Leverage,string"`
-	WebhookURL              string  `json:"WebhookURL"`
+	KEY                     string `json:"KEY,omitempty"`
+	Name                    string `json:"Name"`
+	AggregateID             int    `json:"AggregateID,string"`
+	UserID                  string `json:"UserID"`
+	ExchangeConnection      string `json:"ExchangeConnection"`
+	AccountRiskPercPerTrade string `json:"AccountRiskPercPerTrade"`
+	AccountSizePercToTrade  string `json:"AccountSizePercToTrade"`
+	IsActive                bool   `json:"IsActive,string"`
+	IsArchived              bool   `json:"IsArchived,string"`
+	Leverage                string `json:"Leverage"`
+	WebhookURL              string `json:"WebhookURL"`
 }
 
 func (l Bot) String() string {
@@ -109,6 +112,16 @@ var client *datastore.Client
 var ctx context.Context
 
 // helper funcs
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func generateEncryptKey(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
 
 var iv = []byte{34, 12, 55, 11, 10, 39, 16, 47, 87, 53, 88, 98, 66, 40, 14, 05}
 
@@ -179,7 +192,7 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func authenticateUser(req loginReq) bool {
+func authenticateUser(req loginReq) (bool, User) {
 	// get user with email
 	var userWithEmail User
 	i, _ := strconv.Atoi(req.ID)
@@ -193,7 +206,7 @@ func authenticateUser(req loginReq) bool {
 	}
 
 	// check password hash and return
-	return CheckPasswordHash(req.Password, userWithEmail.Password)
+	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail
 }
 
 // route handlers
@@ -227,7 +240,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var data jsonResponse
-	if authenticateUser(newLoginReq) {
+	authSuccess, _ := authenticateUser(newLoginReq)
+	if authSuccess {
 		data = jsonResponse{
 			Msg:  "Successfully logged in!",
 			Body: newLoginReq.ID,
@@ -259,6 +273,9 @@ func createNewUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// create password hash
 	newUser.Password, _ = HashPassword(newUser.Password)
+	// create encrypt key of fixed length
+	rand.Seed(time.Now().UnixNano())
+	newUser.EncryptKey = generateEncryptKey(32)
 
 	// create new listing in DB
 	kind := "User"
@@ -289,7 +306,8 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
-	if !authenticateUser(authReq) {
+	authSuccess, _ := authenticateUser(authReq)
+	if !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(data)
@@ -334,7 +352,8 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
-	if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
+	authSuccess, _ := authenticateUser(authReq)
+	if len(r.URL.Query()["isActive"]) == 0 && !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(data)
@@ -384,15 +403,9 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // almost identical logic with create and update (event sourcing)
-func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate Bot) {
+func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, reqUser User) {
 	var newBot Bot
-
-	// decode data
-	err := json.NewDecoder(r.Body).Decode(&newBot)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	newBot = reqBot
 
 	// if updating bot, don't allow AggregateID change
 	if isPutReq && (newBot.AggregateID != 0) {
@@ -404,11 +417,10 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 
 	// if updating, name field not passed in JSON body, so must fill
 	if isPutReq {
-		newBot.AggregateID = botToUpdate.AggregateID
+		newBot.AggregateID = reqBot.AggregateID
 	} else {
 		// else increment aggregate ID
 		var x Bot
-
 		//get highest aggregate ID
 		query := datastore.NewQuery("Bot").
 			Project("AggregateID").
@@ -421,12 +433,12 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		newBot.AggregateID = x.AggregateID + 1
 	}
 
-	//encrypt bot data
-	pwordHash := "128797747y74y7fh75h792d9dhj497h4" //TODO: get user's pasword hash
-	newBot.Name = encrypt(pwordHash, newBot.Name)
-	fmt.Println(newBot.Name)
-	decrypted := decrypt(pwordHash, newBot.Name)
-	fmt.Println(decrypted)
+	//encrypt sensitive bot data
+	newBot.Name = encrypt(reqUser.EncryptKey, newBot.Name)
+	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
+	newBot.AccountSizePercToTrade = encrypt(reqUser.EncryptKey, newBot.AccountSizePercToTrade)
+	newBot.Leverage = encrypt(reqUser.EncryptKey, newBot.Leverage)
+	newBot.WebhookURL = encrypt(reqUser.EncryptKey, newBot.WebhookURL)
 
 	// create new bot in DB
 	ctx := context.Background()
@@ -464,7 +476,8 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
-	if !authenticateUser(authReq) {
+	authSuccess, _ := authenticateUser(authReq)
+	if !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(data)
@@ -507,7 +520,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addBot(w, r, true, botsResp[len(botsResp)-1])
+	addBot(w, r, true, botsResp[len(botsResp)-1], User{})
 }
 
 func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
@@ -516,20 +529,29 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// decode data
+	var newBot Bot
+	err := json.NewDecoder(r.Body).Decode(&newBot)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	//authenticate
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       r.URL.Query()["user"][0],
+		ID:       newBot.UserID,
 		Password: auth,
 	}
-	if !authenticateUser(authReq) {
+	authSuccess, reqUser := authenticateUser(authReq)
+	if !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(data)
 		return
 	}
 
-	addBot(w, r, false, Bot{}) //empty Bot struct passed just for compiler
+	addBot(w, r, false, newBot, reqUser) //empty Bot struct passed just for compiler
 }
 
 func main() {
