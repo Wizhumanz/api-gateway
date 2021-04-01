@@ -429,9 +429,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		if isBase64(x.Name) {
-			x.Name = decrypt(reqUser.EncryptKey, x.Name)
-		}
 		if isBase64(x.WebhookURL) {
 			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
 		}
@@ -496,7 +493,6 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 	}
 
 	//encrypt sensitive bot data
-	newBot.Name = encrypt(reqUser.EncryptKey, newBot.Name)
 	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
 	newBot.AccountSizePercToTrade = encrypt(reqUser.EncryptKey, newBot.AccountSizePercToTrade)
 	newBot.Leverage = encrypt(reqUser.EncryptKey, newBot.Leverage)
@@ -598,9 +594,6 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
-		}
-		if isBase64(x.Name) {
-			x.Name = decrypt(reqUser.EncryptKey, x.Name)
 		}
 		if isBase64(x.WebhookURL) {
 			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
