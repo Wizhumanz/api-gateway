@@ -49,11 +49,20 @@ type loginReq struct {
 }
 
 type User struct {
-	Name        string `json:"name"`
-	Email       string `json:"email"`
-	AccountType string `json:"type"`
-	Password    string `json:"password"`
-	EncryptKey  string `json:"encryptKey`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (l User) String() string {
+	r := ""
+	v := reflect.ValueOf(l)
+	typeOfL := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		r = r + fmt.Sprintf("%s: %v, ", typeOfL.Field(i).Name, v.Field(i).Interface())
+	}
+	return r
 }
 
 type Bot struct {
@@ -70,16 +79,6 @@ type Bot struct {
 	WebhookURL              string  `json:"WebhookURL"`
 }
 
-type TradeAction struct {
-	KEY         string  `json:"KEY,omitempty"`
-	Action      string  `json:"Action"`
-	AggregateID int     `json:"AggregateID,string"`
-	BotID       int     `json:"BotID"`
-	OrderType   int     `json:"OrderType"`
-	Size        float32 `json:"size"`
-	TimeStamp   string  `json:"timeStamp"`
-}
-
 func (l Bot) String() string {
 	r := ""
 	v := reflect.ValueOf(l)
@@ -91,11 +90,23 @@ func (l Bot) String() string {
 	return r
 }
 
+type TradeAction struct {
+	KEY         string  `json:"KEY,omitempty"`
+	Action      string  `json:"Action"`
+	AggregateID int     `json:"AggregateID,string"`
+	BotID       int     `json:"BotID"`
+	OrderType   int     `json:"OrderType"`
+	Size        float32 `json:"size"`
+	TimeStamp   string  `json:"timeStamp"`
+}
+
 var googleProjectID = "myika-anastasia"
 var redisHost = os.Getenv("REDISHOST")
 var redisPort = os.Getenv("REDISPORT")
 var redisAddr = fmt.Sprintf("%s:%s", redisHost, redisPort)
 var rdb *redis.Client
+var client *datastore.Client
+var ctx context.Context
 
 // helper funcs
 
@@ -159,7 +170,7 @@ func setupCORS(w *http.ResponseWriter, req *http.Request) {
 }
 
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 2)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 16)
 	return string(bytes), err
 }
 
@@ -170,12 +181,6 @@ func CheckPasswordHash(password, hash string) bool {
 
 func authenticateUser(req loginReq) bool {
 	// get user with email
-	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, googleProjectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-
 	var userWithEmail User
 	query := datastore.NewQuery("User").
 		Filter("Email =", req.Email)
@@ -205,6 +210,39 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// w.Write([]byte(`{"msg": "привет сука"}`))
 }
 
+func createNewUserHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	var newUser User
+	// decode data
+	err := json.NewDecoder(r.Body).Decode(&newUser)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// create password hash
+	newUser.Password, _ = HashPassword(newUser.Password)
+
+	// create new listing in DB
+	kind := "User"
+	newUserKey := datastore.IncompleteKey(kind, nil)
+	if _, err := client.Put(ctx, newUserKey, &newUser); err != nil {
+		log.Fatalf("Failed to save User: %v", err)
+	}
+
+	// return
+	data := jsonResponse{
+		Msg:  "Added " + newUserKey.String(),
+		Body: newUser.String(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(data)
+}
+
 func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -212,7 +250,6 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tradesResp := make([]TradeAction, 0)
-
 	// authReq := loginReq{
 	// 	Email:    r.URL.Query()["user"][0],
 	// 	Password: r.Header.Get("auth"),
@@ -225,11 +262,6 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	//configs before running query
-	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, googleProjectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
 	var query *datastore.Query
 	userIDParam := r.URL.Query()["user"][0]
 	query = datastore.NewQuery("TradeAction").Filter("UserID =", userIDParam)
@@ -273,13 +305,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	// 	json.NewEncoder(w).Encode(data)
 	// 	return
 	// }
-
-	//configs before running query
-	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, googleProjectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
 
 	//build query based on passed URL params
 	var query *datastore.Query
@@ -360,11 +385,6 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	} else {
 		// else increment aggregate ID
 		var x Bot
-		ctx := context.Background()
-		client, err := datastore.NewClient(ctx, googleProjectID)
-		if err != nil {
-			log.Fatalf("Failed to create client: %v", err)
-		}
 
 		//get highest aggregate ID
 		query := datastore.NewQuery("Bot").
@@ -428,13 +448,6 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	//get bot with aggregate ID
-	ctx := context.Background()
-	client, err := datastore.NewClient(ctx, googleProjectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-
 	//check if bot already exists to update
 	botToUpdateID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
 	if unescapeErr != nil {
@@ -486,8 +499,17 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// initRedis()
 
+	//init
+	ctx = context.Background()
+	var err error
+	client, err = datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
+	router.Methods("POST", "OPTIONS").Path("/user").HandlerFunc(createNewUserHandler)
 	router.Methods("GET").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET").Path("/bots").HandlerFunc(getAllBotsHandler)
 	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
