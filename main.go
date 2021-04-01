@@ -588,6 +588,23 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		if key != nil {
 			x.KEY = fmt.Sprint(key.ID)
 		}
+
+		//decrypt props
+		if isBase64(x.AccountRiskPercPerTrade) {
+			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
+		}
+		if isBase64(x.AccountSizePercToTrade) {
+			x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+		}
+		if isBase64(x.Leverage) {
+			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
+		}
+		if isBase64(x.Name) {
+			x.Name = decrypt(reqUser.EncryptKey, x.Name)
+		}
+		if isBase64(x.WebhookURL) {
+			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
+		}
 		botsResp = append(botsResp, x)
 	}
 
@@ -600,7 +617,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addBot(w, r, true, botsResp[len(botsResp)-1], reqUser)
+	addBot(w, r, true, reqBotData, reqUser)
 }
 
 func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
