@@ -430,16 +430,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 // almost identical logic with create and update (event sourcing)
 func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, reqUser User) {
-	var newBot Bot
-	newBot = reqBot
-
-	// if updating bot, don't allow AggregateID change
-	if isPutReq && (newBot.AggregateID != 0) {
-		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
+	newBot := reqBot
 
 	// if updating, name field not passed in JSON body, so must fill
 	if isPutReq {
@@ -499,13 +490,28 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		Email:    r.URL.Query()["user"][0],
+		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
-	authSuccess, _ := authenticateUser(authReq)
+	authSuccess, reqUser := authenticateUser(authReq)
 	if !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// if updating bot, don't allow AggregateID change
+	var reqBotData Bot
+	err := json.NewDecoder(r.Body).Decode(&reqBotData)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if reqBotData.AggregateID != 0 {
+		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
 		return
 	}
@@ -546,7 +552,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addBot(w, r, true, botsResp[len(botsResp)-1], User{})
+	addBot(w, r, true, botsResp[len(botsResp)-1], reqUser)
 }
 
 func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
