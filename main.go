@@ -179,6 +179,16 @@ func decrypt(key, text string) string {
 	return string(plaintext)
 }
 
+var nums = []rune("1234567890")
+
+func generateWebhookID(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = nums[rand.Intn(len(nums))]
+	}
+	return string(b)
+}
+
 func initRedis() {
 	if redisHost == "" {
 		redisHost = "127.0.0.1"
@@ -492,11 +502,15 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 		newBot.AggregateID = x.AggregateID + 1
 	}
 
+	//set webhook URL
+	plainWebhookID := generateWebhookID(100)
+	encryptedWebhookID := encrypt(reqUser.EncryptKey, plainWebhookID)
+	newBot.WebhookURL = "https://ana-api.myika.co/" + encryptedWebhookID
+
 	//encrypt sensitive bot data
 	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
 	newBot.AccountSizePercToTrade = encrypt(reqUser.EncryptKey, newBot.AccountSizePercToTrade)
 	newBot.Leverage = encrypt(reqUser.EncryptKey, newBot.Leverage)
-	newBot.WebhookURL = encrypt(reqUser.EncryptKey, newBot.WebhookURL)
 
 	//set timestamp
 	newBot.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
@@ -555,6 +569,13 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 	if reqBotData.AggregateID != 0 {
 		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	//fon't allow for webhookURL passed, random will be auto generated
+	if reqBotData.WebhookURL != "" {
+		data := jsonResponse{Msg: "WebhookURL property of Bot cannot be set explicitly.", Body: "Do not pass WebhookURL property in request body."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
 		return
