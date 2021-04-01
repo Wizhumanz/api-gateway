@@ -44,7 +44,7 @@ func (bit *JSONBool) UnmarshalJSON(b []byte) error {
 }
 
 type loginReq struct {
-	Email    string `json:"email"`
+	ID       string `json:"id"`
 	Password string `json:"password"`
 }
 
@@ -182,15 +182,21 @@ func CheckPasswordHash(password, hash string) bool {
 func authenticateUser(req loginReq) bool {
 	// get user with email
 	var userWithEmail User
+	i, _ := strconv.Atoi(req.ID)
+	key := datastore.IDKey("User", int64(i), nil)
 	query := datastore.NewQuery("User").
-		Filter("Email =", req.Email)
+		Filter("__key__ =", key)
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
 	if error != nil {
 		// Handle error.
 	}
 
+	fmt.Println(req.ID)
+	fmt.Println(userWithEmail.Password)
+
 	// check password hash and return
+	go fmt.Println(CheckPasswordHash(req.Password, userWithEmail.Password))
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
 }
 
@@ -292,19 +298,20 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "OPTIONS" {
 		return
 	}
-
 	botResp := make([]Bot, 0)
 
-	// authReq := loginReq{
-	// 	Email:    r.URL.Query()["user"][0],
-	// 	Password: r.Header.Get("auth"),
-	// }
-	// if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
-	// 	data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	json.NewEncoder(w).Encode(data)
-	// 	return
-	// }
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	fmt.Println(auth)
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	if len(r.URL.Query()["isActive"]) == 0 && !authenticateUser(authReq) {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
 
 	//build query based on passed URL params
 	var query *datastore.Query
