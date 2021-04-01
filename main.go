@@ -379,7 +379,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 			Filter("UserID =", userIDParam).
 			Filter("IsActive =", isActiveParam)
 	} else {
-		fmt.Println("Default query")
 		query = datastore.NewQuery("Bot").
 			Filter("UserID =", userIDParam)
 	}
@@ -387,10 +386,8 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	//run query
 	t := client.Run(ctx, query)
 	for {
-		fmt.Println("Iterating results")
 		var x Bot
 		key, err := t.Next(&x)
-		fmt.Print(x.String())
 		if key != nil {
 			x.KEY = fmt.Sprint(key.ID)
 		}
