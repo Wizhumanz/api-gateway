@@ -70,10 +70,10 @@ type TradeAction struct {
 	KEY         string  `json:"KEY,omitempty"`
 	Action      string  `json:"Action"`
 	AggregateID int     `json:"AggregateID,string"`
-	BotID       int     `json:"BotID"`
+	BotID       string  `json:"BotID"`
 	OrderType   int     `json:"OrderType"`
-	Size        float32 `json:"size"`
-	TimeStamp   string  `json:"timeStamp"`
+	Size        float32 `json:"Size"`
+	TimeStamp   string  `json:"TimeStamp"`
 }
 
 func (l Bot) String() string {
@@ -198,7 +198,7 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		var x TradeAction
 		key, err := t.Next(&x)
 		if key != nil {
-			x.KEY = key.Name
+			x.KEY = fmt.Sprint(key.ID)
 		}
 		if err == iterator.Done {
 			break
