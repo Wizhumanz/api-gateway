@@ -69,6 +69,16 @@ func (l User) String() string {
 	return r
 }
 
+type TradeAction struct {
+	KEY         string  `json:"KEY,omitempty"`
+	Action      string  `json:"Action"`
+	AggregateID int     `json:"AggregateID,string"`
+	BotID       string  `json:"BotID"`
+	OrderType   int     `json:"OrderType"`
+	Size        float32 `json:"Size"`
+	TimeStamp   string  `json:"TimeStamp"`
+}
+
 type Bot struct {
 	KEY                     string `json:"KEY,omitempty"`
 	Name                    string `json:"Name"`
@@ -92,16 +102,6 @@ func (l Bot) String() string {
 		r = r + fmt.Sprintf("%s: %v, ", typeOfL.Field(i).Name, v.Field(i).Interface())
 	}
 	return r
-}
-
-type TradeAction struct {
-	KEY         string  `json:"KEY,omitempty"`
-	Action      string  `json:"Action"`
-	AggregateID int     `json:"AggregateID,string"`
-	BotID       int     `json:"BotID"`
-	OrderType   int     `json:"OrderType"`
-	Size        float32 `json:"size"`
-	TimeStamp   string  `json:"timeStamp"`
 }
 
 var googleProjectID = "myika-anastasia"
@@ -339,7 +339,7 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		var x TradeAction
 		key, err := t.Next(&x)
 		if key != nil {
-			x.KEY = key.Name
+			x.KEY = fmt.Sprint(key.ID)
 		}
 		if err == iterator.Done {
 			break
