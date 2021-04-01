@@ -192,9 +192,6 @@ func authenticateUser(req loginReq) bool {
 		// Handle error.
 	}
 
-	fmt.Println(req.ID)
-	fmt.Println(userWithEmail.Password)
-
 	// check password hash and return
 	go fmt.Println(CheckPasswordHash(req.Password, userWithEmail.Password))
 	return CheckPasswordHash(req.Password, userWithEmail.Password)
