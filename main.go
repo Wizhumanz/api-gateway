@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
-	"io"
 	"strconv"
 
 	// "encoding/base64"
@@ -101,63 +99,42 @@ var rdb *redis.Client
 
 // helper funcs
 
-func generateEncryptKey(sz int) []byte {
-	key := make([]byte, sz)
-	_, keyErr := rand.Read(key)
-	if keyErr != nil {
-		// handle error here
-	}
-	return key
+var iv = []byte{34, 12, 55, 11, 10, 39, 16, 47, 87, 53, 88, 98, 66, 40, 14, 05}
+
+func encodeBase64(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
 }
 
-// encrypt string to base64 crypto using AES
-func encrypt(key []byte, text string) string {
-	// key := []byte(keyText)
+func decodeBase64(s string) []byte {
+	data, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func encrypt(key, text string) string {
+	block, err := aes.NewCipher([]byte(key))
+	if err != nil {
+		panic(err)
+	}
 	plaintext := []byte(text)
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic(err)
-	}
-
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
-
-	// convert to base64
-	return base64.URLEncoding.EncodeToString(ciphertext)
+	cfb := cipher.NewCFBEncrypter(block, iv)
+	ciphertext := make([]byte, len(plaintext))
+	cfb.XORKeyStream(ciphertext, plaintext)
+	return encodeBase64(ciphertext)
 }
 
-// decrypt from base64 to decrypted string
-func decrypt(key []byte, cryptoText string) string {
-	ciphertext, _ := base64.URLEncoding.DecodeString(cryptoText)
-
-	block, err := aes.NewCipher(key)
+func decrypt(key, text string) string {
+	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		panic(err)
 	}
-
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	if len(ciphertext) < aes.BlockSize {
-		panic("ciphertext too short")
-	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	// XORKeyStream can work in-place if the two arguments are the same.
-	stream.XORKeyStream(ciphertext, ciphertext)
-
-	return fmt.Sprintf("%s", ciphertext)
+	ciphertext := decodeBase64(text)
+	cfb := cipher.NewCFBEncrypter(block, iv)
+	plaintext := make([]byte, len(ciphertext))
+	cfb.XORKeyStream(plaintext, ciphertext)
+	return string(plaintext)
 }
 
 func initRedis() {
@@ -339,7 +316,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		// if err != nil {
 		// 	// Handle error.
 		// }
-		fmt.Println(x.String())
 		botResp = append(botResp, x)
 	}
 	w.WriteHeader(http.StatusOK)
@@ -403,22 +379,11 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 	}
 
 	//encrypt bot data
-	key := generateEncryptKey(32)
-	fmt.Printf("Key = %v\n", key)
-
-	dbStrKey := string(key)
-	fmt.Println(dbStrKey)
-
-	convertedKey := []byte(dbStrKey)
-	fmt.Printf("ConvertedKey = %v\n", convertedKey)
-
-	newBot.Name = encrypt(key, newBot.Name)
+	pwordHash := "128797747y74y7fh75h792d9dhj497h4" //TODO: get user's pasword hash
+	newBot.Name = encrypt(pwordHash, newBot.Name)
 	fmt.Println(newBot.Name)
-	decrypted := decrypt(key, newBot.Name)
+	decrypted := decrypt(pwordHash, newBot.Name)
 	fmt.Println(decrypted)
-
-	//TEMP
-	newBot.Name = dbStrKey
 
 	// create new bot in DB
 	ctx := context.Background()
@@ -481,7 +446,6 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	int, _ := strconv.Atoi(botToUpdateID)
 	query := datastore.NewQuery("Bot").
 		Filter("AggregateID =", int)
-	fmt.Println(query)
 	t := client.Run(ctx, query)
 	for {
 		var x Bot
