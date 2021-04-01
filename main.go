@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	// "encoding/base64"
@@ -439,8 +440,12 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		if isBase64(x.WebhookURL) {
-			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
+		urlPieces := strings.Split(x.WebhookURL, "https://ana-api.myika.co/webhook/")
+		fmt.Println(urlPieces)
+		webhookID := urlPieces[len(urlPieces)-1]
+		fmt.Println(webhookID)
+		if isBase64(webhookID) {
+			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
 		}
 
 		//event sourcing (pick latest snapshot)
@@ -503,9 +508,11 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 	}
 
 	//set webhook URL
-	plainWebhookID := generateWebhookID(100)
+	plainWebhookID := generateWebhookID(10)
+	fmt.Println(plainWebhookID)
 	encryptedWebhookID := encrypt(reqUser.EncryptKey, plainWebhookID)
-	newBot.WebhookURL = "https://ana-api.myika.co/" + encryptedWebhookID
+	newBot.WebhookURL = "https://ana-api.myika.co/webhook/" + encryptedWebhookID
+	fmt.Println(newBot.WebhookURL)
 
 	//encrypt sensitive bot data
 	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
@@ -616,8 +623,10 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		if isBase64(x.WebhookURL) {
-			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
+		urlPieces := strings.Split(x.WebhookURL, "/")
+		webhookID := urlPieces[len(urlPieces)-1]
+		if isBase64(webhookID) {
+			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
 		}
 		botsResp = append(botsResp, x)
 	}
