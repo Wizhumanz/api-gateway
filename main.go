@@ -461,6 +461,9 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 	newBot.Leverage = encrypt(reqUser.EncryptKey, newBot.Leverage)
 	newBot.WebhookURL = encrypt(reqUser.EncryptKey, newBot.WebhookURL)
 
+	//set timestamp
+	newBot.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
+
 	// create new bot in DB
 	ctx := context.Background()
 	var newBotKey *datastore.Key
