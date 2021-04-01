@@ -566,7 +566,7 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 	//authenticate
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		Email:    newBot.UserID,
+		ID:       newBot.UserID,
 		Password: auth,
 	}
 	authSuccess, reqUser := authenticateUser(authReq)
