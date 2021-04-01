@@ -412,7 +412,10 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
 		}
 		if isBase64(x.AccountSizePercToTrade) {
-			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+			x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+		}
+		if isBase64(x.Leverage) {
+			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
 		if isBase64(x.Name) {
 			x.Name = decrypt(reqUser.EncryptKey, x.Name)
