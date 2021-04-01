@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	// "encoding/base64"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -138,37 +139,54 @@ func createHash(key string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func encrypt(data []byte, passphrase string) []byte {
-	block, _ := aes.NewCipher([]byte(createHash(passphrase)))
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		panic(err.Error())
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		panic(err.Error())
-	}
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	return ciphertext
-}
+// encrypt string to base64 crypto using AES
+func encrypt(key []byte, text string) string {
+	// key := []byte(keyText)
+	plaintext := []byte(text)
 
-func decrypt(data []byte, passphrase string) []byte {
-	key := []byte(createHash(passphrase))
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
-	gcm, err := cipher.NewGCM(block)
+
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		panic(err)
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+
+	// convert to base64
+	return base64.URLEncoding.EncodeToString(ciphertext)
+}
+
+// decrypt from base64 to decrypted string
+func decrypt(key []byte, cryptoText string) string {
+	ciphertext, _ := base64.URLEncoding.DecodeString(cryptoText)
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
-	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		panic(err.Error())
+
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	if len(ciphertext) < aes.BlockSize {
+		panic("ciphertext too short")
 	}
-	return plaintext
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	return fmt.Sprintf("%s", ciphertext)
 }
 
 func initRedis() {
@@ -382,6 +400,17 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, botToUpdate B
 		newBot.AggregateID = x.AggregateID + 1
 	}
 
+	//encrypt bot data
+	// key := make([]byte, 16)
+	// _, keyErr := rand.Read(key)
+	// if keyErr != nil {
+	// 	// handle error here
+	// }
+	// newBot.Name = encrypt(key, newBot.Name)
+	// fmt.Println(newBot.Name)
+	// decrypted := decrypt(key, newBot.Name)
+	// fmt.Println(decrypted)
+
 	// create new bot in DB
 	ctx := context.Background()
 	clientAdd, err := datastore.NewClient(ctx, googleProjectID)
@@ -483,13 +512,6 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// initRedis()
-
-	toEncrypt := "super secret shit"
-	pass := "1787348714348098huheuhuehudhuh131820j08u499y5hf2f04858791849013848784yfghvcjunrounf9u"
-	encrypted := encrypt([]byte(toEncrypt), pass)
-	decrypted := decrypt(encrypted, pass)
-	fmt.Println(encrypted)
-	fmt.Println(string(decrypted))
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
