@@ -352,13 +352,15 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
-	authSuccess, _ := authenticateUser(authReq)
+	authSuccess, reqUser := authenticateUser(authReq)
 	if len(r.URL.Query()["isActive"]) == 0 && !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(data)
 		return
 	}
+
+	fmt.Println(r.URL.Query()["user"][0])
 
 	//build query based on passed URL params
 	var query *datastore.Query
@@ -377,6 +379,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 			Filter("UserID =", userIDParam).
 			Filter("IsActive =", isActiveParam)
 	} else {
+		fmt.Println("Default query")
 		query = datastore.NewQuery("Bot").
 			Filter("UserID =", userIDParam)
 	}
@@ -384,17 +387,24 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	//run query
 	t := client.Run(ctx, query)
 	for {
+		fmt.Println("Iterating results")
 		var x Bot
 		key, err := t.Next(&x)
+		fmt.Print(x.String())
 		if key != nil {
 			x.KEY = fmt.Sprint(key.ID)
 		}
 		if err == iterator.Done {
 			break
 		}
-		// if err != nil {
-		// 	// Handle error.
-		// }
+
+		//decrypt props
+		x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
+		x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+		x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
+		x.Name = decrypt(reqUser.EncryptKey, x.Name)
+		x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
+
 		botResp = append(botResp, x)
 	}
 	w.WriteHeader(http.StatusOK)
