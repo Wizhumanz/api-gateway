@@ -91,6 +91,7 @@ type Bot struct {
 	IsArchived              bool   `json:"IsArchived,string"`
 	Leverage                string `json:"Leverage"`
 	WebhookURL              string `json:"WebhookURL"`
+	Timestamp               string `json:"Timestamp"`
 }
 
 func (l Bot) String() string {
