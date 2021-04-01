@@ -80,18 +80,19 @@ type TradeAction struct {
 }
 
 type Bot struct {
-	KEY                     string `json:"KEY,omitempty"`
-	Name                    string `json:"Name"`
-	AggregateID             int    `json:"AggregateID,string"`
-	UserID                  string `json:"UserID"`
-	ExchangeConnection      string `json:"ExchangeConnection"`
-	AccountRiskPercPerTrade string `json:"AccountRiskPercPerTrade"`
-	AccountSizePercToTrade  string `json:"AccountSizePercToTrade"`
-	IsActive                bool   `json:"IsActive,string"`
-	IsArchived              bool   `json:"IsArchived,string"`
-	Leverage                string `json:"Leverage"`
-	WebhookURL              string `json:"WebhookURL"`
-	Timestamp               string `json:"Timestamp"`
+	KEY                     string         `json:"KEY,omitempty"`
+	K                       *datastore.Key `datastore:"__key__"`
+	Name                    string         `json:"Name"`
+	AggregateID             int            `json:"AggregateID,string"`
+	UserID                  string         `json:"UserID"`
+	ExchangeConnection      string         `json:"ExchangeConnection"`
+	AccountRiskPercPerTrade string         `json:"AccountRiskPercPerTrade"`
+	AccountSizePercToTrade  string         `json:"AccountSizePercToTrade"`
+	IsActive                bool           `json:"IsActive,string"`
+	IsArchived              bool           `json:"IsArchived,string"`
+	Leverage                string         `json:"Leverage"`
+	WebhookURL              string         `json:"WebhookURL"`
+	Timestamp               string         `json:"Timestamp"`
 }
 
 func (l Bot) String() string {
@@ -115,12 +116,22 @@ var ctx context.Context
 
 // helper funcs
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+func deleteElement(sli []Bot, del Bot) []Bot {
+	var rSli []Bot
+	for _, e := range sli {
+		if e.K.ID != del.K.ID {
+			rSli = append(rSli, e)
+		}
+	}
+	return rSli
+}
 
 func isBase64(s string) bool {
 	_, err := base64.StdEncoding.DecodeString(s)
 	return err == nil
 }
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func generateEncryptKey(n int) string {
 	b := make([]rune, n)
@@ -360,7 +371,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "OPTIONS" {
 		return
 	}
-	botResp := make([]Bot, 0)
+	botsResp := make([]Bot, 0)
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
@@ -425,11 +436,41 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 			x.WebhookURL = decrypt(reqUser.EncryptKey, x.WebhookURL)
 		}
 
-		botResp = append(botResp, x)
+		//event sourcing (pick latest snapshot)
+		if len(botsResp) == 0 {
+			botsResp = append(botsResp, x)
+		} else {
+			//find bot in existing array
+			var exBot Bot
+			for i, b := range botsResp {
+				if botsResp[i].AggregateID == b.AggregateID {
+					exBot = botsResp[i]
+				}
+			}
+
+			//if bot exists, append row/entry with the latest timestamp
+			if exBot.AggregateID != 0 && exBot.Timestamp != "" {
+				//compare timestamps
+				layout := "2006-01-02_15:04:05_-0700"
+				existingBotTime, _ := time.Parse(layout, exBot.Timestamp)
+				newBotTime, _ := time.Parse(layout, x.Timestamp)
+				//if existing is older, remove it and add newer current listing; otherwise, do nothing
+				if existingBotTime.Before(newBotTime) {
+					//rm existing listing
+					botsResp = deleteElement(botsResp, exBot)
+					//append current listing
+					botsResp = append(botsResp, x)
+				}
+			} else {
+				//otherwise, just append newly decoded (so far unique) bot
+				botsResp = append(botsResp, x)
+			}
+		}
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(botResp)
+	json.NewEncoder(w).Encode(botsResp)
 }
 
 // almost identical logic with create and update (event sourcing)
