@@ -440,30 +440,25 @@ func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var newUser User
+	var newEx ExchangeConnection
 	// decode data
-	err := json.NewDecoder(r.Body).Decode(&newUser)
+	err := json.NewDecoder(r.Body).Decode(&newEx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// create password hash
-	newUser.Password, _ = HashPassword(newUser.Password)
-	// create encrypt key of fixed length
-	rand.Seed(time.Now().UnixNano())
-	newUser.EncryptKey = generateEncryptKey(32)
 
 	// create new listing in DB
-	kind := "User"
+	kind := "ExchangeConnection"
 	newUserKey := datastore.IncompleteKey(kind, nil)
-	if _, err := client.Put(ctx, newUserKey, &newUser); err != nil {
-		log.Fatalf("Failed to save User: %v", err)
+	if _, err := client.Put(ctx, newUserKey, &newEx); err != nil {
+		log.Fatalf("Failed to save ExchangeConnection: %v", err)
 	}
 
 	// return
 	data := jsonResponse{
-		Msg:  "Added " + newUserKey.String(),
-		Body: newUser.String(),
+		Msg:  "Added exchange connection.",
+		Body: newEx.Name + " - " + newEx.APIKey,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
