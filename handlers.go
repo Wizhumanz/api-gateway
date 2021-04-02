@@ -394,7 +394,6 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exResp := make([]ExchangeConnection, 0)
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
 		ID:       r.URL.Query()["user"][0],
@@ -414,6 +413,7 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 	query = datastore.NewQuery("ExchangeConnection").Filter("UserID =", userIDParam)
 
 	//run query
+	exResp := make([]ExchangeConnection, 0)
 	t := client.Run(ctx, query)
 	for {
 		var x ExchangeConnection
@@ -427,8 +427,39 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 		// if err != nil {
 		// 	// Handle error.
 		// }
-		exResp = append(exResp, x)
+
+		//event sourcing (pick latest snapshot)
+		if len(exResp) == 0 {
+			exResp = append(exResp, x)
+		} else {
+			//find exchange in existing array
+			var exEx ExchangeConnection
+			for _, e := range exResp {
+				if e.APIKey == x.APIKey {
+					exEx = e
+				}
+			}
+
+			//if exchange exists, append row/entry with the latest timestamp
+			if exEx.APIKey != "" || exEx.Timestamp != "" {
+				//compare timestamps
+				layout := "2006-01-02_15:04:05_-0700"
+				existingTime, _ := time.Parse(layout, exEx.Timestamp)
+				newTime, _ := time.Parse(layout, x.Timestamp)
+				//if existing is older, remove it and add newer current one; otherwise, do nothing
+				if existingTime.Before(newTime) {
+					//rm existing listing
+					exResp = deleteExchangeConnection(exResp, exEx)
+					//append current listing
+					exResp = append(exResp, x)
+				}
+			} else {
+				//otherwise, just append newly decoded (so far unique) bot
+				exResp = append(exResp, x)
+			}
+		}
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(exResp)

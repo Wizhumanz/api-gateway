@@ -27,6 +27,16 @@ func deleteElement(sli []Bot, del Bot) []Bot {
 	return rSli
 }
 
+func deleteExchangeConnection(sli []ExchangeConnection, del ExchangeConnection) []ExchangeConnection {
+	var rSli []ExchangeConnection
+	for _, e := range sli {
+		if e.APIKey != del.APIKey {
+			rSli = append(rSli, e)
+		}
+	}
+	return rSli
+}
+
 func isBase64(s string) bool {
 	_, err := base64.StdEncoding.DecodeString(s)
 	return err == nil

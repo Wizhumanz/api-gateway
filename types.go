@@ -101,4 +101,5 @@ type ExchangeConnection struct {
 	APIKey    string         `json:"APIKey"`
 	UserID    string         `json:"UserID"`
 	IsDeleted bool           `json:"IsDeleted,string"`
+	Timestamp string         `json:"Timestamp"`
 }
