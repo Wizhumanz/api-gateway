@@ -111,7 +111,7 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	tradesResp := make([]TradeAction, 0)
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		Email:    r.URL.Query()["user"][0],
+		ID:       r.URL.Query()["user"][0],
 		Password: auth,
 	}
 	authSuccess, _ := authenticateUser(authReq)
