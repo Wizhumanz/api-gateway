@@ -439,10 +439,9 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//find bot that owns webhookURL passed in request
-	encryptedIDToFind := encrypt(webhookUser.EncryptKey, webhookID)
-	encryptedURLToFind := "https://ana-api.myika.co/webhook/" + encryptedIDToFind
+	URLToFind := "https://ana-api.myika.co/webhook/" + webhookID
 	for _, bot := range allBots {
-		if bot.WebhookURL == encryptedURLToFind {
+		if bot.WebhookURL == URLToFind {
 			botToUse = bot
 		}
 	}
