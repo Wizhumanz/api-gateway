@@ -388,6 +388,92 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 	addBot(w, r, false, newBot, reqUser) //empty Bot struct passed just for compiler
 }
 
+func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	tradesResp := make([]TradeAction, 0)
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	authSuccess, _ := authenticateUser(authReq)
+	if !authSuccess {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//configs before running query
+	var query *datastore.Query
+	userIDParam := r.URL.Query()["user"][0]
+	query = datastore.NewQuery("TradeAction").Filter("UserID =", userIDParam)
+
+	//run query
+	t := client.Run(ctx, query)
+	for {
+		var x TradeAction
+		key, err := t.Next(&x)
+		if key != nil {
+			x.KEY = fmt.Sprint(key.ID)
+		}
+		if err == iterator.Done {
+			break
+		}
+		// if err != nil {
+		// 	// Handle error.
+		// }
+		tradesResp = append(tradesResp, x)
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tradesResp)
+}
+
+func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	var newUser User
+	// decode data
+	err := json.NewDecoder(r.Body).Decode(&newUser)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// create password hash
+	newUser.Password, _ = HashPassword(newUser.Password)
+	// create encrypt key of fixed length
+	rand.Seed(time.Now().UnixNano())
+	newUser.EncryptKey = generateEncryptKey(32)
+
+	// create new listing in DB
+	kind := "User"
+	newUserKey := datastore.IncompleteKey(kind, nil)
+	if _, err := client.Put(ctx, newUserKey, &newUser); err != nil {
+		log.Fatalf("Failed to save User: %v", err)
+	}
+
+	// return
+	data := jsonResponse{
+		Msg:  "Added " + newUserKey.String(),
+		Body: newUser.String(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(data)
+}
+
+func deleteExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	var webHookReq webHookRequest
 	err := json.NewDecoder(r.Body).Decode(&webHookReq)

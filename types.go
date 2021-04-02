@@ -46,6 +46,14 @@ type User struct {
 	EncryptKey string
 }
 
+type ExchangeConnection struct {
+	K         *datastore.Key `datastore:"__key__"`
+	Name      string         `json:"name"`
+	APIKey    string         `json:"apiKey"`
+	User      string         `json:"user"`
+	IsDeleted bool           `json:"isDeleted"`
+}
+
 func (l User) String() string {
 	r := ""
 	v := reflect.ValueOf(l)

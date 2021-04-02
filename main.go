@@ -37,7 +37,11 @@ func main() {
 	router.Methods("GET").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET").Path("/bots").HandlerFunc(getAllBotsHandler)
 	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
-	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler) //pass aggregate ID in URL
+	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler)
+	router.Methods("GET").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
+	router.Methods("POST").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
+	router.Methods("DELETE").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
+
 	router.Methods("POST").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 
 	port := os.Getenv("PORT")
