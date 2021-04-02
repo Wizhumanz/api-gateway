@@ -6,10 +6,13 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"cloud.google.com/go/datastore"
 	"github.com/go-redis/redis/v8"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/api/iterator"
 )
 
 // helper funcs
@@ -147,4 +150,66 @@ func authenticateUser(req loginReq) (bool, User) {
 	}
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail
+}
+
+func parseBotsQueryRes(t *datastore.Iterator, reqUser User) []Bot {
+	var botsResp []Bot
+	for {
+		var x Bot
+		key, err := t.Next(&x)
+		if key != nil {
+			x.KEY = fmt.Sprint(key.ID)
+		}
+		if err == iterator.Done {
+			break
+		}
+
+		//decrypt props
+		if isBase64(x.AccountRiskPercPerTrade) {
+			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
+		}
+		if isBase64(x.AccountSizePercToTrade) {
+			x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+		}
+		if isBase64(x.Leverage) {
+			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
+		}
+		webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
+		if isBase64(webhookID) {
+			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
+		}
+
+		//event sourcing (pick latest snapshot)
+		if len(botsResp) == 0 {
+			botsResp = append(botsResp, x)
+		} else {
+			//find bot in existing array
+			var exBot Bot
+			for _, b := range botsResp {
+				if b.AggregateID == x.AggregateID {
+					exBot = b
+				}
+			}
+
+			//if bot exists, append row/entry with the latest timestamp
+			if exBot.AggregateID != 0 || exBot.Timestamp != "" {
+				//compare timestamps
+				layout := "2006-01-02_15:04:05_-0700"
+				existingBotTime, _ := time.Parse(layout, exBot.Timestamp)
+				newBotTime, _ := time.Parse(layout, x.Timestamp)
+				//if existing is older, remove it and add newer current listing; otherwise, do nothing
+				if existingBotTime.Before(newBotTime) {
+					//rm existing listing
+					botsResp = deleteElement(botsResp, exBot)
+					//append current listing
+					botsResp = append(botsResp, x)
+				}
+			} else {
+				//otherwise, just append newly decoded (so far unique) bot
+				botsResp = append(botsResp, x)
+			}
+		}
+	}
+
+	return botsResp
 }
