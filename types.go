@@ -48,10 +48,11 @@ type User struct {
 
 type ExchangeConnection struct {
 	K         *datastore.Key `datastore:"__key__"`
-	Name      string         `json:"name"`
-	APIKey    string         `json:"apiKey"`
-	User      string         `json:"user"`
-	IsDeleted bool           `json:"isDeleted"`
+	KEY       string         `json:"KEY"`
+	Name      string         `json:"Name"`
+	APIKey    string         `json:"APIKey"`
+	UserID    string         `json:"UserID"`
+	IsDeleted bool           `json:"IsDeleted"`
 }
 
 func (l User) String() string {
