@@ -5,6 +5,6 @@ import (
 	"testing"
 )
 
-func TestMain(t *testing.T) {
+func TestIndex(t *testing.T) {
 	fmt.Println("Tests working!")
 }
