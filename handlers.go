@@ -389,11 +389,6 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
-	//TODO: get {id} and find user that matches
-	userID := mux.Vars(r)["id"]
-
-	//decode/unmarshall the body
-	//two properties: "msg", "size"
 	var webHookRes webHookResponse
 	err := json.NewDecoder(r.Body).Decode(&webHookRes)
 	if err != nil {
@@ -401,6 +396,51 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(webHookRes.Msg)
-	fmt.Println(webHookRes.Size)
+	// get user with ID
+	var webhookUser User
+	intUserID, _ := strconv.Atoi(webHookRes.User)
+	key := datastore.IDKey("User", int64(intUserID), nil)
+	query := datastore.NewQuery("User").
+		Filter("__key__ =", key)
+	t := client.Run(ctx, query)
+	_, error := t.Next(&webhookUser)
+	if error != nil {
+		// Handle error.
+	}
+
+	// get the bot referred to by webhookID
+	webhookID := mux.Vars(r)["id"]
+	var allBots []Bot
+	var botToUse Bot
+	botQuery := datastore.NewQuery("Bot").
+		Filter("UserID =", webHookRes.User)
+	tBot := client.Run(ctx, botQuery)
+	allBots = parseBotsQueryRes(tBot, webhookUser)
+
+	if len(allBots) == 0 {
+		data := jsonResponse{
+			Msg:  "Unable to get bots for this userID.",
+			Body: "webHookRes.User",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//find bot that owns webhookURL passed in request
+	encryptedIDToFind := encrypt(webhookUser.EncryptKey, webhookID)
+	encryptedURLToFind := "https://ana-api.myika.co/webhook/" + encryptedIDToFind
+	for _, bot := range allBots {
+		if bot.WebhookURL == encryptedURLToFind {
+			botToUse = bot
+		}
+	}
+
+	//TODO: call other services for given bot based on body props
+	data := jsonResponse{
+		Msg:  fmt.Sprintf("Bot to use: \n %s", botToUse.String()),
+		Body: webHookRes.Msg + "/" + webHookRes.Size + "/" + webHookRes.User,
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(data)
 }
