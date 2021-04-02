@@ -466,7 +466,80 @@ func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func deleteExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
 
+	exs := make([]ExchangeConnection, 0)
+
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	authSuccess, _ := authenticateUser(authReq)
+	if !authSuccess {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//check if ExchangeConnection already exists to delete
+	exDelID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
+	if unescapeErr != nil {
+		data := jsonResponse{Msg: "Exchange ID Parse Error", Body: unescapeErr.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	intID, _ := strconv.Atoi(exDelID)
+	key := datastore.IDKey("ExchangeConnection", int64(intID), nil)
+	query := datastore.NewQuery("ExchangeConnection").
+		Filter("__key__ =", key)
+	t := client.Run(ctx, query)
+	for {
+		var x ExchangeConnection
+		key, err := t.Next(&x)
+		if err == iterator.Done {
+			break
+		}
+		// if err != nil {
+		// 	// Handle error.
+		// }
+		if key != nil {
+			x.KEY = fmt.Sprint(key.ID)
+		}
+		exs = append(exs, x)
+	}
+
+	//return if ExchangeConnection to update doesn't exist
+	isDelIdValid := len(exs) > 0 && exs[0].APIKey != ""
+	if !isDelIdValid {
+		data := jsonResponse{Msg: "ExchangeConnection ID Invalid", Body: "ExchangeConnection with provided ID does not exist."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// add new row to DB
+	exToDel := exs[len(exs)-1]
+	exToDel.IsDeleted = true
+	kind := "ExchangeConnection"
+	newKey := datastore.IncompleteKey(kind, nil)
+	if _, err := client.Put(ctx, newKey, &exToDel); err != nil {
+		log.Fatalf("Failed to delete ExchangeConnection: %v", err)
+	}
+
+	// return
+	data := jsonResponse{
+		Msg:  "DELETED exchange connection.",
+		Body: exToDel.Name + " - " + exToDel.APIKey,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+	json.NewEncoder(w).Encode(data)
 }
 
 func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
