@@ -389,8 +389,8 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
-	var webHookRes webHookResponse
-	err := json.NewDecoder(r.Body).Decode(&webHookRes)
+	var webHookReq webHookRequest
+	err := json.NewDecoder(r.Body).Decode(&webHookReq)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -398,7 +398,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	// get user with ID
 	var webhookUser User
-	intUserID, _ := strconv.Atoi(webHookRes.User)
+	intUserID, _ := strconv.Atoi(webHookReq.User)
 	key := datastore.IDKey("User", int64(intUserID), nil)
 	query := datastore.NewQuery("User").
 		Filter("__key__ =", key)
@@ -413,14 +413,14 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	var allBots []Bot
 	var botToUse Bot
 	botQuery := datastore.NewQuery("Bot").
-		Filter("UserID =", webHookRes.User)
+		Filter("UserID =", webHookReq.User)
 	tBot := client.Run(ctx, botQuery)
 	allBots = parseBotsQueryRes(tBot, webhookUser)
 
 	if len(allBots) == 0 {
 		data := jsonResponse{
 			Msg:  "Unable to get bots for this userID.",
-			Body: webHookRes.User,
+			Body: webHookReq.User,
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
@@ -439,7 +439,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	//TODO: call other services for given bot based on body props
 	data := jsonResponse{
 		Msg:  fmt.Sprintf("Bot to use: \n %s", botToUse.String()),
-		Body: webHookRes.Msg + "/" + webHookRes.Size + "/" + webHookRes.User,
+		Body: webHookReq.Msg + "/" + webHookReq.Size + "/" + webHookReq.User,
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
