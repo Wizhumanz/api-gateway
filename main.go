@@ -579,7 +579,8 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 		return
 	}
-	//fon't allow for webhookURL passed, random will be auto generated
+
+	//don't allow webhookURL passed in body, must be generated randomly
 	if reqBotData.WebhookURL != "" {
 		data := jsonResponse{Msg: "WebhookURL property of Bot cannot be set explicitly.", Body: "Do not pass WebhookURL property in request body."}
 		w.WriteHeader(http.StatusBadRequest)
@@ -638,6 +639,9 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 		return
 	}
+
+	//must assign aggregate ID from existing bot
+	reqBotData.AggregateID = botsResp[len(botsResp)-1].AggregateID
 
 	addBot(w, r, true, reqBotData, reqUser)
 }
