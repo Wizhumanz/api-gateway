@@ -80,6 +80,7 @@ type Bot struct {
 	Leverage                string         `json:"Leverage"`
 	WebhookURL              string         `json:"WebhookURL"`
 	Timestamp               string         `json:"Timestamp"`
+	Ticker                  string         `json:"Ticker"`
 }
 
 func (l Bot) String() string {
