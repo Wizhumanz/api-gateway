@@ -38,9 +38,10 @@ type webHookResponse struct {
 }
 
 type User struct {
-	Name       string `json:"name"`
-	Email      string `json:"email"`
-	Password   string `json:"password"`
+	K          *datastore.Key `datastore:"__key__"`
+	Name       string         `json:"name"`
+	Email      string         `json:"email"`
+	Password   string         `json:"password"`
 	EncryptKey string
 }
 
