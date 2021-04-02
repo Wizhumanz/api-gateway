@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"os"
 	"reflect"
 	"testing"
@@ -13,10 +15,11 @@ type testPair struct {
 	Expected interface{}
 }
 
-var testData []testPair
+var testDelElemData []testPair
+var testBase64CheckData []testPair
 
 func setup() {
-	testData = []testPair{
+	testDelElemData = []testPair{
 		{
 			Inputs: []interface{}{
 				[]Bot{
@@ -46,6 +49,33 @@ func setup() {
 			},
 		},
 	}
+
+	testBase64CheckData = []testPair{
+		{
+			Inputs: []interface{}{
+				base64.StdEncoding.EncodeToString([]byte("string")),
+			},
+			Expected: true,
+		},
+		{
+			Inputs: []interface{}{
+				base64.StdEncoding.EncodeToString([]byte("anotherString")),
+			},
+			Expected: true,
+		},
+		{
+			Inputs: []interface{}{
+				"Simon",
+			},
+			Expected: false,
+		},
+		{
+			Inputs: []interface{}{
+				"Testing SUCKS",
+			},
+			Expected: false,
+		},
+	}
 }
 
 func shutdown() {
@@ -60,13 +90,33 @@ func TestMain(m *testing.M) {
 }
 
 func TestHelperDeleteElement(t *testing.T) {
-	for _, pair := range testData {
+	for _, pair := range testDelElemData {
 		arg1 := pair.Inputs[0].([]Bot)
 		arg2 := pair.Inputs[1].(Bot)
 		expected := pair.Expected.([]Bot)
 		res := deleteElement(arg1, arg2)
+
+		arg1J, _ := json.MarshalIndent(arg1, "", "  ")
+		arg2J, _ := json.MarshalIndent(arg2, "", "  ")
+		expectedJ, _ := json.MarshalIndent(expected, "", "  ")
+		resJ, _ := json.MarshalIndent(res, "", "  ")
 		if !reflect.DeepEqual(res, expected) {
-			t.Errorf("Expected deleteElement(%s, %s) to equal %s, actual result = %s", arg1, arg2, expected, res)
+			t.Errorf("Expected deleteElement(%v, %v) to equal %v, actual result = %v",
+				string(arg1J),
+				string(arg2J),
+				string(expectedJ),
+				string(resJ))
+		}
+	}
+}
+
+func TestHelperBase64Check(t *testing.T) {
+	for _, pair := range testBase64CheckData {
+		arg1 := pair.Inputs[0].(string)
+		expected := pair.Expected.(bool)
+		res := isBase64(arg1)
+		if !reflect.DeepEqual(res, expected) {
+			t.Errorf("Expected isBase64(%s) to equal %v, actual result = %v", arg1, expected, res)
 		}
 	}
 }

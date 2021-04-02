@@ -69,18 +69,18 @@ type TradeAction struct {
 type Bot struct {
 	KEY                     string         `json:"KEY,omitempty"`
 	K                       *datastore.Key `datastore:"__key__"`
-	Name                    string         `json:"Name"`
-	AggregateID             int            `json:"AggregateID,string"`
-	UserID                  string         `json:"UserID"`
-	ExchangeConnection      string         `json:"ExchangeConnection"`
-	AccountRiskPercPerTrade string         `json:"AccountRiskPercPerTrade"`
-	AccountSizePercToTrade  string         `json:"AccountSizePercToTrade"`
-	IsActive                bool           `json:"IsActive,string"`
-	IsArchived              bool           `json:"IsArchived,string"`
-	Leverage                string         `json:"Leverage"`
-	WebhookURL              string         `json:"WebhookURL"`
-	Timestamp               string         `json:"Timestamp"`
-	Ticker                  string         `json:"Ticker"`
+	Name                    string         `json:"Name,omitempty"`
+	AggregateID             int            `json:"AggregateID,string,omitempty"`
+	UserID                  string         `json:"UserID,omitempty"`
+	ExchangeConnection      string         `json:"ExchangeConnection,omitempty"`
+	AccountRiskPercPerTrade string         `json:"AccountRiskPercPerTrade,omitempty"`
+	AccountSizePercToTrade  string         `json:"AccountSizePercToTrade,omitempty"`
+	IsActive                bool           `json:"IsActive,string,omitempty"`
+	IsArchived              bool           `json:"IsArchived,string,omitempty"`
+	Leverage                string         `json:"Leverage,omitempty"`
+	WebhookURL              string         `json:"WebhookURL,omitempty"`
+	Timestamp               string         `json:"Timestamp,omitempty"`
+	Ticker                  string         `json:"Ticker,omitempty"`
 }
 
 func (l Bot) String() string {
