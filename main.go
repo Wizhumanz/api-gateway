@@ -623,8 +623,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		urlPieces := strings.Split(x.WebhookURL, "/")
-		webhookID := urlPieces[len(urlPieces)-1]
+		webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
 		if isBase64(webhookID) {
 			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
 		}
