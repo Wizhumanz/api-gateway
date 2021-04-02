@@ -66,6 +66,7 @@ type TradeAction struct {
 	Size        float32 `json:"Size"`
 	TimeStamp   string  `json:"TimeStamp"`
 	Ticker      string  `json:"Ticker"`
+	Exchange    string  `json:"Exchange"`
 }
 
 type Bot struct {
