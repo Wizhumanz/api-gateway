@@ -32,9 +32,10 @@ type loginReq struct {
 	Password string `json:"password"`
 }
 
-type webHookResponse struct {
+type webHookRequest struct {
 	Msg  string `json:"message"`
 	Size string `json:"size"`
+	User string `json:"user"`
 }
 
 type User struct {

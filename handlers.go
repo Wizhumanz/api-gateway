@@ -191,62 +191,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 	//run query
 	t := client.Run(ctx, query)
-	for {
-		var x Bot
-		key, err := t.Next(&x)
-		if key != nil {
-			x.KEY = fmt.Sprint(key.ID)
-		}
-		if err == iterator.Done {
-			break
-		}
-
-		//decrypt props
-		if isBase64(x.AccountRiskPercPerTrade) {
-			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
-		}
-		if isBase64(x.AccountSizePercToTrade) {
-			x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
-		}
-		if isBase64(x.Leverage) {
-			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
-		}
-		webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
-		if isBase64(webhookID) {
-			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
-		}
-
-		//event sourcing (pick latest snapshot)
-		if len(botsResp) == 0 {
-			botsResp = append(botsResp, x)
-		} else {
-			//find bot in existing array
-			var exBot Bot
-			for _, b := range botsResp {
-				if b.AggregateID == x.AggregateID {
-					exBot = b
-				}
-			}
-
-			//if bot exists, append row/entry with the latest timestamp
-			if exBot.AggregateID != 0 || exBot.Timestamp != "" {
-				//compare timestamps
-				layout := "2006-01-02_15:04:05_-0700"
-				existingBotTime, _ := time.Parse(layout, exBot.Timestamp)
-				newBotTime, _ := time.Parse(layout, x.Timestamp)
-				//if existing is older, remove it and add newer current listing; otherwise, do nothing
-				if existingBotTime.Before(newBotTime) {
-					//rm existing listing
-					botsResp = deleteElement(botsResp, exBot)
-					//append current listing
-					botsResp = append(botsResp, x)
-				}
-			} else {
-				//otherwise, just append newly decoded (so far unique) bot
-				botsResp = append(botsResp, x)
-			}
-		}
-	}
+	botsResp = parseBotsQueryRes(t, reqUser)
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
@@ -444,17 +389,68 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
-	//TODO: get {id} and find user that matches
-
-	//decode/unmarshall the body
-	//two properties: "msg", "size"
-	var webHookRes webHookResponse
-	err := json.NewDecoder(r.Body).Decode(&webHookRes)
+	var webHookReq webHookRequest
+	err := json.NewDecoder(r.Body).Decode(&webHookReq)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println(webHookRes.Msg)
-	fmt.Println(webHookRes.Size)
+	//req validity check
+	if webHookReq.User == "" {
+		data := jsonResponse{
+			Msg:  "User field in webhook body nil!",
+			Body: "Must pass User field in webhook body JSON.",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// get user with ID
+	var webhookUser User
+	intUserID, _ := strconv.Atoi(webHookReq.User)
+	key := datastore.IDKey("User", int64(intUserID), nil)
+	query := datastore.NewQuery("User").
+		Filter("__key__ =", key)
+	t := client.Run(ctx, query)
+	_, error := t.Next(&webhookUser)
+	if error != nil {
+		// Handle error.
+	}
+
+	// get the bot referred to by webhookID
+	webhookID := mux.Vars(r)["id"]
+	var allBots []Bot
+	var botToUse Bot
+	botQuery := datastore.NewQuery("Bot").
+		Filter("UserID =", webHookReq.User)
+	tBot := client.Run(ctx, botQuery)
+	allBots = parseBotsQueryRes(tBot, webhookUser)
+
+	if len(allBots) == 0 {
+		data := jsonResponse{
+			Msg:  "Unable to get bots for this userID.",
+			Body: webHookReq.User,
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//find bot that owns webhookURL passed in request
+	URLToFind := "https://ana-api.myika.co/webhook/" + webhookID
+	for _, bot := range allBots {
+		if bot.WebhookURL == URLToFind {
+			botToUse = bot
+		}
+	}
+
+	//TODO: call other services for given bot based on body props
+	data := jsonResponse{
+		Msg:  fmt.Sprintf("Bot to use: \n %s", botToUse.String()),
+		Body: webHookReq.Msg + "/" + webHookReq.Size + "/" + webHookReq.User,
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(data)
 }
