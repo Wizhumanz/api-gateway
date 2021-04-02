@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -157,27 +155,33 @@ func decodeBase64(s string) []byte {
 }
 
 func encrypt(key, text string) string {
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		panic(err)
-	}
-	plaintext := []byte(text)
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	ciphertext := make([]byte, len(plaintext))
-	cfb.XORKeyStream(ciphertext, plaintext)
-	return encodeBase64(ciphertext)
+	return base64.StdEncoding.EncodeToString([]byte(text))
+	// block, err := aes.NewCipher([]byte(key))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// plaintext := []byte(text)
+	// cfb := cipher.NewCFBEncrypter(block, iv)
+	// ciphertext := make([]byte, len(plaintext))
+	// cfb.XORKeyStream(ciphertext, plaintext)
+	// return encodeBase64(ciphertext)
 }
 
 func decrypt(key, text string) string {
-	block, err := aes.NewCipher([]byte(key))
+	data, err := base64.StdEncoding.DecodeString(text)
 	if err != nil {
 		panic(err)
 	}
-	ciphertext := decodeBase64(text)
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	plaintext := make([]byte, len(ciphertext))
-	cfb.XORKeyStream(plaintext, ciphertext)
-	return string(plaintext)
+	return string(data)
+	// block, err := aes.NewCipher([]byte(key))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// ciphertext := decodeBase64(text)
+	// cfb := cipher.NewCFBEncrypter(block, iv)
+	// plaintext := make([]byte, len(ciphertext))
+	// cfb.XORKeyStream(plaintext, ciphertext)
+	// return string(plaintext)
 }
 
 var nums = []rune("1234567890")
@@ -440,10 +444,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		urlPieces := strings.Split(x.WebhookURL, "https://ana-api.myika.co/webhook/")
-		fmt.Println(urlPieces)
-		webhookID := urlPieces[len(urlPieces)-1]
-		fmt.Println(webhookID)
+		webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
 		if isBase64(webhookID) {
 			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
 		}
@@ -508,11 +509,9 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 	}
 
 	//set webhook URL
-	plainWebhookID := generateWebhookID(10)
-	fmt.Println(plainWebhookID)
+	plainWebhookID := generateWebhookID(100)
 	encryptedWebhookID := encrypt(reqUser.EncryptKey, plainWebhookID)
 	newBot.WebhookURL = "https://ana-api.myika.co/webhook/" + encryptedWebhookID
-	fmt.Println(newBot.WebhookURL)
 
 	//encrypt sensitive bot data
 	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
