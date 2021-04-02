@@ -479,6 +479,9 @@ func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	//log creation timestamp
+	newEx.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
+
 	// create new listing in DB
 	kind := "ExchangeConnection"
 	newUserKey := datastore.IncompleteKey(kind, nil)
