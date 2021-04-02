@@ -50,6 +50,11 @@ type loginReq struct {
 	Password string `json:"password"`
 }
 
+type webHookResponse struct {
+	Msg  string `json:"message"`
+	Size string `json:"size"`
+}
+
 type User struct {
 	Name       string `json:"name"`
 	Email      string `json:"email"`
@@ -676,6 +681,22 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 	addBot(w, r, false, newBot, reqUser) //empty Bot struct passed just for compiler
 }
 
+func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	//TODO: get {id} and find user that matches
+
+	//decode/unmarshall the body
+	//two properties: "msg", "size"
+	var webHookRes webHookResponse
+	err := json.NewDecoder(r.Body).Decode(&webHookRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println(webHookRes.Msg)
+	fmt.Println(webHookRes.Size)
+}
+
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -697,6 +718,7 @@ func main() {
 	router.Methods("GET").Path("/bots").HandlerFunc(getAllBotsHandler)
 	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
 	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler) //pass aggregate ID in URL
+	router.Methods("POST").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
