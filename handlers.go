@@ -396,6 +396,17 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//req validity check
+	if webHookReq.User == "" {
+		data := jsonResponse{
+			Msg:  "User field in webhook body nil!",
+			Body: "Must pass User field in webhook body JSON.",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
 	// get user with ID
 	var webhookUser User
 	intUserID, _ := strconv.Atoi(webHookReq.User)
