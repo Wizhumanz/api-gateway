@@ -155,6 +155,14 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	botsResp := make([]Bot, 0)
 
+	//check for user query string
+	if len(r.URL.Query().Get("user")) == 0 {
+		data := jsonResponse{Msg: "User param missing.", Body: "User param must be passed in query string."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
 		ID:       r.URL.Query()["user"][0],
