@@ -52,7 +52,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if authSuccess {
 		data = jsonResponse{
 			Msg:  "Successfully logged in!",
-			Body: loggedInUser.String(),
+			Body: fmt.Sprint(loggedInUser.K.ID),
 		}
 		w.WriteHeader(http.StatusOK)
 	} else {
