@@ -14,8 +14,17 @@ import (
 
 	"cloud.google.com/go/datastore"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 )
+
+var googleProjectID = "myika-anastasia"
+var redisHost = os.Getenv("REDISHOST")
+var redisPort = os.Getenv("REDISPORT")
+var redisAddr = fmt.Sprintf("%s:%s", redisHost, redisPort)
+var rdb *redis.Client
+var client *datastore.Client
+var ctx context.Context
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())

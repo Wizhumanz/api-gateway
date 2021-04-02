@@ -1,13 +1,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"os"
 	"reflect"
 
 	"cloud.google.com/go/datastore"
-	"github.com/go-redis/redis/v8"
 )
 
 // API types
@@ -44,15 +41,6 @@ type User struct {
 	Email      string         `json:"email"`
 	Password   string         `json:"password"`
 	EncryptKey string
-}
-
-type ExchangeConnection struct {
-	K         *datastore.Key `datastore:"__key__"`
-	KEY       string         `json:"KEY"`
-	Name      string         `json:"Name"`
-	APIKey    string         `json:"APIKey"`
-	UserID    string         `json:"UserID"`
-	IsDeleted bool           `json:"IsDeleted"`
 }
 
 func (l User) String() string {
@@ -104,10 +92,11 @@ func (l Bot) String() string {
 	return r
 }
 
-var googleProjectID = "myika-anastasia"
-var redisHost = os.Getenv("REDISHOST")
-var redisPort = os.Getenv("REDISPORT")
-var redisAddr = fmt.Sprintf("%s:%s", redisHost, redisPort)
-var rdb *redis.Client
-var client *datastore.Client
-var ctx context.Context
+type ExchangeConnection struct {
+	K         *datastore.Key `datastore:"__key__"`
+	KEY       string         `json:"KEY"`
+	Name      string         `json:"Name"`
+	APIKey    string         `json:"APIKey"`
+	UserID    string         `json:"UserID"`
+	IsDeleted bool           `json:"IsDeleted,string"`
+}
