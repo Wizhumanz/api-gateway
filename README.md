@@ -5,6 +5,12 @@ API gateway to receive web app client requests and forward to other services.
 ## Local Dev
 
 ```
+chmod +x run.sh
+./run.sh
+```
+
+Inside `run.sh`:
+```
 export PORT=8000
 
 # build/ directory ignored by git
