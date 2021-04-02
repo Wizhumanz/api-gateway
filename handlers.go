@@ -420,7 +420,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	if len(allBots) == 0 {
 		data := jsonResponse{
 			Msg:  "Unable to get bots for this userID.",
-			Body: "webHookRes.User",
+			Body: webHookRes.User,
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
