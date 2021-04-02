@@ -394,7 +394,7 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tradesResp := make([]TradeAction, 0)
+	exResp := make([]ExchangeConnection, 0)
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
 		ID:       r.URL.Query()["user"][0],
@@ -411,27 +411,27 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 	//configs before running query
 	var query *datastore.Query
 	userIDParam := r.URL.Query()["user"][0]
-	query = datastore.NewQuery("TradeAction").Filter("UserID =", userIDParam)
+	query = datastore.NewQuery("ExchangeConnection").Filter("UserID =", userIDParam)
 
 	//run query
 	t := client.Run(ctx, query)
 	for {
-		var x TradeAction
-		key, err := t.Next(&x)
-		if key != nil {
-			x.KEY = fmt.Sprint(key.ID)
-		}
+		var x ExchangeConnection
+		_, err := t.Next(&x)
 		if err == iterator.Done {
 			break
+		}
+		if x.K.ID != 0 {
+			x.KEY = fmt.Sprint(x.K.ID)
 		}
 		// if err != nil {
 		// 	// Handle error.
 		// }
-		tradesResp = append(tradesResp, x)
+		exResp = append(exResp, x)
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tradesResp)
+	json.NewEncoder(w).Encode(exResp)
 }
 
 func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
