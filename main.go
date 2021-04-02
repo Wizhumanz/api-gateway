@@ -677,6 +677,8 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// initRedis()
 
 	//init
