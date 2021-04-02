@@ -4,19 +4,23 @@ API gateway to receive web app client requests and forward to other services.
 
 ## Local Dev
 
-Serve command: `PORT=8000 go run main.go`
+```
+chmod +x run.sh
+./run.sh
+```
 
-`PORT` env var must be passed for local dev. This env var is passed by default when deployed to Cloud Run.
+Inside `run.sh`:
+```
+export PORT=8000
 
-### [GCP Datastore testing](https://cloud.google.com/datastore/docs/reference/libraries#client-libraries-install-go):
+# build/ directory ignored by git
+go build -o build/api .
 
-1. Must authenticate: `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/auth/my-key.json"` in current shell session.
+build/api
+```
 
-OR local testing with emulator:
 
-1. Install local emulator: `gcloud components install cloud-datastore-emulator`.
-2. [Run local emulator](https://cloud.google.com/datastore/docs/tools/datastore-emulator): `gcloud beta emulators datastore start`.
-3. Set env vars so that local app connects to emulated DB instead of prod: `$(gcloud beta emulators datastore env-init)`.
+`PORT` env var must be passed for local dev. This env var is present by default in Cloud Run production environment.
 
 ### Docker
 
@@ -25,3 +29,7 @@ cd api
 docker build -t <img-name> .
 docker run -e AUTH=password -e PORT=8000 --name <container-name> -p 8000:8000 <img-name>
 ```
+
+### [GCP Datastore testing](https://cloud.google.com/datastore/docs/reference/libraries#client-libraries-install-go):
+
+1. Must authenticate: `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/auth/my-key.json"` in current shell session.
