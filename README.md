@@ -33,3 +33,9 @@ docker run -e AUTH=password -e PORT=8000 --name <container-name> -p 8000:8000 <i
 ### [GCP Datastore testing](https://cloud.google.com/datastore/docs/reference/libraries#client-libraries-install-go):
 
 1. Must authenticate: `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/auth/my-key.json"` in current shell session.
+
+### Testing
+
+`go test -v -run Handler`
+
+where `Handler` is the name match of the test function.
