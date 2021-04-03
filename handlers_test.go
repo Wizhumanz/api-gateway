@@ -8,19 +8,21 @@ import (
 	"testing"
 )
 
-func TestHandlerGetAllBots(t *testing.T) {
-	// type ColorGroup struct {
-	// 	ID     int
-	// 	Name   string
-	// 	Colors []string
-	// }
-	// group := ColorGroup{
-	// 	ID:     1,
-	// 	Name:   "Reds",
-	// 	Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
-	// }
-	// b, err := json.Marshal(group)
+// func TestHandlerCreateNewBot(t *testing.T) {
+// 	type ColorGroup struct {
+// 		ID     int
+// 		Name   string
+// 		Colors []string
+// 	}
+// 	group := ColorGroup{
+// 		ID:     1,
+// 		Name:   "Reds",
+// 		Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
+// 	}
+// 	b, err := json.Marshal(group)
+// }
 
+func TestHandlerGetAllBots(t *testing.T) {
 	req := httptest.NewRequest("GET", "/bots?user="+"5632499082330112", nil)
 	req.Header.Set("Authorization", "trader")
 	w := httptest.NewRecorder()
