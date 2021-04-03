@@ -1,8 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
+	"bytes"
+	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -25,10 +27,31 @@ func TestHandlerGetAllBots(t *testing.T) {
 	getAllBotsHandler(w, req)
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(body)
+
 	if resp.StatusCode != 200 {
 		t.Error("Expected status code to equal 200")
+	}
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	newJsonStr := buf.String()
+	// fmt.Println(newJsonStr)
+
+	var listOfBots []Bot
+	dec := json.NewDecoder(strings.NewReader(newJsonStr))
+	err := dec.Decode(&listOfBots)
+	if err != nil {
+		t.Error("Expected response body to be of type []Bot")
+	}
+	// for i, bot := range listOfBots {
+	// 	fmt.Println(i, bot.K.ID)
+	// }
+	if len(listOfBots) > 0 {
+		for _, bot := range listOfBots {
+			if bot.K.ID == 0 {
+				t.Error("Expected handler to return Bot structs with DB key")
+			}
+		}
 	}
 
 	// fmt.Println(resp.Header.Get("Content-Type")
