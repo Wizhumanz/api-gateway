@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -121,6 +123,15 @@ func initRedis() {
 	})
 }
 
+func initDatastore() {
+	ctx = context.Background()
+	var err error
+	client, err = datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+}
+
 func setupCORS(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*") //temp
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT")
@@ -156,7 +167,7 @@ func authenticateUser(req loginReq) (bool, User) {
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
 	if error != nil {
-		// Handle error.
+		fmt.Println("ISSUES")
 	}
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail

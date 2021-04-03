@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -153,6 +154,11 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "OPTIONS" {
 		return
 	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	botsResp := make([]Bot, 0)
 
 	//check for user query string
@@ -165,7 +171,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       r.URL.Query()["user"][0],
+		ID:       r.URL.Query().Get("user"),
 		Password: auth,
 	}
 	authSuccess, reqUser := authenticateUser(authReq)
@@ -175,7 +181,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 		return
 	}
-
 	//build query based on passed URL params
 	var query *datastore.Query
 	userIDParam := r.URL.Query()["user"][0]
