@@ -109,6 +109,10 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	tradesResp := make([]TradeAction, 0)
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
