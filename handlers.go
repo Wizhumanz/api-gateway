@@ -411,6 +411,10 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
 		ID:       r.URL.Query()["user"][0],
