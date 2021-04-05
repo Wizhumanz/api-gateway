@@ -255,3 +255,57 @@ func TestHandlerCreateNewUser(t *testing.T) {
 		}
 	}
 }
+
+func TestHandlerCreateNewBot(t *testing.T) {
+	values := map[string]string{
+		"Name":                    "Taylor Bot",
+		"UserID":                  "5632499082330112",
+		"ExchangeConnection":      "5634161670881280",
+		"AccountRiskPercPerTrade": "5",
+		"AccountSizePercToTrade":  "12",
+		"IsActive":                "true",
+		"IsArchived":              "false",
+		"Leverage":                "69"}
+
+	json_data, err := json.Marshal(values)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req := httptest.NewRequest("POST", "/user", bytes.NewBuffer(json_data))
+	req.Header.Set("Authorization", "trader")
+	w := httptest.NewRecorder()
+	createNewBotHandler(w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != 201 {
+		t.Error("Expected status code to equal 201")
+	} else {
+		ctx := context.Background()
+		client, err := datastore.NewClient(ctx, googleProjectID)
+		if err != nil {
+			// TODO: Handle error.
+			log.Fatal(err)
+		}
+
+		query := datastore.NewQuery("Bot").Filter("Name =", "Taylor Bot")
+
+		//run query
+		t := client.Run(ctx, query)
+		var x User
+		for {
+			_, err := t.Next(&x)
+			if err == iterator.Done {
+				break
+			}
+		}
+		fmt.Println("working")
+		key := datastore.IDKey("Bot", x.K.ID, nil)
+		if err := client.Delete(ctx, key); err != nil {
+			// TODO: Handle error.
+			log.Fatal(err)
+		}
+	}
+}
