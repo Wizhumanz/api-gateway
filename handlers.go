@@ -88,14 +88,15 @@ func createNewUserHandler(w http.ResponseWriter, r *http.Request) {
 	// create new listing in DB
 	kind := "User"
 	newUserKey := datastore.IncompleteKey(kind, nil)
-	if _, err := client.Put(ctx, newUserKey, &newUser); err != nil {
+	addedKey, err := client.Put(ctx, newUserKey, &newUser)
+	if err != nil {
 		log.Fatalf("Failed to save User: %v", err)
 	}
 
 	// return
 	data := jsonResponse{
 		Msg:  "Added " + newUserKey.String(),
-		Body: newUser.String(),
+		Body: fmt.Sprint(addedKey.ID),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
