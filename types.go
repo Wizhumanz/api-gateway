@@ -79,7 +79,6 @@ type Bot struct {
 	IsActive                bool           `json:"IsActive,string,omitempty"`
 	IsArchived              bool           `json:"IsArchived,string,omitempty"`
 	Leverage                string         `json:"Leverage,omitempty"`
-	WebhookURL              string         `json:"WebhookURL,omitempty"`
 	Timestamp               string         `json:"Timestamp,omitempty"`
 	Ticker                  string         `json:"Ticker,omitempty"`
 }
@@ -103,4 +102,12 @@ type ExchangeConnection struct {
 	UserID    string         `json:"UserID"`
 	IsDeleted bool           `json:"IsDeleted,string"`
 	Timestamp string         `json:"Timestamp"`
+}
+
+type WebhookConnection struct {
+	URL         string   `json:"URL"`
+	BotIDs      []string `json:"BotIDs"`
+	Name        string   `json:"Name"`
+	Description string   `json:"Description"`
+	IsPublic    bool     `json:"IsPublic,string"`
 }
