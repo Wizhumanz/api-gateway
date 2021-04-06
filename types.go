@@ -62,7 +62,7 @@ type TradeAction struct {
 	BotID       string  `json:"BotID"`
 	OrderType   int     `json:"OrderType"`
 	Size        float32 `json:"Size"`
-	TimeStamp   string  `json:"TimeStamp"`
+	Timestamp   string  `json:"Timestamp"`
 	Ticker      string  `json:"Ticker"`
 	Exchange    string  `json:"Exchange"`
 }

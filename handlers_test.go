@@ -140,8 +140,8 @@ func TestHandlerGetAllTrades(t *testing.T) {
 			if trade.Size == 0 {
 				t.Error("Expected handler to return TradeAction structs with Size")
 			}
-			if trade.TimeStamp == "" {
-				t.Error("Expected handler to return TradeAction structs with TimeStamp")
+			if trade.Timestamp == "" {
+				t.Error("Expected handler to return TradeAction structs with Timestamp")
 			}
 			if trade.Ticker == "" {
 				t.Error("Expected handler to return TradeAction structs with Ticker")
