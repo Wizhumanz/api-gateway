@@ -56,6 +56,7 @@ func (l User) String() string {
 
 type TradeAction struct {
 	KEY         string  `json:"KEY,omitempty"`
+	UserID      string  `json:"UserID,omitempty"`
 	Action      string  `json:"Action"`
 	AggregateID int     `json:"AggregateID,string"`
 	BotID       string  `json:"BotID"`

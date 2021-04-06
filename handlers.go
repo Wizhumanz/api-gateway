@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -109,6 +110,10 @@ func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	tradesResp := make([]TradeAction, 0)
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
@@ -154,11 +159,24 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "OPTIONS" {
 		return
 	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	botsResp := make([]Bot, 0)
+
+	//check for user query string
+	if len(r.URL.Query().Get("user")) == 0 {
+		data := jsonResponse{Msg: "User param missing.", Body: "User param must be passed in query string."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
-		ID:       r.URL.Query()["user"][0],
+		ID:       r.URL.Query().Get("user"),
 		Password: auth,
 	}
 	authSuccess, reqUser := authenticateUser(authReq)
@@ -168,7 +186,6 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 		return
 	}
-
 	//build query based on passed URL params
 	var query *datastore.Query
 	userIDParam := r.URL.Query()["user"][0]
@@ -393,6 +410,10 @@ func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
 	}
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))

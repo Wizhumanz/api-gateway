@@ -30,14 +30,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	// initRedis()
-
-	//init
-	ctx = context.Background()
-	var err error
-	client, err = datastore.NewClient(ctx, googleProjectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
+	initDatastore()
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET").Path("/").HandlerFunc(indexHandler)
