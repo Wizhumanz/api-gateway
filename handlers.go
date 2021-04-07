@@ -685,9 +685,13 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	t := client.Run(ctx, query)
 	for {
 		var x WebhookConnection
-		_, err := t.Next(&x)
+		key, err := t.Next(&x)
 		if err == iterator.Done {
 			break
+		}
+
+		if key != nil {
+			x.KEY = fmt.Sprint(key.ID)
 		}
 		// if err != nil {
 		// 	// Handle error.
