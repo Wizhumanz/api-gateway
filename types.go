@@ -81,6 +81,7 @@ type Bot struct {
 	Leverage                string         `json:"Leverage,omitempty"`
 	Timestamp               string         `json:"Timestamp,omitempty"`
 	Ticker                  string         `json:"Ticker,omitempty"`
+	WebhookConn             string         `json:"WebhookConn"`
 }
 
 func (l Bot) String() string {
@@ -105,9 +106,10 @@ type ExchangeConnection struct {
 }
 
 type WebhookConnection struct {
-	URL         string   `json:"URL"`
-	BotIDs      []string `json:"BotIDs"`
-	Name        string   `json:"Name"`
-	Description string   `json:"Description"`
-	IsPublic    bool     `json:"IsPublic,string"`
+	K           *datastore.Key `datastore:"__key__"`
+	URL         string         `json:"URL"`
+	BotIDs      []string       `json:"BotIDs"`
+	Name        string         `json:"Name"`
+	Description string         `json:"Description"`
+	IsPublic    bool           `json:"IsPublic,string"`
 }

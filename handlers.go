@@ -259,7 +259,44 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 	}
 	kind := "Bot"
 	newBotKey = datastore.IncompleteKey(kind, nil)
-	if _, err := clientAdd.Put(ctx, newBotKey, &newBot); err != nil {
+	botKey, err := clientAdd.Put(ctx, newBotKey, &newBot)
+	if err != nil {
+		log.Fatalf("Failed to save Bot: %v", err)
+	}
+
+	//add BotID to designated WebhookConnection
+	var webhookResp WebhookConnection
+
+	//configs before running query
+	var query *datastore.Query
+	intID, _ := strconv.Atoi(newBot.WebhookConn)
+	key := datastore.IDKey("WebhookConnection", int64(intID), nil)
+	query = datastore.NewQuery("WebhookConnection").Filter("__key__ =", key)
+
+	//run query
+	t := client.Run(ctx, query)
+	for {
+		var x WebhookConnection
+		_, err := t.Next(&x)
+		if err == iterator.Done {
+			break
+		}
+		// if err != nil {
+		// 	// Handle error.
+		// }
+		webhookResp = x
+	}
+
+	webhookResp.BotIDs = append(webhookResp.BotIDs, fmt.Sprint(botKey.ID))
+
+	var newWebKey *datastore.Key
+	client, err := datastore.NewClient(ctx, googleProjectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	newkind := "WebhookConnection"
+	newWebKey = datastore.IncompleteKey(newkind, nil)
+	if _, err := client.Put(ctx, newWebKey, &webhookResp); err != nil {
 		log.Fatalf("Failed to save Bot: %v", err)
 	}
 
@@ -664,7 +701,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func getAllWebhookConnection(w http.ResponseWriter, r *http.Request) {
+func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
@@ -699,7 +736,7 @@ func getAllWebhookConnection(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(webhookResp)
 }
 
-func addNewWebhookConnection(w http.ResponseWriter, r *http.Request) {
+func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
