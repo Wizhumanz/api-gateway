@@ -14,6 +14,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/gorilla/mux"
+	"gitlab.com/myikaco/msngr"
 	"google.golang.org/api/iterator"
 )
 
@@ -243,9 +244,9 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 	// newBot.WebhookURL = "https://ana-api.myika.co/webhook/" + encryptedWebhookID
 
 	//encrypt sensitive bot data
-	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
-	newBot.AccountSizePercToTrade = encrypt(reqUser.EncryptKey, newBot.AccountSizePercToTrade)
-	newBot.Leverage = encrypt(reqUser.EncryptKey, newBot.Leverage)
+	newBot.AccountRiskPercPerTrade = encrypt(newBot.AccountRiskPercPerTrade)
+	newBot.AccountSizePercToTrade = encrypt(newBot.AccountSizePercToTrade)
+	newBot.Leverage = encrypt(newBot.Leverage)
 
 	//set timestamp
 	newBot.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
@@ -582,7 +583,7 @@ func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) 
 	//log creation timestamp
 	newEx.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
 
-	// create new listing in DB
+	// create new ExchangeConnection in DB
 	kind := "ExchangeConnection"
 	newUserKey := datastore.IncompleteKey(kind, nil)
 	if _, err := client.Put(ctx, newUserKey, &newEx); err != nil {
@@ -798,28 +799,16 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get user with ID (to decrypt bot data)
-	var webhookUser User
-	intUserID, _ := strconv.Atoi(webHookReq.User)
-	key := datastore.IDKey("User", int64(intUserID), nil)
-	query := datastore.NewQuery("User").
-		Filter("__key__ =", key)
-	t := client.Run(ctx, query)
-	_, error := t.Next(&webhookUser)
-	if error != nil {
-		// Handle error.
-	}
-
-	// get bot with UserID and WebhookConnectionID
+	// get bots with WebhookConnectionID
 	var allBots []Bot
 	botQuery := datastore.NewQuery("Bot").
-		Order("-Timestamp").
 		Filter("UserID =", webHookReq.User).
 		Filter("WebhookConnectionID =", webhookID)
 	tBot := client.Run(ctx, botQuery)
-	allBots = parseBotsQueryRes(tBot, webhookUser)
+	allBots = parseBotsQueryRes(tBot, User{})
 
 	if len(allBots) == 0 {
+		//TODO: alert user of error, not caller
 		data := jsonResponse{
 			Msg:  "Unable to get bots for this userID.",
 			Body: webHookReq.User,
@@ -829,7 +818,66 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	botToUse := allBots[0]
+	for _, botToUse := range allBots {
+		//check bot validity
+		if botToUse.AccountRiskPercPerTrade == "" ||
+			botToUse.AccountSizePercToTrade == "" ||
+			botToUse.Leverage == "" ||
+			botToUse.Ticker == "" {
+			//TODO: alert user of error, not caller
+			data := jsonResponse{
+				Msg:  "Bot with ID invalid: " + botToUse.KEY,
+				Body: webHookReq.User,
+			}
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(data)
+			return
+		}
 
-	//TODO: add new trade info into stream (triggers other services)
+		//add new TradeAction to DB
+		x := TradeAction{
+			UserID:    botToUse.UserID,
+			Action:    "tradeIntentSubmitted",
+			BotID:     string(botToUse.K.ID),
+			Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
+			Ticker:    webHookReq.Ticker,
+		}
+
+		//set aggregate ID (get highest, then increment)
+		var calcTA TradeAction
+		query := datastore.NewQuery("TradeAction").
+			Project("AggregateID").
+			Order("-AggregateID")
+		t := client.Run(ctx, query)
+		_, error := t.Next(&calcTA)
+		if error != nil {
+			// Handle error.
+		}
+		x.AggregateID = x.AggregateID + 1
+
+		// create new TradeAction in DB
+		kind := "TradeAction"
+		newUserKey := datastore.IncompleteKey(kind, nil)
+		if _, err := client.Put(ctx, newUserKey, &x); err != nil {
+			log.Fatalf("Failed to save ExchangeConnection: %v", err)
+		}
+
+		//create redis stream key <userID>:<aggregateID>
+		tradeStreamName := botToUse.UserID + ":" + fmt.Sprint(x.AggregateID)
+
+		//TODO: add new trade info into stream (triggers other services)
+		msgs := []string{}
+		msgs = append(msgs, "TradeStreamName")
+		msgs = append(msgs, tradeStreamName)
+		msgs = append(msgs, "AccountRiskPercPerTrade")
+		msgs = append(msgs, fmt.Sprint(botToUse.AccountRiskPercPerTrade))
+		msgs = append(msgs, "AccountSizePercToTrade")
+		msgs = append(msgs, fmt.Sprint(botToUse.AccountSizePercToTrade))
+		msgs = append(msgs, "Leverage")
+		msgs = append(msgs, fmt.Sprint(botToUse.Leverage))
+		msgs = append(msgs, "Ticker")
+		msgs = append(msgs, fmt.Sprint(botToUse.Ticker))
+
+		msngr.AddToStream("webhookTrades", msgs)
+	}
 }

@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/datastore"
+	"gitlab.com/myikaco/msngr"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
@@ -48,6 +49,10 @@ func main() {
 	router.Methods("DELETE").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
 
 	router.Methods("POST").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
+
+	msngr.GoogleProjectID = "myika-anastasia"
+	msngr.InitRedis()
+	msngr.InitDatastore()
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)

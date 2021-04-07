@@ -30,9 +30,10 @@ type loginReq struct {
 }
 
 type webHookRequest struct {
-	Msg  string `json:"message"`
-	Size string `json:"size"`
-	User string `json:"user"`
+	Msg    string `json:"message"`
+	Size   string `json:"size"`
+	User   string `json:"user"`
+	Ticker string `json:"ticker"`
 }
 
 type User struct {

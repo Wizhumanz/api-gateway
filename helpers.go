@@ -43,58 +43,16 @@ func isBase64(s string) bool {
 	return err == nil
 }
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func generateEncryptKey(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
-
-var iv = []byte{34, 12, 55, 11, 10, 39, 16, 47, 87, 53, 88, 98, 66, 40, 14, 05}
-
-func encodeBase64(b []byte) string {
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-func decodeBase64(s string) []byte {
-	data, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
-func encrypt(key, text string) string {
+func encrypt(text string) string {
 	return base64.StdEncoding.EncodeToString([]byte(text))
-	// block, err := aes.NewCipher([]byte(key))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// plaintext := []byte(text)
-	// cfb := cipher.NewCFBEncrypter(block, iv)
-	// ciphertext := make([]byte, len(plaintext))
-	// cfb.XORKeyStream(ciphertext, plaintext)
-	// return encodeBase64(ciphertext)
 }
 
-func decrypt(key, text string) string {
+func decrypt(text string) string {
 	data, err := base64.StdEncoding.DecodeString(text)
 	if err != nil {
 		panic(err)
 	}
 	return string(data)
-	// block, err := aes.NewCipher([]byte(key))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// ciphertext := decodeBase64(text)
-	// cfb := cipher.NewCFBEncrypter(block, iv)
-	// plaintext := make([]byte, len(ciphertext))
-	// cfb.XORKeyStream(plaintext, ciphertext)
-	// return string(plaintext)
 }
 
 var nums = []rune("1234567890")
@@ -186,13 +144,13 @@ func parseBotsQueryRes(t *datastore.Iterator, reqUser User) []Bot {
 
 		//decrypt props
 		if isBase64(x.AccountRiskPercPerTrade) {
-			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
+			x.AccountRiskPercPerTrade = decrypt(x.AccountRiskPercPerTrade)
 		}
 		if isBase64(x.AccountSizePercToTrade) {
-			x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+			x.AccountSizePercToTrade = decrypt(x.AccountSizePercToTrade)
 		}
 		if isBase64(x.Leverage) {
-			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
+			x.Leverage = decrypt(x.Leverage)
 		}
 		// webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
 		// if isBase64(webhookID) {
