@@ -676,73 +676,6 @@ func deleteExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
-	var webHookReq webHookRequest
-	err := json.NewDecoder(r.Body).Decode(&webHookReq)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	//req validity check
-	if webHookReq.User == "" {
-		data := jsonResponse{
-			Msg:  "User field in webhook body nil!",
-			Body: "Must pass User field in webhook body JSON.",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
-
-	// get user with ID
-	var webhookUser User
-	intUserID, _ := strconv.Atoi(webHookReq.User)
-	key := datastore.IDKey("User", int64(intUserID), nil)
-	query := datastore.NewQuery("User").
-		Filter("__key__ =", key)
-	t := client.Run(ctx, query)
-	_, error := t.Next(&webhookUser)
-	if error != nil {
-		// Handle error.
-	}
-
-	// get the bot referred to by webhookID
-	// webhookID := mux.Vars(r)["id"]
-	var allBots []Bot
-	var botToUse Bot
-	botQuery := datastore.NewQuery("Bot").
-		Filter("UserID =", webHookReq.User)
-	tBot := client.Run(ctx, botQuery)
-	allBots = parseBotsQueryRes(tBot, webhookUser)
-
-	if len(allBots) == 0 {
-		data := jsonResponse{
-			Msg:  "Unable to get bots for this userID.",
-			Body: webHookReq.User,
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
-
-	//find bot that owns webhookURL passed in request
-	// URLToFind := "https://ana-api.myika.co/webhook/" + webhookID
-	// for _, bot := range allBots {
-	// 	if bot.WebhookURL == URLToFind {
-	// 		botToUse = bot
-	// 	}
-	// }
-
-	//TODO: call other services for given bot based on body props
-	data := jsonResponse{
-		Msg:  fmt.Sprintf("Bot to use: \n %s", botToUse.String()),
-		Body: webHookReq.Msg + "/" + webHookReq.Size + "/" + webHookReq.User,
-	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
-}
-
 func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -830,5 +763,64 @@ func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(data)
+}
+
+func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	var webHookReq webHookRequest
+	err := json.NewDecoder(r.Body).Decode(&webHookReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// check userID valid
+	if webHookReq.User == "" {
+		//TODO: alert user of error, not caller
+		data := jsonResponse{
+			Msg:  "User field in webhook body nil!",
+			Body: "Must pass User field in webhook body JSON.",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	// check webhookConnID valid
+	webhookID := mux.Vars(r)["id"]
+	if webhookID == "" {
+		//TODO: alert user of error, not caller
+		data := jsonResponse{
+			Msg:  "Webhook URL invalid.",
+			Body: "No webhook id passed in /webhook/{id}.",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// get bot with UserID and WebhookConnectionID
+	// webhookID := mux.Vars(r)["id"]
+	var botToUse Bot
+	botQuery := datastore.NewQuery("Bot").
+		Filter("UserID =", webHookReq.User).
+		Filter("WebhookConnectionID =", webhookID)
+	tBot := client.Run(ctx, botQuery)
+
+	if len(allBots) == 0 {
+		data := jsonResponse{
+			Msg:  "Unable to get bots for this userID.",
+			Body: webHookReq.User,
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//TODO: call other services for given bot based on body props
+	data := jsonResponse{
+		Msg:  fmt.Sprintf("Bot to use: \n %s", botToUse.String()),
+		Body: webHookReq.Msg + "/" + webHookReq.Size + "/" + webHookReq.User,
+	}
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
 }
