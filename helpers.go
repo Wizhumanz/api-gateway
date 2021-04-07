@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -195,10 +194,10 @@ func parseBotsQueryRes(t *datastore.Iterator, reqUser User) []Bot {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
-		if isBase64(webhookID) {
-			x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
-		}
+		// webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
+		// if isBase64(webhookID) {
+		// 	x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
+		// }
 
 		//event sourcing (pick latest snapshot)
 		if len(botsResp) == 0 {
