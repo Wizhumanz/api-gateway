@@ -40,6 +40,7 @@ func main() {
 	router.Methods("GET").Path("/bots").HandlerFunc(getAllBotsHandler)
 	router.Methods("POST").Path("/bot").HandlerFunc(createNewBotHandler)
 	router.Methods("PUT").Path("/bot/{id}").HandlerFunc(updateBotHandler)
+	router.Methods("DELETE").Path("/bot/{id}").HandlerFunc(deleteBotHandler)
 	router.Methods("GET").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
 	router.Methods("POST").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
 	router.Methods("DELETE").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
