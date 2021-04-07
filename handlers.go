@@ -467,6 +467,7 @@ func deleteBotHandler(w http.ResponseWriter, r *http.Request) {
 	// add new row to DB
 	botToDel := bots[len(bots)-1]
 	botToDel.IsArchived = true
+	botToDel.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
 	kind := "Bot"
 	newKey := datastore.IncompleteKey(kind, nil)
 	if _, err := client.Put(ctx, newKey, &botToDel); err != nil {
