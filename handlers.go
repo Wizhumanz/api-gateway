@@ -724,6 +724,12 @@ func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
 	var webhook WebhookConnection
 
+	error := json.NewDecoder(r.Body).Decode(&webhook)
+	if error != nil {
+		http.Error(w, error.Error(), http.StatusBadRequest)
+		return
+	}
+
 	webhook.IsPublic = false
 	webhook.URL = "unclejack.com"
 
