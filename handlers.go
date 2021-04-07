@@ -798,13 +798,26 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get user with ID (to decrypt bot data)
+	var webhookUser User
+	intUserID, _ := strconv.Atoi(webHookReq.User)
+	key := datastore.IDKey("User", int64(intUserID), nil)
+	query := datastore.NewQuery("User").
+		Filter("__key__ =", key)
+	t := client.Run(ctx, query)
+	_, error := t.Next(&webhookUser)
+	if error != nil {
+		// Handle error.
+	}
+
 	// get bot with UserID and WebhookConnectionID
-	// webhookID := mux.Vars(r)["id"]
-	var botToUse Bot
+	var allBots []Bot
 	botQuery := datastore.NewQuery("Bot").
+		Order("-Timestamp").
 		Filter("UserID =", webHookReq.User).
 		Filter("WebhookConnectionID =", webhookID)
 	tBot := client.Run(ctx, botQuery)
+	allBots = parseBotsQueryRes(tBot, webhookUser)
 
 	if len(allBots) == 0 {
 		data := jsonResponse{
@@ -816,11 +829,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: call other services for given bot based on body props
-	data := jsonResponse{
-		Msg:  fmt.Sprintf("Bot to use: \n %s", botToUse.String()),
-		Body: webHookReq.Msg + "/" + webHookReq.Size + "/" + webHookReq.User,
-	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
+	botToUse := allBots[0]
+
+	//TODO: add new trade info into stream (triggers other services)
 }
