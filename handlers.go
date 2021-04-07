@@ -406,6 +406,83 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 	addBot(w, r, false, newBot, reqUser) //empty Bot struct passed just for compiler
 }
 
+func deleteBotHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	bots := make([]Bot, 0)
+
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	authSuccess, _ := authenticateUser(authReq)
+	if !authSuccess {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//check if bot already exists to delete
+	botDelID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
+	if unescapeErr != nil {
+		data := jsonResponse{Msg: "Bot ID Parse Error", Body: unescapeErr.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	intID, _ := strconv.Atoi(botDelID)
+	key := datastore.IDKey("Bot", int64(intID), nil)
+	query := datastore.NewQuery("Bot").
+		Filter("__key__ =", key)
+	t := client.Run(ctx, query)
+	for {
+		var x Bot
+		key, err := t.Next(&x)
+		if err == iterator.Done {
+			break
+		}
+		// if err != nil {
+		// 	// Handle error.
+		// }
+		if key != nil {
+			x.KEY = fmt.Sprint(key.ID)
+		}
+		bots = append(bots, x)
+	}
+
+	//return if ExchangeConnection to update doesn't exist
+	isDelIdValid := len(bots) > 0 && bots[0].K.ID != 0
+	if !isDelIdValid {
+		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided ID does not exist."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// add new row to DB
+	botToDel := bots[len(bots)-1]
+	botToDel.IsArchived = true
+	kind := "Bot"
+	newKey := datastore.IncompleteKey(kind, nil)
+	if _, err := client.Put(ctx, newKey, &botToDel); err != nil {
+		log.Fatalf("Failed to delete Bot: %v", err)
+	}
+
+	// return
+	data := jsonResponse{
+		Msg:  "DELETED bot.",
+		Body: fmt.Sprint(botToDel.K.ID),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+	json.NewEncoder(w).Encode(data)
+}
+
 func getAllExchangeConnectionsHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
