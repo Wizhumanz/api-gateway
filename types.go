@@ -55,8 +55,8 @@ func (l User) String() string {
 }
 
 type TradeAction struct {
-	KEY         string  `json:"KEY,omitempty"`
-	UserID      string  `json:"UserID,omitempty"`
+	KEY         string  `json:"KEY"`
+	UserID      string  `json:"UserID"`
 	Action      string  `json:"Action"`
 	AggregateID int     `json:"AggregateID,string"`
 	BotID       string  `json:"BotID"`
@@ -67,19 +67,19 @@ type TradeAction struct {
 }
 
 type Bot struct {
-	KEY                     string         `json:"KEY,omitempty"`
+	KEY                     string         `json:"KEY"`
 	K                       *datastore.Key `datastore:"__key__"`
-	Name                    string         `json:"Name,omitempty"`
-	AggregateID             int            `json:"AggregateID,string,omitempty"`
-	UserID                  string         `json:"UserID,omitempty"`
-	ExchangeConnection      string         `json:"ExchangeConnection,omitempty"`
-	AccountRiskPercPerTrade string         `json:"AccountRiskPercPerTrade,omitempty"`
-	AccountSizePercToTrade  string         `json:"AccountSizePercToTrade,omitempty"`
-	IsActive                bool           `json:"IsActive,string,omitempty"`
-	IsArchived              bool           `json:"IsArchived,string,omitempty"`
-	Leverage                string         `json:"Leverage,omitempty"`
-	Timestamp               string         `json:"Timestamp,omitempty"`
-	Ticker                  string         `json:"Ticker,omitempty"`
+	Name                    string         `json:"Name"`
+	AggregateID             int            `json:"AggregateID,string"`
+	UserID                  string         `json:"UserID"`
+	ExchangeConnection      string         `json:"ExchangeConnection"`
+	AccountRiskPercPerTrade string         `json:"AccountRiskPercPerTrade"`
+	AccountSizePercToTrade  string         `json:"AccountSizePercToTrade"`
+	IsActive                bool           `json:"IsActive,string"`
+	IsArchived              bool           `json:"IsArchived,string"`
+	Leverage                string         `json:"Leverage"`
+	Timestamp               string         `json:"Timestamp"`
+	Ticker                  string         `json:"Ticker"`
 	WebhookConnectionID     string         `json:"WebhookConnectionID"`
 }
 
