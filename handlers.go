@@ -237,11 +237,6 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 		newBot.AggregateID = x.AggregateID + 1
 	}
 
-	//set webhook URL
-	// plainWebhookID := generateWebhookID(100)
-	// encryptedWebhookID := encrypt(reqUser.EncryptKey, plainWebhookID)
-	// newBot.WebhookURL = "https://ana-api.myika.co/webhook/" + encryptedWebhookID
-
 	//encrypt sensitive bot data
 	newBot.AccountRiskPercPerTrade = encrypt(reqUser.EncryptKey, newBot.AccountRiskPercPerTrade)
 	newBot.AccountSizePercToTrade = encrypt(reqUser.EncryptKey, newBot.AccountSizePercToTrade)
@@ -310,14 +305,6 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//don't allow webhookURL passed in body, must be generated randomly
-	// if reqBotData.WebhookURL != "" {
-	// 	data := jsonResponse{Msg: "WebhookURL property of Bot cannot be set explicitly.", Body: "Do not pass WebhookURL property in request body."}
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	json.NewEncoder(w).Encode(data)
-	// 	return
-	// }
-
 	//check if bot already exists to update
 	botToUpdateID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
 	if unescapeErr != nil {
@@ -353,10 +340,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		if isBase64(x.Leverage) {
 			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
 		}
-		// webhookID := strings.TrimPrefix(x.WebhookURL, "https://ana-api.myika.co/webhook/")
-		// if isBase64(webhookID) {
-		// 	x.WebhookURL = "https://ana-api.myika.co/webhook/" + decrypt(reqUser.EncryptKey, webhookID)
-		// }
+
 		botsResp = append(botsResp, x)
 	}
 
@@ -781,6 +765,58 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(webhookResp)
 }
 
+func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	type batchWebhookReq struct {
+		IDs []string `json:"ids"`
+	}
+
+	// decode data
+	var batchReq batchWebhookReq
+	err := json.NewDecoder(r.Body).Decode(&batchReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !(len(batchReq.IDs) > 0) {
+		data := jsonResponse{Msg: "IDs array param empty.", Body: "Pass ids property in json as array of strings."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	var retWebhookConns []WebhookConnection
+	for _, id := range batchReq.IDs {
+		//query object with id
+		var query *datastore.Query
+		intID, _ := strconv.Atoi(id)
+		k := datastore.IDKey("WebhookConnection", int64(intID), nil)
+		query = datastore.NewQuery("WebhookConnection").Filter("__key__ =", k)
+
+		//parse into struct
+		var res WebhookConnection
+		t := client.Run(ctx, query)
+		for {
+			key, err := t.Next(&res)
+			if err == iterator.Done {
+				break
+			}
+
+			if key != nil {
+				res.KEY = fmt.Sprint(key.ID)
+			}
+			// if err != nil {
+			// 	// Handle error.
+			// }
+		}
+		retWebhookConns = append(retWebhookConns, res)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(retWebhookConns)
+}
+
 func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -790,6 +826,10 @@ func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	if flag.Lookup("test.v") != nil {
 		initDatastore()
 	}
+
+	//set webhook URL
+	plainWebhookID := generateWebhookID(100)
+	webhookURL := "https://ana-api.myika.co/webhook/" + plainWebhookID
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
@@ -806,19 +846,19 @@ func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
 	var webhook WebhookConnection
 
-	error := json.NewDecoder(r.Body).Decode(&webhook)
-	if error != nil {
-		http.Error(w, error.Error(), http.StatusBadRequest)
-		return
-	}
+	// error := json.NewDecoder(r.Body).Decode(&webhook)
+	// if error != nil {
+	// 	http.Error(w, error.Error(), http.StatusBadRequest)
+	// 	return
+	// }
 
 	webhook.IsPublic = false
-	webhook.URL = "unclejack.com"
+	webhook.URL = webhookURL
 
 	// create new listing in DB
 	kind := "WebhookConnection"
 	newWebhookKey := datastore.IncompleteKey(kind, nil)
-	_, err := client.Put(ctx, newWebhookKey, &webhook)
+	newKey, err := client.Put(ctx, newWebhookKey, &webhook)
 	if err != nil {
 		log.Fatalf("Failed to save User: %v", err)
 	}
@@ -826,7 +866,7 @@ func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	// return
 	data := jsonResponse{
 		Msg:  "Added " + newWebhookKey.String(),
-		Body: "unclejack.com",
+		Body: fmt.Sprint(newKey.ID),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
