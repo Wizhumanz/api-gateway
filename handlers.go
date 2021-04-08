@@ -26,6 +26,10 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	var data jsonResponse
 	w.Header().Set("Content-Type", "application/json")
 	data = jsonResponse{Msg: "Anastasia API Gateway", Body: "Ready"}
@@ -38,6 +42,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
 	}
 
 	var newLoginReq loginReq
@@ -71,6 +79,10 @@ func createNewUserHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
 	}
 
 	var newUser User
@@ -218,6 +230,14 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 // almost identical logic with create and update (event sourcing)
 func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, reqUser User) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
 	newBot := reqBot
 
 	// if updating, name field not passed in JSON body, so must fill
@@ -274,6 +294,10 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
 	}
 
 	botsResp := make([]Bot, 0)
@@ -366,6 +390,10 @@ func createNewBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	// decode data
 	var newBot Bot
 	err := json.NewDecoder(r.Body).Decode(&newBot)
@@ -395,6 +423,10 @@ func deleteBotHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
 	}
 
 	bots := make([]Bot, 0)
@@ -556,6 +588,10 @@ func createNewExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	var newEx ExchangeConnection
 	// decode data
 	err := json.NewDecoder(r.Body).Decode(&newEx)
@@ -588,6 +624,10 @@ func deleteExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
 	}
 
 	exs := make([]ExchangeConnection, 0)
@@ -662,6 +702,15 @@ func deleteExchangeConnectionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	var webHookReq webHookRequest
 	err := json.NewDecoder(r.Body).Decode(&webHookReq)
 	if err != nil {
@@ -767,6 +816,15 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
 	//get query string ids
 	rawIDs := r.URL.Query()["ids"][0]
 	batchReqIDs := strings.Split(rawIDs, " ")
