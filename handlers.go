@@ -765,6 +765,58 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(webhookResp)
 }
 
+func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	type batchWebhookReq struct {
+		IDs []string `json:"ids"`
+	}
+
+	// decode data
+	var batchReq batchWebhookReq
+	err := json.NewDecoder(r.Body).Decode(&batchReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !(len(batchReq.IDs) > 0) {
+		data := jsonResponse{Msg: "IDs array param empty.", Body: "Pass ids property in json as array of strings."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	var retWebhookConns []WebhookConnection
+	for _, id := range batchReq.IDs {
+		//query object with id
+		var query *datastore.Query
+		intID, _ := strconv.Atoi(id)
+		k := datastore.IDKey("WebhookConnection", int64(intID), nil)
+		query = datastore.NewQuery("WebhookConnection").Filter("__key__ =", k)
+
+		//parse into struct
+		var res WebhookConnection
+		t := client.Run(ctx, query)
+		for {
+			key, err := t.Next(&res)
+			if err == iterator.Done {
+				break
+			}
+
+			if key != nil {
+				res.KEY = fmt.Sprint(key.ID)
+			}
+			// if err != nil {
+			// 	// Handle error.
+			// }
+		}
+		retWebhookConns = append(retWebhookConns, res)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(retWebhookConns)
+}
+
 func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
