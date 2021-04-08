@@ -35,10 +35,6 @@ type webHookRequest struct {
 	User string `json:"user"`
 }
 
-type batchWebhookReq struct {
-	IDs []string `json:"ids"`
-}
-
 type User struct {
 	K          *datastore.Key `datastore:"__key__"`
 	Name       string         `json:"name"`

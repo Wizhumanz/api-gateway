@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -766,18 +767,11 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Inside handler")
-	// decode data
-	var batchReq batchWebhookReq
-	err := json.NewDecoder(r.Body).Decode(&batchReq)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	//get query string ids
+	rawIDs := r.URL.Query()["ids"][0]
+	batchReqIDs := strings.Split(rawIDs, " ")
 
-	fmt.Println(batchReq)
-
-	if !(len(batchReq.IDs) > 0) {
+	if !(len(batchReqIDs) > 0) {
 		data := jsonResponse{Msg: "IDs array param empty.", Body: "Pass ids property in json as array of strings."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
@@ -785,8 +779,7 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var retWebhookConns []WebhookConnection
-	for _, id := range batchReq.IDs {
-		fmt.Printf("Querying %s\n", id)
+	for _, id := range batchReqIDs {
 		//query object with id
 		var query *datastore.Query
 		intID, _ := strconv.Atoi(id)
@@ -804,11 +797,12 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
 			if key != nil {
 				res.KEY = fmt.Sprint(key.ID)
+			} else {
+				break
 			}
 			// if err != nil {
 			// 	// Handle error.
 			// }
-			fmt.Printf("Fetched %s\n", res.URL)
 		}
 		retWebhookConns = append(retWebhookConns, res)
 	}
