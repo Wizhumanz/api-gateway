@@ -106,6 +106,7 @@ type ExchangeConnection struct {
 
 type WebhookConnection struct {
 	K           *datastore.Key `datastore:"__key__"`
+	KEY         string         `json:"KEY"`
 	URL         string         `json:"URL"`
 	Name        string         `json:"Name"`
 	Description string         `json:"Description"`
