@@ -766,6 +766,7 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Inside handler")
 	// decode data
 	var batchReq batchWebhookReq
 	err := json.NewDecoder(r.Body).Decode(&batchReq)
