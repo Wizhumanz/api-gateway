@@ -766,10 +766,6 @@ func getAllWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
-	type batchWebhookReq struct {
-		IDs []string `json:"ids"`
-	}
-
 	// decode data
 	var batchReq batchWebhookReq
 	err := json.NewDecoder(r.Body).Decode(&batchReq)
@@ -777,6 +773,8 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	fmt.Println(batchReq)
 
 	if !(len(batchReq.IDs) > 0) {
 		data := jsonResponse{Msg: "IDs array param empty.", Body: "Pass ids property in json as array of strings."}
@@ -787,6 +785,7 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 
 	var retWebhookConns []WebhookConnection
 	for _, id := range batchReq.IDs {
+		fmt.Printf("Querying %s\n", id)
 		//query object with id
 		var query *datastore.Query
 		intID, _ := strconv.Atoi(id)
@@ -808,6 +807,7 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 			// if err != nil {
 			// 	// Handle error.
 			// }
+			fmt.Printf("Fetched %s\n", res.URL)
 		}
 		retWebhookConns = append(retWebhookConns, res)
 	}
