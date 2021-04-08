@@ -132,9 +132,11 @@ func initDatastore() {
 }
 
 func setupCORS(w *http.ResponseWriter, req *http.Request) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*") //temp
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, auth")
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Content-Type", "text/html; charset=utf-8")
+	//(*w).Header().Set("Access-Control-Expose-Headers", "Authorization")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, auth, Cache-Control, Pragma, Expires")
 }
 
 func HashPassword(password string) (string, error) {
