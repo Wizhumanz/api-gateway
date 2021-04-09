@@ -134,9 +134,6 @@ func TestHandlerGetAllTrades(t *testing.T) {
 			if trade.BotID == "" {
 				t.Error("Expected handler to return TradeAction structs with BotID")
 			}
-			if trade.OrderType != 0 && trade.OrderType != 1 {
-				t.Error("Expected handler to return TradeAction structs with OrderType")
-			}
 			if trade.Size == 0 {
 				t.Error("Expected handler to return TradeAction structs with Size")
 			}
