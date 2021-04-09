@@ -880,18 +880,32 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//get webhookConn ID
+	var theWebConn WebhookConnection
+	fullURL := "https://ana-api.myika.co" + r.URL.String()
+	webConnQuery := datastore.NewQuery("WebhookConnection").
+		Filter("URL =", fullURL)
+	tWebConn := client.Run(ctx, webConnQuery)
+	_, webConnErr := tWebConn.Next(&theWebConn)
+	if webConnErr != nil {
+		//handle error
+	}
+	theWebConn.KEY = fmt.Sprint(theWebConn.K.ID)
+
 	//get bot(s) to execute strategy on
 	var allBots []Bot
 	var botQuery *datastore.Query
 	if webHookReq.User == "" {
+		fmt.Println("PUBLIC strat")
 		//public strategy
 		botQuery = datastore.NewQuery("Bot").
-			Filter("WebhookConnectionID =", webhookID)
+			Filter("WebhookConnectionID =", theWebConn.KEY)
 	} else {
+		fmt.Println("PRIVATE strat")
 		//private strategy (custom webhookURL)
 		botQuery = datastore.NewQuery("Bot").
 			Filter("UserID =", webHookReq.User).
-			Filter("WebhookConnectionID =", webhookID)
+			Filter("WebhookConnectionID =", theWebConn.KEY)
 	}
 	tBot := client.Run(ctx, botQuery)
 	allBots = parseBotsQueryRes(tBot, User{})
@@ -909,6 +923,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	//exec trade for each bot
 	for _, botToUse := range allBots {
+		fmt.Println(botToUse.String())
 		//check bot validity
 		if botToUse.AccountRiskPercPerTrade == "" ||
 			botToUse.AccountSizePercToTrade == "" ||

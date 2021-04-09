@@ -112,3 +112,14 @@ type WebhookConnection struct {
 	Description string         `json:"Description"`
 	IsPublic    bool           `json:"IsPublic,string"`
 }
+
+func (l WebhookConnection) String() string {
+	r := ""
+	v := reflect.ValueOf(l)
+	typeOfL := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		r = r + fmt.Sprintf("%s: %v, ", typeOfL.Field(i).Name, v.Field(i).Interface())
+	}
+	return r
+}
