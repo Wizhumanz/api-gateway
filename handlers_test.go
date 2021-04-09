@@ -134,26 +134,16 @@ func TestHandlerGetAllTrades(t *testing.T) {
 			if trade.BotID == "" {
 				t.Error("Expected handler to return TradeAction structs with BotID")
 			}
-			if trade.Size == 0 {
-				t.Error("Expected handler to return TradeAction structs with Size")
-			}
 			if trade.Timestamp == "" {
 				t.Error("Expected handler to return TradeAction structs with Timestamp")
 			}
 			if trade.Ticker == "" {
 				t.Error("Expected handler to return TradeAction structs with Ticker")
 			}
-			if trade.Exchange == "" {
-				t.Error("Expected handler to return TradeAction structs with Exchange")
-			}
-			if trade.KEY == "" {
-				t.Error("Expected handler to return TradeAction structs with KEY")
-			}
 		}
+	} else {
+		t.Error("Expected handler to return at least one TradeAction, instead received empty slice")
 	}
-
-	// fmt.Println(resp.Header.Get("Content-Type")
-
 }
 
 func TestHandlerGetAllExchangeConnections(t *testing.T) {
@@ -235,14 +225,20 @@ func TestHandlerCreateNewUser(t *testing.T) {
 		query := datastore.NewQuery("User").Filter("Name =", "JOHN DOE")
 
 		//run query
-		t := client.Run(ctx, query)
+		tds := client.Run(ctx, query)
 		var x User
 		for {
-			_, err := t.Next(&x)
+			_, err := tds.Next(&x)
 			if err == iterator.Done {
 				break
 			}
 		}
+
+		if x.Name != "JOHN DOE" {
+			t.Error("Expected new User name to be defined")
+		}
+
+		//cleanup DEL user
 		key := datastore.IDKey("User", x.K.ID, nil)
 		if err := client.Delete(ctx, key); err != nil {
 			// TODO: Handle error.
@@ -253,7 +249,7 @@ func TestHandlerCreateNewUser(t *testing.T) {
 
 func TestHandlerCreateNewBot(t *testing.T) {
 	values := map[string]string{
-		"Name":                    "Taylor Bot",
+		"Name":                    "TAYLOR BOT",
 		"UserID":                  "5632499082330112",
 		"ExchangeConnection":      "5634161670881280",
 		"AccountRiskPercPerTrade": "5",
@@ -285,17 +281,22 @@ func TestHandlerCreateNewBot(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		query := datastore.NewQuery("Bot").Filter("Name =", "Taylor Bot")
+		query := datastore.NewQuery("Bot").Filter("Name =", "TAYLOR BOT")
 
 		//run query
-		t := client.Run(ctx, query)
+		tds := client.Run(ctx, query)
 		var x User
 		for {
-			_, err := t.Next(&x)
+			_, err := tds.Next(&x)
 			if err == iterator.Done {
 				break
 			}
 		}
+
+		if x.Name != "TAYLOR BOT" {
+			t.Error("Expected new Bot name to be defined")
+		}
+
 		key := datastore.IDKey("Bot", x.K.ID, nil)
 		if err := client.Delete(ctx, key); err != nil {
 			// TODO: Handle error.

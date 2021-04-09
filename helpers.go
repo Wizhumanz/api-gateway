@@ -126,7 +126,7 @@ func authenticateUser(req loginReq) (bool, User) {
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
 	if error != nil {
-		fmt.Println("ISSUES")
+		fmt.Println(error.Error())
 	}
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail

@@ -945,6 +945,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			BotID:     fmt.Sprint(botToUse.K.ID),
 			Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
 			Ticker:    webhookReq.Ticker,
+			Exchange:  botToUse.ExchangeConnection,
 		}
 
 		//set aggregate ID + trade desc
