@@ -868,17 +868,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check userID valid
-	if webHookReq.User == "" {
-		//TODO: alert user of error, not caller
-		data := jsonResponse{
-			Msg:  "User field in webhook body nil!",
-			Body: "Must pass User field in webhook body JSON.",
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(data)
-		return
-	}
 	// check webhookConnID valid
 	webhookID := mux.Vars(r)["id"]
 	if webhookID == "" {
@@ -892,11 +881,19 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// get bots with WebhookConnectionID
+	//get bot(s) to execute strategy on
 	var allBots []Bot
-	botQuery := datastore.NewQuery("Bot").
-		Filter("UserID =", webHookReq.User).
-		Filter("WebhookConnectionID =", webhookID)
+	var botQuery *datastore.Query
+	if webHookReq.User == "" {
+		//public strategy
+		botQuery = datastore.NewQuery("Bot").
+			Filter("WebhookConnectionID =", webhookID)
+	} else {
+		//private strategy (custom webhookURL)
+		botQuery = datastore.NewQuery("Bot").
+			Filter("UserID =", webHookReq.User).
+			Filter("WebhookConnectionID =", webhookID)
+	}
 	tBot := client.Run(ctx, botQuery)
 	allBots = parseBotsQueryRes(tBot, User{})
 
@@ -911,6 +908,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//exec trade for each bot
 	for _, botToUse := range allBots {
 		//check bot validity
 		if botToUse.AccountRiskPercPerTrade == "" ||
@@ -920,14 +918,14 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			//TODO: alert user of error, not caller
 			data := jsonResponse{
 				Msg:  "Bot with ID invalid: " + botToUse.KEY,
-				Body: webHookReq.User,
+				Body: botToUse.String(),
 			}
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(data)
 			return
 		}
 
-		//add new TradeAction to DB
+		// save new TradeAction to DB //
 		x := TradeAction{
 			UserID:    botToUse.UserID,
 			Action:    "tradeIntentSubmitted",
@@ -935,7 +933,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
 			Ticker:    webHookReq.Ticker,
 		}
-
 		//set aggregate ID (get highest, then increment)
 		var calcTA TradeAction
 		query := datastore.NewQuery("TradeAction").
@@ -946,19 +943,18 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		if error != nil {
 			// Handle error.
 		}
-		x.AggregateID = x.AggregateID + 1
-
-		// create new TradeAction in DB
+		x.AggregateID = calcTA.AggregateID + 1
+		//add row to DB
 		kind := "TradeAction"
 		newUserKey := datastore.IncompleteKey(kind, nil)
 		if _, err := client.Put(ctx, newUserKey, &x); err != nil {
 			log.Fatalf("Failed to save ExchangeConnection: %v", err)
 		}
 
-		//create redis stream key <userID>:<aggregateID>
-		tradeStreamName := botToUse.UserID + ":" + fmt.Sprint(x.AggregateID)
+		//create redis stream key <aggregateID>:<userID>:<botID>
+		tradeStreamName := fmt.Sprint(x.AggregateID) + ":" + botToUse.UserID + ":" + botToUse.KEY
 
-		//TODO: add new trade info into stream (triggers other services)
+		// add new trade info into stream (triggers other services)
 		msgs := []string{}
 		msgs = append(msgs, "TradeStreamName")
 		msgs = append(msgs, tradeStreamName)
