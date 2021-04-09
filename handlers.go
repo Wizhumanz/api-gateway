@@ -949,7 +949,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//set aggregate ID + trade desc
-		switch webhookReq.TradeType {
+		switch webhookReq.TradeActionType {
 		case "ENTER":
 			fmt.Println("NEW aggr ID")
 			// NEW aggr ID (get highest, then increment)
@@ -982,7 +982,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			x.AggregateID = calcTA.AggregateID
-			x.Action = webhookReq.TradeType + "IntentSubmitted"
+			x.Action = webhookReq.TradeActionType + "IntentSubmitted"
 		}
 
 		//add row to DB
@@ -997,6 +997,8 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 		// add new trade info into stream (triggers other services)
 		msgs := []string{}
+		msgs = append(msgs, "CMD")
+		msgs = append(msgs, webhookReq.TradeActionType)
 		msgs = append(msgs, "TradeStreamName")
 		msgs = append(msgs, tradeStreamName)
 		msgs = append(msgs, "AccountRiskPercPerTrade")
