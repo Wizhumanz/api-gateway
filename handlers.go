@@ -860,8 +860,8 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	var webHookReq webHookRequest
-	err := json.NewDecoder(r.Body).Decode(&webHookReq)
+	var webhookReq webHookRequest
+	err := json.NewDecoder(r.Body).Decode(&webhookReq)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -895,7 +895,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	//get bot(s) to execute strategy on
 	var allBots []Bot
 	var botQuery *datastore.Query
-	if webHookReq.User == "" {
+	if webhookReq.User == "" {
 		fmt.Println("PUBLIC strat")
 		//public strategy
 		botQuery = datastore.NewQuery("Bot").
@@ -904,7 +904,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PRIVATE strat")
 		//private strategy (custom webhookURL)
 		botQuery = datastore.NewQuery("Bot").
-			Filter("UserID =", webHookReq.User).
+			Filter("UserID =", webhookReq.User).
 			Filter("WebhookConnectionID =", theWebConn.KEY)
 	}
 	tBot := client.Run(ctx, botQuery)
@@ -914,7 +914,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		//TODO: alert user of error, not caller
 		data := jsonResponse{
 			Msg:  "Unable to get bots for this userID.",
-			Body: webHookReq.User,
+			Body: webhookReq.User,
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
@@ -942,22 +942,48 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		// save new TradeAction to DB //
 		x := TradeAction{
 			UserID:    botToUse.UserID,
-			Action:    "tradeIntentSubmitted",
 			BotID:     fmt.Sprint(botToUse.K.ID),
 			Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
-			Ticker:    webHookReq.Ticker,
+			Ticker:    webhookReq.Ticker,
 		}
-		//set aggregate ID (get highest, then increment)
-		var calcTA TradeAction
-		query := datastore.NewQuery("TradeAction").
-			Project("AggregateID").
-			Order("-AggregateID")
-		t := client.Run(ctx, query)
-		_, error := t.Next(&calcTA)
-		if error != nil {
-			// Handle error.
+
+		//set aggregate ID + trade desc
+		switch webhookReq.TradeType {
+		case "ENTER":
+			fmt.Println("NEW aggr ID")
+			// NEW aggr ID (get highest, then increment)
+			var calcTA TradeAction
+			query := datastore.NewQuery("TradeAction").
+				Project("AggregateID").
+				Order("-AggregateID")
+			t := client.Run(ctx, query)
+			_, error := t.Next(&calcTA)
+			if error != nil {
+				// Handle error.
+			}
+
+			x.AggregateID = calcTA.AggregateID + 1
+			x.Action = "ENTERIntentSubmitted"
+		case "EXIT", "SL", "TP":
+			fmt.Println("REUSING aggr ID")
+			// use previous aggr ID from existing trade
+			var calcTA TradeAction
+			//NOTE: one bot can only be in one trade at any one time
+			query := datastore.NewQuery("TradeAction").
+				Filter("UserID =", botToUse.UserID).
+				Filter("BotID =", fmt.Sprint(botToUse.K.ID))
+				// Project("AggregateID").
+				// Order("-AggregateID")
+			t := client.Run(ctx, query)
+			_, error := t.Next(&calcTA)
+			if error != nil {
+				// Handle error.
+			}
+
+			x.AggregateID = calcTA.AggregateID
+			x.Action = webhookReq.TradeType + "IntentSubmitted"
 		}
-		x.AggregateID = calcTA.AggregateID + 1
+
 		//add row to DB
 		kind := "TradeAction"
 		newUserKey := datastore.IncompleteKey(kind, nil)
@@ -982,5 +1008,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		msgs = append(msgs, fmt.Sprint(botToUse.Ticker))
 
 		msngr.AddToStream("webhookTrades", msgs)
+		fmt.Println("-")
 	}
 }
