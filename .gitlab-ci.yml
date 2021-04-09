@@ -17,6 +17,7 @@ integration-tests:
   stage: test
   image: $IMAGE
   script:
+    - export GOOGLE_APPLICATION_CREDENTIALS=$GCLOUD_ACC_KEY
     - go test -v
 
 deploy:
