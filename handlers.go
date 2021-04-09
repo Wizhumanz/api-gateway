@@ -97,7 +97,6 @@ func createNewUserHandler(w http.ResponseWriter, r *http.Request) {
 	newUser.Password, _ = HashPassword(newUser.Password)
 	// create encrypt key of fixed length
 	rand.Seed(time.Now().UnixNano())
-	newUser.EncryptKey = generateEncryptKey(32)
 
 	// create new listing in DB
 	kind := "User"
@@ -358,13 +357,13 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 		//decrypt props
 		if isBase64(x.AccountRiskPercPerTrade) {
-			x.AccountRiskPercPerTrade = decrypt(reqUser.EncryptKey, x.AccountRiskPercPerTrade)
+			x.AccountRiskPercPerTrade = decrypt(x.AccountRiskPercPerTrade)
 		}
 		if isBase64(x.AccountSizePercToTrade) {
-			x.AccountSizePercToTrade = decrypt(reqUser.EncryptKey, x.AccountSizePercToTrade)
+			x.AccountSizePercToTrade = decrypt(x.AccountSizePercToTrade)
 		}
 		if isBase64(x.Leverage) {
-			x.Leverage = decrypt(reqUser.EncryptKey, x.Leverage)
+			x.Leverage = decrypt(x.Leverage)
 		}
 
 		botsResp = append(botsResp, x)
@@ -929,7 +928,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		x := TradeAction{
 			UserID:    botToUse.UserID,
 			Action:    "tradeIntentSubmitted",
-			BotID:     string(botToUse.K.ID),
+			BotID:     fmt.Sprint(botToUse.K.ID),
 			Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
 			Ticker:    webHookReq.Ticker,
 		}
