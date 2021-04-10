@@ -64,9 +64,7 @@ func TestHandlerCreateNewExchangeConnection(t *testing.T) {
 		"APIKey":    "hcuid27495hf727erer98974hfh2f9",
 		"UserID":    "5632499082330112",
 		"IsDeleted": "false"}
-
 	json_data, err := json.Marshal(values)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,7 +73,6 @@ func TestHandlerCreateNewExchangeConnection(t *testing.T) {
 	req.Header.Set("Authorization", "trader")
 	w := httptest.NewRecorder()
 	createNewExchangeConnectionHandler(w, req)
-
 	resp := w.Result()
 
 	if resp.StatusCode != 201 {
@@ -87,18 +84,38 @@ func TestHandlerCreateNewExchangeConnection(t *testing.T) {
 			// TODO: Handle error.
 			log.Fatal(err)
 		}
-
 		query := datastore.NewQuery("ExchangeConnection").Filter("Name =", "Test Exchange")
 
 		//run query
-		t := client.Run(ctx, query)
+		tds := client.Run(ctx, query)
 		var x ExchangeConnection
 		for {
-			_, err := t.Next(&x)
+			_, err := tds.Next(&x)
 			if err == iterator.Done {
 				break
 			}
 		}
+
+		if x.Name != values["Name"] {
+			t.Error("Expected new Bot name to be defined")
+		}
+		if x.APIKey != values["APIKey"] {
+			t.Error("Expected new Bot APIKey to be defined")
+		}
+		if x.UserID != values["UserID"] {
+			t.Error("Expected new Bot UserID to be defined")
+		}
+		var compIsDeleted string
+		if x.IsDeleted {
+			compIsDeleted = "true"
+		} else {
+			compIsDeleted = "false"
+		}
+		if compIsDeleted != values["IsDeleted"] {
+			t.Error("Expected new Bot IsDeleted to be defined")
+		}
+
+		//cleanup: del bot
 		key := datastore.IDKey("ExchangeConnection", x.K.ID, nil)
 		if err := client.Delete(ctx, key); err != nil {
 			// TODO: Handle error.
