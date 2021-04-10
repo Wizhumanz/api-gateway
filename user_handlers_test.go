@@ -13,9 +13,12 @@ import (
 )
 
 func TestHandlerCreateNewUser(t *testing.T) {
-	values := map[string]string{"name": "JOHN DOE", "email": "VEGGIE@VEGGIE.COM", "password": "supersoaker"}
+	values := map[string]string{
+		"Name":     "JOHN DOE",
+		"Email":    "VEGGIE@VEGGIE.COM",
+		"Password": "supersoaker",
+	}
 	json_data, err := json.Marshal(values)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +26,6 @@ func TestHandlerCreateNewUser(t *testing.T) {
 	req := httptest.NewRequest("POST", "/user", bytes.NewBuffer(json_data))
 	w := httptest.NewRecorder()
 	createNewUserHandler(w, req)
-
 	resp := w.Result()
 
 	if resp.StatusCode != 201 {
@@ -35,7 +37,6 @@ func TestHandlerCreateNewUser(t *testing.T) {
 			// TODO: Handle error.
 			log.Fatal(err)
 		}
-
 		query := datastore.NewQuery("User").Filter("Name =", "JOHN DOE")
 
 		//run query
@@ -48,11 +49,17 @@ func TestHandlerCreateNewUser(t *testing.T) {
 			}
 		}
 
-		if x.Name != "JOHN DOE" {
-			t.Error("Expected new User name to be defined")
+		if x.Name != values["Name"] {
+			t.Error("Expected new User Name to be defined")
+		}
+		if x.Email != values["Email"] {
+			t.Error("Expected new User Email to be defined")
+		}
+		if !(CheckPasswordHash(values["Password"], x.Password)) {
+			t.Error("Expected new User password to match hash")
 		}
 
-		//cleanup DEL user
+		//cleanup del user
 		key := datastore.IDKey("User", x.K.ID, nil)
 		if err := client.Delete(ctx, key); err != nil {
 			// TODO: Handle error.
