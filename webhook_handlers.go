@@ -159,7 +159,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	// check webhookConnID valid
 	webhookID := mux.Vars(r)["id"]
-	fmt.Printf("webhookID: %s \n", webhookID)
+	// fmt.Printf("webhookID: %s \n", webhookID)
 	if webhookID == "" {
 		//TODO: alert user of error, not caller
 		data := jsonResponse{
