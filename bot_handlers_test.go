@@ -14,68 +14,59 @@ import (
 )
 
 func TestHandlerGetAllBots(t *testing.T) {
+	//send req
 	req := httptest.NewRequest("GET", "/bots?user="+"5632499082330112", nil)
 	req.Header.Set("Authorization", "trader")
 	w := httptest.NewRecorder()
 	getAllBotsHandler(w, req)
-
 	resp := w.Result()
 
+	//check status code
 	if resp.StatusCode != 200 {
 		t.Error("Expected status code to equal 200")
 	}
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	newJsonStr := buf.String()
-	// fmt.Println(newJsonStr)
-
+	//check resp body
 	var listOfBots []Bot
-	dec := json.NewDecoder(strings.NewReader(newJsonStr))
+	dec := json.NewDecoder(strings.NewReader(decodeRespBody(resp)))
 	err := dec.Decode(&listOfBots)
 	if err != nil {
 		t.Error("Expected response body to be of type []Bot")
 	}
-	// for i, bot := range listOfBots {
-	// 	fmt.Println(i, bot.K.ID)
-	// }
-	if len(listOfBots) > 0 {
+
+	if len(listOfBots) <= 0 {
+		t.Error("Expected response of type []Bot to have length > 0")
+	} else {
 		for _, bot := range listOfBots {
 			if bot.Name == "" {
-				t.Error("Expected handler to return Bot structs with Name")
+				t.Error("Expected handler to return Bot with Name")
 			}
 			if bot.AggregateID == 0 {
-				t.Error("Expected handler to return Bot structs with AggregateID")
+				t.Error("Expected handler to return Bot with AggregateID")
 			}
 			if bot.UserID == "" {
-				t.Error("Expected handler to return Bot structs with UserID")
+				t.Error("Expected handler to return Bot with UserID")
 			}
 			if bot.ExchangeConnection == "" {
-				t.Error("Expected handler to return Bot structs with ExchangeConnection")
+				t.Error("Expected handler to return Bot with ExchangeConnection")
 			}
 			if bot.AccountRiskPercPerTrade == "" {
-				t.Error("Expected handler to return Bot structs with AccountRiskPercPerTrade")
+				t.Error("Expected handler to return Bot with AccountRiskPercPerTrade")
 			}
 			if bot.AccountSizePercToTrade == "" {
-				t.Error("Expected handler to return Bot structs with AccountSizePercToTrade")
+				t.Error("Expected handler to return Bot with AccountSizePercToTrade")
 			}
 			if bot.Leverage == "" {
-				t.Error("Expected handler to return Bot structs with Leverage")
+				t.Error("Expected handler to return Bot with Leverage")
 			}
-			// if bot.WebhookURL == "" {
-			// 	t.Error("Expected handler to return Bot structs with WebhookURL")
-			// }
 			if bot.Timestamp == "" {
-				t.Error("Expected handler to return Bot structs with Timestamp")
+				t.Error("Expected handler to return Bot with Timestamp")
 			}
 			if bot.Ticker == "" {
-				t.Error("Expected handler to return Bot structs with Ticker")
+				t.Error("Expected handler to return Bot with Ticker")
 			}
 			if bot.KEY == "" {
-				t.Error("Expected handler to return Bot structs with KEY")
-			}
-			if bot.K.ID == 0 {
-				t.Error("Expected handler to return Bot structs with DB key")
+				t.Error("Expected handler to return Bot with KEY")
 			}
 		}
 	}
