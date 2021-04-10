@@ -145,8 +145,21 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//check required body params
+	if webhookReq.Ticker == "" {
+		//TODO: alert user of error, not caller
+		data := jsonResponse{
+			Msg:  "Webhook body invalid.",
+			Body: "Ticker field in request body is required, found \"\".",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
 	// check webhookConnID valid
 	webhookID := mux.Vars(r)["id"]
+	fmt.Printf("webhookID: %s \n", webhookID)
 	if webhookID == "" {
 		//TODO: alert user of error, not caller
 		data := jsonResponse{
@@ -290,5 +303,8 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 		msngr.AddToStream("webhookTrades", msgs)
 		fmt.Println("-")
+
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 }

@@ -32,7 +32,7 @@ type loginReq struct {
 type webHookRequest struct {
 	User            string `json:"User"`
 	Ticker          string `json:"Ticker"`
-	TradeActionType string `json:"TradeType"` // ENTER, EXIT, SL, TP
+	TradeActionType string `json:"TradeActionType"` // ENTER, EXIT, SL, TP
 	Size            string `json:"Size"`
 }
 
