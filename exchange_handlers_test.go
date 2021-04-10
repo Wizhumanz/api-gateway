@@ -18,28 +18,23 @@ func TestHandlerGetAllExchangeConnections(t *testing.T) {
 	req.Header.Set("Authorization", "trader")
 	w := httptest.NewRecorder()
 	getAllExchangeConnectionsHandler(w, req)
-
 	resp := w.Result()
 
 	if resp.StatusCode != 200 {
 		t.Error("Expected status code to equal 200")
 	}
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	newJsonStr := buf.String()
-	// fmt.Println(newJsonStr)
-
+	//check body
 	var listOfExchanges []ExchangeConnection
-	dec := json.NewDecoder(strings.NewReader(newJsonStr))
+	dec := json.NewDecoder(strings.NewReader(decodeRespBody(resp)))
 	err := dec.Decode(&listOfExchanges)
 	if err != nil {
 		t.Error("Expected response body to be of type []ExchangeConnection")
 	}
-	// for i, bot := range listOfBots {
-	// 	fmt.Println(i, bot.K.ID)
-	// }
-	if len(listOfExchanges) > 0 {
+
+	if len(listOfExchanges) <= 0 {
+		t.Error("Expected length of response []ExchangeConnection to be > 0")
+	} else {
 		for _, exchange := range listOfExchanges {
 			if exchange.Name == "" {
 				t.Error("Expected handler to return ExchangeConnection structs with Name")
