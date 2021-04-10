@@ -997,8 +997,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 		// add new trade info into stream (triggers other services)
 		msgs := []string{}
-		msgs = append(msgs, "CMD")
-		msgs = append(msgs, webhookReq.TradeActionType)
 		msgs = append(msgs, "TradeStreamName")
 		msgs = append(msgs, tradeStreamName)
 		msgs = append(msgs, "AccountRiskPercPerTrade")
@@ -1009,6 +1007,8 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		msgs = append(msgs, fmt.Sprint(botToUse.Leverage))
 		msgs = append(msgs, "Ticker")
 		msgs = append(msgs, fmt.Sprint(botToUse.Ticker))
+		msgs = append(msgs, "CMD")
+		msgs = append(msgs, webhookReq.TradeActionType)
 
 		msngr.AddToStream("webhookTrades", msgs)
 		fmt.Println("-")
