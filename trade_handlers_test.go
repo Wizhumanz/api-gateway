@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http/httptest"
 	"strings"
@@ -13,28 +12,22 @@ func TestHandlerGetAllTrades(t *testing.T) {
 	req.Header.Set("Authorization", "trader")
 	w := httptest.NewRecorder()
 	getAllTradesHandler(w, req)
-
 	resp := w.Result()
 
 	if resp.StatusCode != 200 {
 		t.Error("Expected status code to equal 200")
 	}
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	newJsonStr := buf.String()
-	// fmt.Println(newJsonStr)
-
+	//check body
 	var listOfTrades []TradeAction
-	dec := json.NewDecoder(strings.NewReader(newJsonStr))
+	dec := json.NewDecoder(strings.NewReader(decodeRespBody(resp)))
 	err := dec.Decode(&listOfTrades)
 	if err != nil {
 		t.Error("Expected response body to be of type []TradeAction")
 	}
-	// for i, bot := range listOfBots {
-	// 	fmt.Println(i, bot.K.ID)
-	// }
-	if len(listOfTrades) > 0 {
+	if len(listOfTrades) <= 0 {
+		t.Error("Expected response of type []TradeAction to have length > 0")
+	} else {
 		for _, trade := range listOfTrades {
 			if trade.Action == "" {
 				t.Error("Expected handler to return TradeAction structs with Action")
@@ -52,7 +45,5 @@ func TestHandlerGetAllTrades(t *testing.T) {
 				t.Error("Expected handler to return TradeAction structs with Ticker")
 			}
 		}
-	} else {
-		t.Error("Expected handler to return at least one TradeAction, instead received empty slice")
 	}
 }
