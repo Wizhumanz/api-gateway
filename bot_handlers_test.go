@@ -77,14 +77,13 @@ func TestHandlerCreateNewBot(t *testing.T) {
 		"Name":                    "TAYLOR BOT",
 		"UserID":                  "5632499082330112",
 		"ExchangeConnection":      "5634161670881280",
-		"AccountRiskPercPerTrade": "5",
-		"AccountSizePercToTrade":  "12",
+		"AccountRiskPercPerTrade": "5.69",
+		"AccountSizePercToTrade":  "12.69",
 		"IsActive":                "true",
 		"IsArchived":              "false",
-		"Leverage":                "69"}
-
+		"Leverage":                "69",
+	}
 	json_data, err := json.Marshal(values)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,24 +92,23 @@ func TestHandlerCreateNewBot(t *testing.T) {
 	req.Header.Set("Authorization", "trader")
 	w := httptest.NewRecorder()
 	createNewBotHandler(w, req)
-
 	resp := w.Result()
 
 	if resp.StatusCode != 201 {
 		t.Error("Expected status code to equal 201")
 	} else {
+		//check added bot
 		ctx := context.Background()
 		client, err := datastore.NewClient(ctx, googleProjectID)
 		if err != nil {
 			// TODO: Handle error.
 			log.Fatal(err)
 		}
-
 		query := datastore.NewQuery("Bot").Filter("Name =", "TAYLOR BOT")
 
 		//run query
 		tds := client.Run(ctx, query)
-		var x User
+		var x Bot
 		for {
 			_, err := tds.Next(&x)
 			if err == iterator.Done {
@@ -118,10 +116,44 @@ func TestHandlerCreateNewBot(t *testing.T) {
 			}
 		}
 
-		if x.Name != "TAYLOR BOT" {
+		if x.Name != values["Name"] {
 			t.Error("Expected new Bot name to be defined")
 		}
+		if x.UserID != values["UserID"] {
+			t.Error("Expected new Bot UserID to be defined")
+		}
+		if x.ExchangeConnection != values["ExchangeConnection"] {
+			t.Error("Expected new Bot ExchangeConnection to be defined")
+		}
+		if x.AccountRiskPercPerTrade != encrypt(values["AccountRiskPercPerTrade"]) {
+			t.Error("Expected new Bot AccountRiskPercPerTrade to be defined")
+		}
+		if x.AccountSizePercToTrade != encrypt(values["AccountSizePercToTrade"]) {
+			t.Error("Expected new Bot AccountSizePercToTrade to be defined")
+		}
+		var compIsActive string
+		if x.IsActive {
+			compIsActive = "true"
+		} else {
+			compIsActive = "false"
+		}
+		if compIsActive != values["IsActive"] {
+			t.Error("Expected new Bot IsActive to be defined")
+		}
+		var compIsArchived string
+		if x.IsArchived {
+			compIsArchived = "true"
+		} else {
+			compIsArchived = "false"
+		}
+		if compIsArchived != values["IsArchived"] {
+			t.Error("Expected new Bot IsArchived to be defined")
+		}
+		if x.Leverage != encrypt(values["Leverage"]) {
+			t.Error("Expected new Bot Leverage to be defined")
+		}
 
+		//cleanup: del bot
 		key := datastore.IDKey("Bot", x.K.ID, nil)
 		if err := client.Delete(ctx, key); err != nil {
 			// TODO: Handle error.
