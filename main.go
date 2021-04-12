@@ -48,7 +48,9 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
 	router.Methods("POST", "OPTIONS").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
+
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
+	router.Methods("GET", "OPTIONS").Path("/ws").HandlerFunc(wsEndpoint)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()
