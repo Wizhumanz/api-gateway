@@ -36,7 +36,7 @@ var upgrader = websocket.Upgrader{
 }
 
 //all connected clients (url map to *websocket.Conn)
-var wsConnections []map[string]*websocket.Conn
+var wsConnections map[string]*websocket.Conn
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())

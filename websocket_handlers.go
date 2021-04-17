@@ -32,17 +32,7 @@ func wsConnectHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Client Connected")
 
 	//save connection globally
-	m := make(map[string]*websocket.Conn)
-	m[mux.Vars(r)["id"]] = ws
-	wsConnections = append(wsConnections, m)
-
-	for _, mymap := range wsConnections {
-		keys := make([]string, 0, len(mymap))
-		for k, _ := range mymap {
-			keys = append(keys, k)
-		}
-		fmt.Println(keys)
-	}
+	wsConnections[mux.Vars(r)["id"]] = ws
 
 	err := ws.WriteMessage(1, []byte("Yonkers motherfucker"))
 	if err != nil {

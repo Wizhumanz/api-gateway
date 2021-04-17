@@ -38,6 +38,16 @@ func createNewTradeHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Failed to save TradeAction: %v", err)
 	}
 
+	//send on websocket stream
+	ws := wsConnections[newTrade.UserID]
+	if ws != nil {
+		jsonTrade, _ := json.Marshal(newTrade)
+		err := ws.WriteMessage(1, jsonTrade)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
 	// return
 	data := jsonResponse{
 		Msg:  "Added " + newKey.String(),
