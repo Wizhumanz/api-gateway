@@ -41,6 +41,8 @@ var wsConnections map[string]*websocket.Conn
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	wsConnections = make(map[string]*websocket.Conn)
+
 	initDatastore()
 
 	router := mux.NewRouter().StrictSlash(true)
