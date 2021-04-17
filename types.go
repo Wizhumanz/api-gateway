@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"reflect"
 
 	"cloud.google.com/go/datastore"
-	"github.com/gorilla/websocket"
 )
 
 // API types
@@ -125,12 +123,4 @@ func (l WebhookConnection) String() string {
 		r = r + fmt.Sprintf("%s: %v, ", typeOfL.Field(i).Name, v.Field(i).Interface())
 	}
 	return r
-}
-
-//websockets
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
 
@@ -27,8 +28,21 @@ func wsConnectHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	ws, _ = upgrader.Upgrade(w, r, nil)
+	ws, _ := upgrader.Upgrade(w, r, nil)
 	log.Println("Client Connected")
+
+	//save connection globally
+	m := make(map[string]*websocket.Conn)
+	m[mux.Vars(r)["id"]] = ws
+	wsConnections = append(wsConnections, m)
+
+	for _, mymap := range wsConnections {
+		keys := make([]string, 0, len(mymap))
+		for k, _ := range mymap {
+			keys = append(keys, k)
+		}
+		fmt.Println(keys)
+	}
 
 	err := ws.WriteMessage(1, []byte("Yonkers motherfucker"))
 	if err != nil {

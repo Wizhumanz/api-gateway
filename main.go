@@ -26,8 +26,17 @@ var redisPort = os.Getenv("REDISPORT")
 var redisAddr = fmt.Sprintf("%s:%s", redisHost, redisPort)
 var rdb *redis.Client
 var client *datastore.Client
-var ws *websocket.Conn
 var ctx context.Context
+
+//websockets
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
+//all connected clients (url map to *websocket.Conn)
+var wsConnections []map[string]*websocket.Conn
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -51,7 +60,7 @@ func main() {
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
-	router.Methods("GET", "OPTIONS").Path("/ws").HandlerFunc(wsConnectHandler)
+	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()
