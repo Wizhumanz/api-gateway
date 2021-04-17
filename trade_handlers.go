@@ -4,12 +4,49 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
 )
+
+func createNewTradeHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
+	var newTrade TradeAction
+	// decode data
+	err := json.NewDecoder(r.Body).Decode(&newTrade)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// create new listing in DB
+	kind := "TradeAction"
+	newKey := datastore.IncompleteKey(kind, nil)
+	addedKey, err := client.Put(ctx, newKey, &newTrade)
+	if err != nil {
+		log.Fatalf("Failed to save TradeAction: %v", err)
+	}
+
+	// return
+	data := jsonResponse{
+		Msg:  "Added " + newKey.String(),
+		Body: fmt.Sprint(addedKey.ID),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(data)
+}
 
 func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)

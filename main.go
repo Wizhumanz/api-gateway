@@ -47,6 +47,7 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
 	router.Methods("POST", "OPTIONS").Path("/user").HandlerFunc(createNewUserHandler)
+	router.Methods("POST", "OPTIONS").Path("/trade").HandlerFunc(createNewTradeHandler)
 	router.Methods("GET", "OPTIONS").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/bots").HandlerFunc(getAllBotsHandler)
 	router.Methods("GET", "OPTIONS").Path("/webhooks").HandlerFunc(getAllWebhookConnectionHandler)

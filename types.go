@@ -61,7 +61,7 @@ type TradeAction struct {
 	AggregateID int     `json:"AggregateID,string"`
 	BotID       string  `json:"BotID"`
 	Direction   string  `json:"Direction"` //LONG or SHORT
-	Size        float32 `json:"Size"`
+	Size        float32 `json:"Size,string"`
 	Timestamp   string  `json:"Timestamp"`
 	Ticker      string  `json:"Ticker"`
 	Exchange    string  `json:"Exchange"`
