@@ -8,42 +8,32 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func reader(conn *websocket.Conn) {
+func readIncomingWsMsg(conn *websocket.Conn) {
 	for {
-		// read in a message
-		messageType, p, err := conn.ReadMessage()
+		// messageType, p, err := conn.ReadMessage()
+		_, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		// print out that message for clarity
 		fmt.Println(string(p))
-
-		if err := conn.WriteMessage(messageType, p); err != nil {
-			log.Println(err)
-			return
-		}
-
+		// fmt.Printf("Msg type: %v\n", messageType)
 	}
 }
 
-func wsEndpoint(w http.ResponseWriter, r *http.Request) {
+func wsConnectHandler(w http.ResponseWriter, r *http.Request) {
 	// setupCORS(&w, r)
 	// if (*r).Method == "OPTIONS" {
 	// 	return
 	// }
 
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-	}
+	ws, _ = upgrader.Upgrade(w, r, nil)
 	log.Println("Client Connected")
 
-	err = ws.WriteMessage(1, []byte("Yonkers motherfucker"))
+	err := ws.WriteMessage(1, []byte("Yonkers motherfucker"))
 	if err != nil {
 		log.Println(err)
 	}
 
-	reader(ws)
+	go readIncomingWsMsg(ws)
 }

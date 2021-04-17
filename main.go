@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 var googleProjectID = "myika-anastasia"
@@ -25,12 +26,12 @@ var redisPort = os.Getenv("REDISPORT")
 var redisAddr = fmt.Sprintf("%s:%s", redisHost, redisPort)
 var rdb *redis.Client
 var client *datastore.Client
+var ws *websocket.Conn
 var ctx context.Context
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	// initRedis()
 	initDatastore()
 
 	router := mux.NewRouter().StrictSlash(true)
@@ -50,7 +51,7 @@ func main() {
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
-	router.Methods("GET", "OPTIONS").Path("/ws").HandlerFunc(wsEndpoint)
+	router.Methods("GET", "OPTIONS").Path("/ws").HandlerFunc(wsConnectHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()
