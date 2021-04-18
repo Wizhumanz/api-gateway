@@ -146,11 +146,11 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check required body params
-	if webhookReq.Ticker == "" {
+	if webhookReq.Ticker == "" || webhookReq.TradeActionType == "" || webhookReq.User == "" || webhookReq.Size == "" {
 		//TODO: alert user of error, not caller
 		data := jsonResponse{
 			Msg:  "Webhook body invalid.",
-			Body: "Ticker field in request body is required, found \"\".",
+			Body: "Send the right request.",
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
