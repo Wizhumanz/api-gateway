@@ -115,6 +115,11 @@ func addBot(w http.ResponseWriter, r *http.Request, isPutReq bool, reqBot Bot, r
 
 	//set timestamp
 	newBot.Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
+	if isPutReq {
+		newBot.CreationDate = reqBot.CreationDate
+	} else {
+		newBot.CreationDate = newBot.Timestamp
+	}
 
 	// create new bot in DB
 	ctx := context.Background()

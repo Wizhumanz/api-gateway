@@ -82,6 +82,7 @@ type Bot struct {
 	Timestamp               string         `json:"Timestamp"`
 	Ticker                  string         `json:"Ticker"`
 	WebhookConnectionID     string         `json:"WebhookConnectionID"`
+	CreationDate            string         `json:"CreationDate"`
 }
 
 func (l Bot) String() string {
