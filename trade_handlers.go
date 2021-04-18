@@ -31,12 +31,12 @@ func createNewTradeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create new listing in DB
-	kind := "TradeAction"
-	newKey := datastore.IncompleteKey(kind, nil)
-	addedKey, err := client.Put(ctx, newKey, &newTrade)
-	if err != nil {
-		log.Fatalf("Failed to save TradeAction: %v", err)
-	}
+	// kind := "TradeAction"
+	// newKey := datastore.IncompleteKey(kind, nil)
+	// addedKey, err := client.Put(ctx, newKey, &newTrade)
+	// if err != nil {
+	// 	log.Fatalf("Failed to save TradeAction: %v", err)
+	// }
 
 	//send on websocket stream
 	ws := wsConnections[newTrade.UserID]
@@ -49,13 +49,13 @@ func createNewTradeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return
-	data := jsonResponse{
-		Msg:  "Added " + newKey.String(),
-		Body: fmt.Sprint(addedKey.ID),
-	}
+	// data := jsonResponse{
+	// 	Msg:  "Added " + newKey.String(),
+	// 	Body: fmt.Sprint(addedKey.ID),
+	// }
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(data)
+	// json.NewEncoder(w).Encode(data)
 }
 
 func getAllTradesHandler(w http.ResponseWriter, r *http.Request) {
