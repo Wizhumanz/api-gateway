@@ -8,6 +8,9 @@ import (
 )
 
 // API types
+type createCheckoutSessionResponse struct {
+	SessionID string `json:"id"`
+}
 
 type jsonResponse struct {
 	Msg  string `json:"message"`

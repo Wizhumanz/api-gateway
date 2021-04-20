@@ -18,6 +18,8 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+
+	"github.com/stripe/stripe-go"
 )
 
 var googleProjectID = "myika-anastasia"
@@ -45,6 +47,15 @@ func main() {
 
 	initDatastore()
 
+	//Payment processing
+	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+
+	// http.Handle("/", http.FileServer(http.Dir(".")))
+	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
+	// addr := "localhost:4243"
+	// log.Printf("Listening on %s", addr)
+	// log.Fatal(http.ListenAndServe(addr, nil))
+
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
@@ -61,6 +72,7 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
 	router.Methods("POST", "OPTIONS").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
+	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(createCheckoutSession)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
