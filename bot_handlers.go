@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -17,6 +18,7 @@ import (
 )
 
 func getBotHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Simon's cock")
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
@@ -26,7 +28,7 @@ func getBotHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	var retBot Bot
+	var botsRes []Bot
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	authReq := loginReq{
@@ -41,35 +43,32 @@ func getBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//get the bot from DB
-	botID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
-	if unescapeErr != nil {
-		data := jsonResponse{Msg: "Bot ID Parse Error", Body: unescapeErr.Error()}
+	//get query string ids
+	rawIDs := r.URL.Query()["ids"][0]
+	batchReqIDs := strings.Split(rawIDs, " ")
+
+	if !(len(batchReqIDs) > 0) {
+		data := jsonResponse{Msg: "IDs array param empty.", Body: "Pass ids property in json as array of strings."}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(data)
 		return
 	}
-	intID, _ := strconv.Atoi(botID)
-	key := datastore.IDKey("Bot", int64(intID), nil)
-	query := datastore.NewQuery("Bot").
-		Filter("__key__ =", key)
-	t := client.Run(ctx, query)
-	botsResp := parseBotsQueryRes(t)
-	retBot = botsResp[0]
 
-	//return if bot doesn't exist
-	isValid := retBot.AggregateID != 0 && retBot.K.ID != 0
-	if !isValid {
-		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided ID does not exist."}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(data)
-		return
+	//get the bot from DB
+	for _, id := range batchReqIDs {
+		intID, _ := strconv.Atoi(id)
+		key := datastore.IDKey("Bot", int64(intID), nil)
+		query := datastore.NewQuery("Bot").
+			Filter("__key__ =", key)
+		t := client.Run(ctx, query)
+		botRes := parseBotsQueryRes(t)
+		botsRes = append(botsRes, botRes[0])
 	}
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(retBot)
+	json.NewEncoder(w).Encode(botsRes)
 }
 
 func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
