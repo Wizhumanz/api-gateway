@@ -16,6 +16,62 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+func getBotHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
+	var retBot Bot
+
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query()["user"][0],
+		Password: auth,
+	}
+	authSuccess, _ := authenticateUser(authReq)
+	if !authSuccess {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	//get the bot from DB
+	botID, unescapeErr := url.QueryUnescape(mux.Vars(r)["id"]) //aggregate ID, not DB __key__
+	if unescapeErr != nil {
+		data := jsonResponse{Msg: "Bot ID Parse Error", Body: unescapeErr.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	intID, _ := strconv.Atoi(botID)
+	key := datastore.IDKey("Bot", int64(intID), nil)
+	query := datastore.NewQuery("Bot").
+		Filter("__key__ =", key)
+	t := client.Run(ctx, query)
+	botsResp := parseBotsQueryRes(t)
+	retBot = botsResp[0]
+
+	//return if bot doesn't exist
+	isValid := retBot.AggregateID != 0 && retBot.K.ID != 0
+	if !isValid {
+		data := jsonResponse{Msg: "Bot ID Invalid", Body: "Bot with provided ID does not exist."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
+	// return
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(retBot)
+}
+
 func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -41,7 +97,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       r.URL.Query().Get("user"),
 		Password: auth,
 	}
-	authSuccess, reqUser := authenticateUser(authReq)
+	authSuccess, _ := authenticateUser(authReq)
 	if len(r.URL.Query()["isActive"]) == 0 && !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
 		w.WriteHeader(http.StatusUnauthorized)
@@ -71,7 +127,7 @@ func getAllBotsHandler(w http.ResponseWriter, r *http.Request) {
 
 	//run query
 	t := client.Run(ctx, query)
-	botsResp = parseBotsQueryRes(t, reqUser)
+	botsResp = parseBotsQueryRes(t)
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")

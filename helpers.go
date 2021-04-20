@@ -132,7 +132,7 @@ func authenticateUser(req loginReq) (bool, User) {
 	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail
 }
 
-func parseBotsQueryRes(t *datastore.Iterator, reqUser User) []Bot {
+func parseBotsQueryRes(t *datastore.Iterator) []Bot {
 	var botsResp []Bot
 	for {
 		var x Bot

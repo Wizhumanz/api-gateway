@@ -52,6 +52,7 @@ func main() {
 	router.Methods("POST", "OPTIONS").Path("/trade").HandlerFunc(createNewTradeHandler)
 	router.Methods("GET", "OPTIONS").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/bots").HandlerFunc(getAllBotsHandler)
+	router.Methods("GET", "OPTIONS").Path("/bot/{id}").HandlerFunc(getBotHandler)
 	router.Methods("GET", "OPTIONS").Path("/webhooks").HandlerFunc(getAllWebhookConnectionHandler)
 	router.Methods("GET", "OPTIONS").Path("/webhook").HandlerFunc(getWebhookConnectionHandler)
 	router.Methods("POST", "OPTIONS").Path("/bot").HandlerFunc(createNewBotHandler)

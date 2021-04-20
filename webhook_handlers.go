@@ -199,7 +199,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			Filter("WebhookConnectionID =", theWebConn.KEY)
 	}
 	tBot := client.Run(ctx, botQuery)
-	allBots = parseBotsQueryRes(tBot, User{})
+	allBots = parseBotsQueryRes(tBot)
 
 	if len(allBots) == 0 {
 		//TODO: alert user of error, not caller
