@@ -18,7 +18,6 @@ func createCheckoutSession(w http.ResponseWriter, req *http.Request) {
 	if (*req).Method == "OPTIONS" {
 		return
 	}
-	fmt.Printf("Hello")
 
 	domain := "http://localhost:3000"
 	params := &stripe.CheckoutSessionParams{
@@ -38,7 +37,7 @@ func createCheckoutSession(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(domain + "/success.html"),
+		SuccessURL: stripe.String(domain + "/"),
 		CancelURL:  stripe.String(domain + "/cancel.html"),
 	}
 
