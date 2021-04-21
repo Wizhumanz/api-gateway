@@ -18,7 +18,6 @@ import (
 )
 
 func getBotHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Simon's cock")
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
