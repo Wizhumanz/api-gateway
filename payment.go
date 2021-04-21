@@ -11,6 +11,9 @@ import (
 )
 
 func createCheckoutSession(w http.ResponseWriter, req *http.Request) {
+	//Payment processing
+	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+
 	setupCORS(&w, req)
 	if (*req).Method == "OPTIONS" {
 		return

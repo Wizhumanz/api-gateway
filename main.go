@@ -18,8 +18,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-
-	"github.com/stripe/stripe-go"
 )
 
 var googleProjectID = "myika-anastasia"
@@ -46,9 +44,6 @@ func main() {
 	wsConnections = make(map[string]*websocket.Conn)
 
 	initDatastore()
-
-	//Payment processing
-	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	// http.Handle("/", http.FileServer(http.Dir(".")))
 	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
