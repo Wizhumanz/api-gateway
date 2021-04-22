@@ -38,6 +38,20 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
+	authReq := loginReq{
+		ID:       r.URL.Query().Get("user"),
+		Password: auth,
+	}
+	fmt.Println("auth working man")
+	authSuccess, _ := authenticateUser(authReq)
+	if len(r.URL.Query()["isActive"]) == 0 && !authSuccess {
+		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+
 	var retWebhookConns []WebhookConnection
 	for _, id := range batchReqIDs {
 		//query object with id
