@@ -10,7 +10,8 @@ variables:
 api-build:
   stage: build
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production" || $CI_COMMIT_BRANCH == "master"'
+    # - if: '$CI_COMMIT_BRANCH == "production" || $CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "production"'
   image: $IMAGE
   script:
     - go build
@@ -18,7 +19,8 @@ api-build:
 integration-tests:
   stage: test
   rules:
-    - if: '$CI_COMMIT_BRANCH == "production" || $CI_COMMIT_BRANCH == "master"'
+    # - if: '$CI_COMMIT_BRANCH == "production" || $CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "production"'
   image: $IMAGE
   script:
     - export GOOGLE_APPLICATION_CREDENTIALS=$GCLOUD_ACC_KEY
