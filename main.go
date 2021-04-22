@@ -45,6 +45,12 @@ func main() {
 
 	initDatastore()
 
+	// http.Handle("/", http.FileServer(http.Dir(".")))
+	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
+	// addr := "localhost:4243"
+	// log.Printf("Listening on %s", addr)
+	// log.Fatal(http.ListenAndServe(addr, nil))
+
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
@@ -62,6 +68,7 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
 	router.Methods("POST", "OPTIONS").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
+	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(createCheckoutSession)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
