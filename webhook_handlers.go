@@ -218,8 +218,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		//check bot validity
 		if botToUse.AccountRiskPercPerTrade == "" ||
 			botToUse.AccountSizePercToTrade == "" ||
-			botToUse.Leverage == "" ||
-			botToUse.Ticker == "" {
+			botToUse.Leverage == "" {
 			//TODO: alert user of error, not caller
 			data := jsonResponse{
 				Msg:  "Bot with ID invalid: " + botToUse.KEY,
@@ -231,12 +230,14 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// save new TradeAction to DB //
+		sz, _ := strconv.ParseFloat(webhookReq.Size, 32)
 		x := TradeAction{
 			UserID:    botToUse.UserID,
 			BotID:     fmt.Sprint(botToUse.K.ID),
 			Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
 			Ticker:    webhookReq.Ticker,
 			Exchange:  botToUse.ExchangeConnection,
+			Size:      float32(sz),
 		}
 
 		//set aggregate ID + trade desc
@@ -297,14 +298,16 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		msgs = append(msgs, "Leverage")
 		msgs = append(msgs, fmt.Sprint(botToUse.Leverage))
 		msgs = append(msgs, "Ticker")
-		msgs = append(msgs, fmt.Sprint(botToUse.Ticker))
+		msgs = append(msgs, webhookReq.Ticker)
+		msgs = append(msgs, "Size")
+		msgs = append(msgs, webhookReq.Size)
+		msgs = append(msgs, "Exchange")
+		msgs = append(msgs, botToUse.ExchangeConnection)
 		msgs = append(msgs, "CMD")
 		msgs = append(msgs, webhookReq.TradeActionType)
 
 		msngr.AddToStream("webhookTrades", msgs)
-		fmt.Println("-")
 
 		w.WriteHeader(http.StatusOK)
-		return
 	}
 }
