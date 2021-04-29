@@ -228,7 +228,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	//exec trade for each bot
 	for _, botToUse := range allBots {
-		fmt.Println(botToUse.String())
 		//check bot validity
 		if botToUse.AccountRiskPercPerTrade == "" ||
 			botToUse.AccountSizePercToTrade == "" ||
@@ -257,7 +256,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		//set aggregate ID + trade desc
 		switch webhookReq.TradeActionType {
 		case "ENTER":
-			fmt.Println("NEW aggr ID")
 			// NEW aggr ID (get highest, then increment)
 			var calcTA TradeAction
 			query := datastore.NewQuery("TradeAction").
@@ -272,30 +270,47 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			x.AggregateID = calcTA.AggregateID + 1
 			x.Action = "ENTERIntentSubmitted"
 		case "EXIT", "SL", "TP":
-			fmt.Println("REUSING aggr ID")
 			// use previous aggr ID from existing trade
-			var calcTA TradeAction
+			fmt.Println(botToUse.UserID)
+			fmt.Println(fmt.Sprint(botToUse.K.ID))
+			fmt.Println(fmt.Sprint(x.Ticker))
+			var taCalc []TradeAction
 			//NOTE: one bot can only be in one trade at any one time
 			query := datastore.NewQuery("TradeAction").
 				Filter("UserID =", botToUse.UserID).
-				Filter("BotID =", fmt.Sprint(botToUse.K.ID))
-				// Project("AggregateID").
-				// Order("-AggregateID")
+				Filter("BotID =", fmt.Sprint(botToUse.K.ID)).
+				Filter("Ticker =", fmt.Sprint(x.Ticker))
+				// Project("AggregateID")
 			t := client.Run(ctx, query)
-			_, error := t.Next(&calcTA)
-			if error != nil {
-				// Handle error.
+			for {
+				var x TradeAction
+				_, err := t.Next(&x)
+				if err == iterator.Done {
+					break
+				}
+				fmt.Println(x)
+				taCalc = append(taCalc, x)
 			}
 
-			x.AggregateID = calcTA.AggregateID
+			//get max aggr ID
+			maxAggrID := 1
+			for _, ta := range taCalc {
+				if ta.AggregateID > maxAggrID {
+					maxAggrID = ta.AggregateID
+				}
+			}
+
+			x.AggregateID = maxAggrID
 			x.Action = webhookReq.TradeActionType + "IntentSubmitted"
 		}
 
 		//add row to DB
+		fmt.Println("---")
+		fmt.Println(x)
 		kind := "TradeAction"
-		newUserKey := datastore.IncompleteKey(kind, nil)
-		if _, err := client.Put(ctx, newUserKey, &x); err != nil {
-			log.Fatalf("Failed to save ExchangeConnection: %v", err)
+		newKey := datastore.IncompleteKey(kind, nil)
+		if _, err := client.Put(ctx, newKey, &x); err != nil {
+			log.Fatalf("Failed to save TradeAction: %v", err)
 		}
 
 		//create redis stream key <aggregateID>:<userID>:<botID>
