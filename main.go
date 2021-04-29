@@ -43,6 +43,7 @@ func main() {
 
 	wsConnections = make(map[string]*websocket.Conn)
 
+	initRedis()
 	initDatastore()
 
 	// http.Handle("/", http.FileServer(http.Dir(".")))
