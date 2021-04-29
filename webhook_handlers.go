@@ -251,6 +251,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			Ticker:    webhookReq.Ticker,
 			Exchange:  botToUse.ExchangeConnection,
 			Size:      float32(sz),
+			Direction: webhookReq.Direction,
 		}
 
 		//set aggregate ID + trade desc
