@@ -23,7 +23,7 @@ import (
 var googleProjectID = "myika-anastasia"
 var redisHost = os.Getenv("REDISHOST")
 var redisPort = os.Getenv("REDISPORT")
-var redisAddr = fmt.Sprintf("%s:%s", redisHost, redisPort)
+var redisPass = os.Getenv("REDISPASS")
 var rdb *redis.Client
 var client *datastore.Client
 var ctx context.Context

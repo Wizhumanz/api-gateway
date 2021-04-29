@@ -66,17 +66,17 @@ func generateWebhookID(n int) string {
 }
 
 func initRedis() {
+	// default to dev redis instance
 	if redisHost == "" {
 		redisHost = "127.0.0.1"
-		fmt.Println("Env var nil, using redis dev address -- " + redisHost)
 	}
 	if redisPort == "" {
 		redisPort = "6379"
-		fmt.Println("Env var nil, using redis dev port -- " + redisPort)
 	}
-	fmt.Println("Connected to Redis on " + redisHost + ":" + redisPort)
+	fmt.Println("msngr connecting to Redis on " + redisHost + ":" + redisPort)
 	rdb = redis.NewClient(&redis.Options{
-		Addr: redisHost + ":" + redisPort,
+		Addr:     redisHost + ":" + redisPort,
+		Password: redisPass,
 	})
 }
 
