@@ -76,7 +76,6 @@ func main() {
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()
-	msngr.InitDatastore()
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
