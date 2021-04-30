@@ -75,9 +75,12 @@ func initRedis() {
 	}
 	fmt.Println("msngr connecting to Redis on " + redisHost + ":" + redisPort + " - " + redisPass)
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     redisHost + ":" + redisPort,
-		Password: redisPass,
+		Addr:        redisHost + ":" + redisPort,
+		Password:    redisPass,
+		IdleTimeout: -1,
 	})
+	ctx := context.Background()
+	rdb.Do(ctx, "AUTH", redisPass)
 }
 
 func initDatastore() {
