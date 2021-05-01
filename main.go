@@ -45,7 +45,6 @@ func main() {
 
 	initRedis()
 	initDatastore()
-
 	// http.Handle("/", http.FileServer(http.Dir(".")))
 	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
 	// addr := "localhost:4243"
@@ -73,6 +72,9 @@ func main() {
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
+	router.Methods("GET", "OPTIONS").Path("/stacked").HandlerFunc(stackedHandler)
+	router.Methods("GET", "OPTIONS").Path("/pie").HandlerFunc(pieHandler)
+	router.Methods("GET", "OPTIONS").Path("/scatter").HandlerFunc(scatterHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()

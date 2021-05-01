@@ -196,6 +196,7 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		//handle error
 	}
 	theWebConn.KEY = fmt.Sprint(theWebConn.K.ID)
+	// theWebConn.KEY = "6607937963294720"
 
 	//get bot(s) to execute strategy on
 	var allBots []Bot

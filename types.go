@@ -119,6 +119,14 @@ type WebhookConnection struct {
 	IsPublic    bool           `json:"IsPublic,string"`
 }
 
+type ScatterData struct {
+	Profit   float64 `json:"Profit"`
+	Duration float64 `json:"Duration"`
+	Size     int     `json:"Size"`
+	Leverage int     `json:"Leverage"`
+	Time     int     `json:"Time"`
+}
+
 func (l WebhookConnection) String() string {
 	r := ""
 	v := reflect.ValueOf(l)

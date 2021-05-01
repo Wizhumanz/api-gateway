@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"math/rand"
 	"net/http"
+	"time"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
@@ -42,7 +44,7 @@ func pieHandler(w http.ResponseWriter, r *http.Request) {
 	// 	json.NewEncoder(w).Encode(data)
 	// 	return
 	// }
-	var pieData []TradeAction
+	var tradeAction []TradeAction
 	kind := "TradeAction"
 	query := datastore.NewQuery(kind)
 
@@ -54,11 +56,11 @@ func pieHandler(w http.ResponseWriter, r *http.Request) {
 		if err == iterator.Done {
 			break
 		}
-		pieData = append(pieData, x)
+		tradeAction = append(tradeAction, x)
 	}
 
 	var tickerData []string
-	for _, x := range pieData {
+	for _, x := range tradeAction {
 		tickerData = append(tickerData, x.Ticker)
 	}
 
@@ -78,8 +80,6 @@ func scatterHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	var scatterRes []ScatterData
-
 	// auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	// authReq := loginReq{
 	// 	ID:       r.URL.Query()["user"][0],
@@ -103,7 +103,9 @@ func scatterHandler(w http.ResponseWriter, r *http.Request) {
 	// 	json.NewEncoder(w).Encode(data)
 	// 	return
 	// }
-	var pieData []TradeAction
+
+	var scatterRes []ScatterData
+	var tradeAction []TradeAction
 	kind := "TradeAction"
 	query := datastore.NewQuery(kind)
 
@@ -115,62 +117,37 @@ func scatterHandler(w http.ResponseWriter, r *http.Request) {
 		if err == iterator.Done {
 			break
 		}
-		pieData = append(pieData, x)
+		tradeAction = append(tradeAction, x)
 	}
 
-	var tickerData []string
-	for _, x := range pieData {
-		tickerData = append(tickerData, x.Ticker)
+	duration := make(map[int]string)
+	// var duration []int64
+	for _, x := range tradeAction {
+		// tickerData = append(tickerData, x.AggregateID)
+		if duration[x.AggregateID] == "" {
+			duration[x.AggregateID] = x.Timestamp
+		} else {
+			layout := "2006-01-02_15:04:05_-0700"
+			str1 := duration[x.AggregateID]
+			t1, _ := time.Parse(layout, str1)
+			str2 := x.Timestamp
+			t2, _ := time.Parse(layout, str2)
+
+			scatterRes = append(scatterRes,
+				ScatterData{
+					Profit:   0 + rand.Float64()*(1-0),
+					Duration: t1.Sub(t2).Minutes(),
+					Size:     5,
+					Leverage: 13,
+					Time:     20,
+				})
+		}
 	}
-
-	// if rawIDs == "Scatter" {
-	scatterRes = append(scatterRes,
-		ScatterData{
-			Profit:   1,
-			Duration: 2,
-			Size:     5,
-			Leverage: 13,
-			Time:     20,
-		},
-		ScatterData{
-			Profit:   2,
-			Duration: 3,
-			Size:     4,
-			Leverage: 4,
-			Time:     12,
-		},
-		ScatterData{
-			Profit:   3,
-			Duration: 1,
-			Size:     4,
-			Leverage: 16,
-			Time:     3,
-		},
-		ScatterData{
-			Profit:   4,
-			Duration: 7,
-			Size:     4,
-			Leverage: 12,
-			Time:     19,
-		},
-	)
-	// }
-
-	// //get the bot from DB
-	// for _, id := range batchReqIDs {
-	// 	intID, _ := strconv.Atoi(id)
-	// 	key := datastore.IDKey("Bot", int64(intID), nil)
-	// 	query := datastore.NewQuery("Bot").
-	// 		Filter("__key__ =", key)
-	// 	t := client.Run(ctx, query)
-	// 	botRes := parseBotsQueryRes(t)
-	// 	botsRes = append(botsRes, botRes[0])
-	// }
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(tickerData)
+	json.NewEncoder(w).Encode(scatterRes)
 }
 
 func stackedHandler(w http.ResponseWriter, r *http.Request) {
@@ -183,8 +160,6 @@ func stackedHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	var scatterRes []ScatterData
-
 	// auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
 	// authReq := loginReq{
 	// 	ID:       r.URL.Query()["user"][0],
@@ -208,72 +183,9 @@ func stackedHandler(w http.ResponseWriter, r *http.Request) {
 	// 	json.NewEncoder(w).Encode(data)
 	// 	return
 	// }
-	var pieData []TradeAction
-	kind := "TradeAction"
-	query := datastore.NewQuery(kind)
-
-	t := client.Run(ctx, query)
-	for {
-		var x TradeAction
-		_, err := t.Next(&x)
-
-		if err == iterator.Done {
-			break
-		}
-		pieData = append(pieData, x)
-	}
-
-	var tickerData []string
-	for _, x := range pieData {
-		tickerData = append(tickerData, x.Ticker)
-	}
-
-	// if rawIDs == "Scatter" {
-	scatterRes = append(scatterRes,
-		ScatterData{
-			Profit:   1,
-			Duration: 2,
-			Size:     5,
-			Leverage: 13,
-			Time:     20,
-		},
-		ScatterData{
-			Profit:   2,
-			Duration: 3,
-			Size:     4,
-			Leverage: 4,
-			Time:     12,
-		},
-		ScatterData{
-			Profit:   3,
-			Duration: 1,
-			Size:     4,
-			Leverage: 16,
-			Time:     3,
-		},
-		ScatterData{
-			Profit:   4,
-			Duration: 7,
-			Size:     4,
-			Leverage: 12,
-			Time:     19,
-		},
-	)
-	// }
-
-	// //get the bot from DB
-	// for _, id := range batchReqIDs {
-	// 	intID, _ := strconv.Atoi(id)
-	// 	key := datastore.IDKey("Bot", int64(intID), nil)
-	// 	query := datastore.NewQuery("Bot").
-	// 		Filter("__key__ =", key)
-	// 	t := client.Run(ctx, query)
-	// 	botRes := parseBotsQueryRes(t)
-	// 	botsRes = append(botsRes, botRes[0])
-	// }
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(tickerData)
+	json.NewEncoder(w).Encode(nil)
 }
