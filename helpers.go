@@ -12,6 +12,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/go-redis/redis/v8"
+	"gitlab.com/myikaco/msngr"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/iterator"
 )
@@ -81,6 +82,7 @@ func initRedis() {
 	})
 	ctx := context.Background()
 	rdb.Do(ctx, "AUTH", redisPass)
+	rdb.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
 }
 
 func initDatastore() {
