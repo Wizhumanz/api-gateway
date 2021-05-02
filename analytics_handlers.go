@@ -121,7 +121,7 @@ func scatterHandler(w http.ResponseWriter, r *http.Request) {
 		tradeAction = append(tradeAction, x)
 	}
 
-	duration := make(map[int]string)
+	// duration := make(map[int]string)
 	collection := make(map[int][]TradeAction)
 	// var duration []int64
 	for _, x := range tradeAction {
@@ -134,61 +134,61 @@ func scatterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for key, value := range collection {
-		fmt.Println(key, value)
+	for _, value := range collection {
 		var largerNumber, temp1 time.Time
-		var lowerNumber, temp2 time.Time
+		var lowerNumber time.Time
+		var temp2, _ = time.Parse("2006-01-02_15:04:05_-0700", value[0].Timestamp)
 
 		for _, element := range value {
 			layout := "2006-01-02_15:04:05_-0700"
 			str := element.Timestamp
 			time, _ := time.Parse(layout, str)
-			fmt.Println(time)
-			fmt.Println(time.Sub(temp1).Minutes())
 			if time.Sub(temp1).Minutes() > 0 {
 				temp1 = time
 				largerNumber = temp1
 			}
-		}
-
-		for _, element := range value {
-			layout := "2006-01-02_15:04:05_-0700"
-			str := element.Timestamp
-			time, _ := time.Parse(layout, str)
-			// fmt.Println(time)
-			// fmt.Println(time.Sub(temp2).Minutes())
-			if time.Sub(temp2).Minutes() < 0 {
+			if time.Sub(temp2).Minutes() <= 0 {
 				temp2 = time
 				lowerNumber = temp2
 			}
 		}
+
 		fmt.Println(" ")
 		fmt.Println(largerNumber)
 		fmt.Println(lowerNumber)
 		fmt.Println(" ")
+
+		scatterRes = append(scatterRes,
+			ScatterData{
+				Profit:   0 + rand.Float64()*(1-0),
+				Duration: largerNumber.Sub(lowerNumber).Minutes(),
+				Size:     5,
+				Leverage: 13,
+				Time:     20,
+			})
 	}
 
-	for _, x := range tradeAction {
-		// tickerData = append(tickerData, x.AggregateID)
-		if duration[x.AggregateID] == "" {
-			duration[x.AggregateID] = x.Timestamp
-		} else {
-			layout := "2006-01-02_15:04:05_-0700"
-			str1 := duration[x.AggregateID]
-			t1, _ := time.Parse(layout, str1)
-			str2 := x.Timestamp
-			t2, _ := time.Parse(layout, str2)
+	// for _, x := range tradeAction {
+	// 	// tickerData = append(tickerData, x.AggregateID)
+	// 	if duration[x.AggregateID] == "" {
+	// 		duration[x.AggregateID] = x.Timestamp
+	// 	} else {
+	// 		layout := "2006-01-02_15:04:05_-0700"
+	// 		str1 := duration[x.AggregateID]
+	// 		t1, _ := time.Parse(layout, str1)
+	// 		str2 := x.Timestamp
+	// 		t2, _ := time.Parse(layout, str2)
 
-			scatterRes = append(scatterRes,
-				ScatterData{
-					Profit:   0 + rand.Float64()*(1-0),
-					Duration: t1.Sub(t2).Minutes(),
-					Size:     5,
-					Leverage: 13,
-					Time:     20,
-				})
-		}
-	}
+	// 		scatterRes = append(scatterRes,
+	// 			ScatterData{
+	// 				Profit:   0 + rand.Float64()*(1-0),
+	// 				Duration: t1.Sub(t2).Minutes(),
+	// 				Size:     5,
+	// 				Leverage: 13,
+	// 				Time:     20,
+	// 		})
+	// 	}
+	// }
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
