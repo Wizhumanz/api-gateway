@@ -23,12 +23,12 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 	//generate random OHLC data
 	min := 500000
 	max := 900000
-	minChange := 4000
-	maxChange := 50000
-	minWick := 500
-	maxWick := 5000
+	minChange := -40000
+	maxChange := 45000
+	minWick := 1000
+	maxWick := 30000
 	startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
-	for i := 0; i < 80; i++ {
+	for i := 0; i < 250; i++ {
 		var new ChartmasterData
 
 		//body
