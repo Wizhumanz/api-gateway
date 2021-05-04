@@ -72,9 +72,12 @@ func main() {
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
+
 	router.Methods("GET", "OPTIONS").Path("/stacked").HandlerFunc(stackedHandler)
 	router.Methods("GET", "OPTIONS").Path("/pie").HandlerFunc(pieHandler)
 	router.Methods("GET", "OPTIONS").Path("/scatter").HandlerFunc(scatterHandler)
+
+	router.Methods("GET", "OPTIONS").Path("/chartmaster").HandlerFunc(indexChartmasterHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()

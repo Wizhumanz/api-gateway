@@ -119,14 +119,6 @@ type WebhookConnection struct {
 	IsPublic    bool           `json:"IsPublic,string"`
 }
 
-type ScatterData struct {
-	Profit   float64 `json:"Profit"`
-	Duration float64 `json:"Duration"`
-	Size     int     `json:"Size"`
-	Leverage int     `json:"Leverage"`
-	Time     int     `json:"Time"`
-}
-
 func (l WebhookConnection) String() string {
 	r := ""
 	v := reflect.ValueOf(l)
@@ -136,4 +128,20 @@ func (l WebhookConnection) String() string {
 		r = r + fmt.Sprintf("%s: %v, ", typeOfL.Field(i).Name, v.Field(i).Interface())
 	}
 	return r
+}
+
+type ScatterData struct {
+	Profit   float64 `json:"Profit"`
+	Duration float64 `json:"Duration"`
+	Size     int     `json:"Size"`
+	Leverage int     `json:"Leverage"`
+	Time     int     `json:"Time"`
+}
+
+type ChartmasterData struct {
+	Date  string  `json:"Date"`
+	Open  float64 `json:"Open"`
+	High  float64 `json:"High"`
+	Low   float64 `json:"Low"`
+	Close float64 `json:"Close"`
 }
