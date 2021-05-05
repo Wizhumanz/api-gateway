@@ -155,3 +155,18 @@ type ProfitCurveData struct {
 	Label string                 `json:"DataLabel"`
 	Data  []ProfitCurveDataPoint `json:"Data"`
 }
+
+type SimulatedTradeDataPoint struct {
+	Date          string  `json:"Date"`
+	Direction     string  `json:"Direction"`
+	EntryPrice    float64 `json:"EntryPrice"`
+	ExitPrice     float64 `json:"ExitPrice"`
+	PosSize       float64 `json:"PosSize"`
+	RiskedEquity  float64 `json:"RiskedEquity"`
+	RawProfitPerc float64 `json:"RawProfitPerc"`
+}
+
+type SimulatedTradeData struct {
+	Label string                    `json:"DataLabel"`
+	Data  []SimulatedTradeDataPoint `json:"Data"`
+}

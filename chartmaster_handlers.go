@@ -78,7 +78,7 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	//generate random OHLC data
+	//generate random profit data
 	minChange := -60
 	maxChange := 80
 	minPeriodChange := 0
@@ -91,7 +91,7 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 			Data:  []ProfitCurveDataPoint{},
 		})
 
-		for i := 0; i < 30; i++ {
+		for i := 0; i < 40; i++ {
 			var new ProfitCurveDataPoint
 
 			//randomize equity change
@@ -121,7 +121,7 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
-	var retData []ProfitCurveData
+	var retData []SimulatedTradeData
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -132,14 +132,45 @@ func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	// //generate random OHLC data
-	// min := 500000
-	// max := 900000
-	// minChange := -40000
-	// maxChange := 45000
-	// minWick := 1000
-	// maxWick := 30000
-	// startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
+	//generate random trade entry data
+	minPrice := 500000  //divided by 100
+	maxPrice := 900000  //divided by 100
+	minChange := -5000  //divided by 100
+	maxChange := 5000   //divided by 100
+	minSize := 5        //divided by 1000
+	maxSize := 400      //divided by 1000
+	minRawProfit := -25 //divided by 10
+	maxRawProfit := 40  //divided by 10
+	minPeriodChange := 0
+	maxPeriodChange := 4
+	for j := 0; j < 3; j++ {
+		startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
+		retData = append(retData, SimulatedTradeData{
+			Label: fmt.Sprintf("Param %v", j+1),
+			Data:  []SimulatedTradeDataPoint{},
+		})
+
+		for i := 0; i < 40; i++ {
+			var new SimulatedTradeDataPoint
+
+			//randomize trade data
+			new.Direction = "LONG"
+			new.EntryPrice = (float64(rand.Intn(maxPrice-minPrice+1)+minPrice) / 100)
+			new.ExitPrice = new.EntryPrice + (float64(rand.Intn(maxChange-minChange+1)+minChange) / 100)
+			new.PosSize = (float64(rand.Intn(maxSize-minSize+1)+minSize) / 1000)
+			new.RiskedEquity = (float64(rand.Intn(maxPrice-minPrice+1)+minPrice) / 100) / 5
+			new.RawProfitPerc = (float64(rand.Intn(maxRawProfit-minRawProfit+1)+minRawProfit) / 10)
+
+			new.Date = startDate.Format("2006-01-02")
+
+			//randomize period skip
+			randSkip := (rand.Intn(maxPeriodChange-minPeriodChange+1) + minPeriodChange)
+			i = i + randSkip
+
+			startDate = startDate.AddDate(0, 0, randSkip+1)
+			retData[j].Data = append(retData[j].Data, new)
+		}
+	}
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
