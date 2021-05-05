@@ -138,10 +138,20 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
-type ChartmasterData struct {
+type CandlestickData struct {
 	Date  string  `json:"Date"`
 	Open  float64 `json:"Open"`
 	High  float64 `json:"High"`
 	Low   float64 `json:"Low"`
 	Close float64 `json:"Close"`
+}
+
+type ProfitCurveDataPoint struct {
+	Date   string  `json:"Date"`
+	Equity float64 `json:"Equity"`
+}
+
+type ProfitCurveData struct {
+	Label string                 `json:"DataLabel"`
+	Data  []ProfitCurveDataPoint `json:"Data"`
 }

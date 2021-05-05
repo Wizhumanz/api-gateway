@@ -77,7 +77,9 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/pie").HandlerFunc(pieHandler)
 	router.Methods("GET", "OPTIONS").Path("/scatter").HandlerFunc(scatterHandler)
 
-	router.Methods("GET", "OPTIONS").Path("/chartmaster").HandlerFunc(indexChartmasterHandler)
+	router.Methods("GET", "OPTIONS").Path("/candlestick").HandlerFunc(indexChartmasterHandler)
+	router.Methods("GET", "OPTIONS").Path("/profitCurve").HandlerFunc(profitCurveHandler)
+	router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()
