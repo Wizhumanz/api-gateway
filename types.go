@@ -138,7 +138,7 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
-type CandlestickData struct {
+type CandlestickChartData struct {
 	Date  string  `json:"Date"`
 	Open  float64 `json:"Open"`
 	High  float64 `json:"High"`
@@ -169,4 +169,41 @@ type SimulatedTradeDataPoint struct {
 type SimulatedTradeData struct {
 	Label string                    `json:"DataLabel"`
 	Data  []SimulatedTradeDataPoint `json:"Data"`
+}
+
+type Candlestick struct {
+	Open  float64
+	High  float64
+	Low   float64
+	Close float64
+}
+
+type StrategySimulator struct {
+	PosLongSize  float64
+	PosShortSize float64
+	equity       float64
+}
+
+func (strat *StrategySimulator) Init(e float64) {
+	strat.equity = e
+}
+
+func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bool) {
+	if (orderSize * price) > strat.equity {
+		fmt.Println(colorRed + "Order size exceeds simulated capital" + colorReset)
+		return
+	}
+
+	strat.equity = strat.equity - (orderSize * price)
+
+	if directionIsLong {
+		strat.PosLongSize = orderSize
+	} else {
+		strat.PosShortSize = orderSize
+	}
+}
+
+func (strat *StrategySimulator) CloseLong(price, orderSize float64) {
+	strat.equity = strat.equity + (orderSize * price)
+	strat.PosLongSize = strat.PosLongSize - orderSize
 }

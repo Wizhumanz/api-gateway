@@ -11,7 +11,7 @@ import (
 )
 
 func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
-	var retData []CandlestickData
+	var retData []CandlestickChartData
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -31,17 +31,17 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 	maxWick := 30000
 	startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
 	for i := 0; i < 250; i++ {
-		var new CandlestickData
+		var new CandlestickChartData
 
 		//body
 		if i != 0 {
 			startDate = startDate.AddDate(0, 0, 1)
-			new = CandlestickData{
+			new = CandlestickChartData{
 				Date: startDate.Format("2006-01-02"),
 				Open: retData[len(retData)-1].Close,
 			}
 		} else {
-			new = CandlestickData{
+			new = CandlestickChartData{
 				Date: startDate.Format("2006-01-02"),
 				Open: float64(rand.Intn(max-min+1)+min) / 100,
 			}
