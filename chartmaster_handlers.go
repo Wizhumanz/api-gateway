@@ -11,7 +11,7 @@ import (
 )
 
 func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
-	var retData []CandlestickChartData
+	// var retData []CandlestickChartData
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
