@@ -37,12 +37,12 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		if i != 0 {
 			startDate = startDate.AddDate(0, 0, 1)
 			new = CandlestickChartData{
-				DateTime: startDate.Format("2006-01-02"),
+				DateTime: startDate.Format("2006-01-02T15:04:05"),
 				Open:     retData[len(retData)-1].Close,
 			}
 		} else {
 			new = CandlestickChartData{
-				DateTime: startDate.Format("2006-01-02"),
+				DateTime: startDate.Format("2006-01-02T15:04:05"),
 				Open:     float64(rand.Intn(max-min+1)+min) / 100,
 			}
 		}
@@ -60,10 +60,22 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		retData = append(retData, new)
 	}
 
+	//filter by time
+	var finalRet []CandlestickChartData
+	format := "2006-01-02T15:04:05"
+	start, _ := time.Parse(r.URL.Query()["time_start"][0], format)
+	end, _ := time.Parse(r.URL.Query()["time_end"][0], format)
+	for _, c := range retData {
+		cTime, _ := time.Parse(c.DateTime, format)
+		if cTime.After(start) && cTime.Before(end) {
+			finalRet = append(finalRet, c)
+		}
+	}
+
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(retData)
+	json.NewEncoder(w).Encode(finalRet)
 }
 
 func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
