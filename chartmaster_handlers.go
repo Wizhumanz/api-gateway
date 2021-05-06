@@ -69,6 +69,8 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		cTime, _ := time.Parse(c.DateTime, format)
 		if cTime.After(start) && cTime.Before(end) {
 			finalRet = append(finalRet, c)
+		} else {
+			break
 		}
 	}
 
