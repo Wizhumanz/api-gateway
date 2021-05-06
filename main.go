@@ -66,7 +66,7 @@ func main() {
 
 	// getData()
 	// go saveJsonToRedis()
-	go runBacktest(strat1)
+	// go runBacktest(strat1)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
