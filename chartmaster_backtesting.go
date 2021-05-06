@@ -69,11 +69,10 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) (Cand
 	}
 	//strategy enter/exit/label
 	if strat.Actions[relIndex].Action == "ENTER" {
-		newCandleD.StratEnterPrice = strat.Actions[0].Price
-		// newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[0].SL)
+		newCandleD.StratEnterPrice = strat.Actions[relIndex].Price
+		newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[relIndex].SL)
 	} else if strat.Actions[relIndex].Action == "SL" {
-		newCandleD.StratExitPrice = strat.Actions[0].Price
-		// newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[0].SL)
+		newCandleD.StratExitPrice = strat.Actions[relIndex].Price
 	}
 
 	//profit curve
