@@ -138,6 +138,19 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
+type RawOHLCGetResp struct {
+	PeriodStart string  `json:"time_period_start"`
+	PeriodEnd   string  `json:"time_period_end"`
+	TimeOpen    string  `json:"time_open"`
+	TimeClose   string  `json:"time_close"`
+	Open        float64 `json:"price_open"`
+	High        float64 `json:"price_high"`
+	Low         float64 `json:"price_low"`
+	Close       float64 `json:"price_close"`
+	Volume      float64 `json:"volume_traded"`
+	TradesCount float64 `json:"trades_count"`
+}
+
 type CandlestickChartData struct {
 	DateTime        string  `json:"Date"`
 	Open            float64 `json:"Open"`

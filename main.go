@@ -48,6 +48,8 @@ var upgrader = websocket.Upgrader{
 var wsConnections map[string]*websocket.Conn
 
 func main() {
+	// go saveJsonToRedis()
+
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	wsConnections = make(map[string]*websocket.Conn)
