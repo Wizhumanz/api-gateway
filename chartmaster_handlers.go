@@ -92,6 +92,7 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 		})
 
 		for i := 0; i < 40; i++ {
+			rand.Seed(time.Now().UTC().UnixNano())
 			var new ProfitCurveDataPoint
 
 			//randomize equity change
