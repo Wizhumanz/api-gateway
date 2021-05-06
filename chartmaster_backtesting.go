@@ -1,6 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"time"
+)
 
 var candleDisplay []CandlestickChartData
 var profitCurveDisplay []ProfitCurveData
@@ -53,8 +58,26 @@ func saveDisplayData(c Candlestick, strat StrategySimulator) {
 func runBacktest(
 	userStrat func(float64, float64, float64, float64, int, *StrategySimulator, *interface{}),
 ) {
-	//TODO: get all candlestick data for selected backtest period
+	//get all candlestick data for selected backtest period
+	format := "2006-01-02T15:04:05"
+	startDateTime, _ := time.Parse(format, "2021-05-01T00:00:00") //TODO: get this as func arg
 	data := []Candlestick{}
+	for i := 0; i < 100; i++ {
+		var new Candlestick
+		ctx := context.Background()
+		key := "BTCUSDT:1MIN:" + startDateTime.Format(format) + ".0000000Z"
+		res, _ := rdb.HGetAll(ctx, key).Result()
+
+		new.DateTime = startDateTime.Format(format)
+		new.Open, _ = strconv.ParseFloat(res["open"], 32)
+		new.High, _ = strconv.ParseFloat(res["open"], 32)
+		new.Low, _ = strconv.ParseFloat(res["open"], 32)
+		new.Close, _ = strconv.ParseFloat(res["open"], 32)
+		data = append(data, new)
+
+		startDateTime = startDateTime.Add(1 * time.Minute)
+	}
+
 	strategySim := StrategySimulator{}
 	strategySim.Init(1000)
 	var storage interface{}

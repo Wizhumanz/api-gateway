@@ -48,8 +48,6 @@ var upgrader = websocket.Upgrader{
 var wsConnections map[string]*websocket.Conn
 
 func main() {
-	// go saveJsonToRedis()
-
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	wsConnections = make(map[string]*websocket.Conn)
@@ -61,6 +59,9 @@ func main() {
 	// addr := "localhost:4243"
 	// log.Printf("Listening on %s", addr)
 	// log.Fatal(http.ListenAndServe(addr, nil))
+
+	// getData()
+	// go saveJsonToRedis()
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
