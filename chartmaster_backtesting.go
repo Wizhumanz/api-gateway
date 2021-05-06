@@ -13,6 +13,8 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	accSz := 1000
 	leverage := 25 //limits raw price SL %
 
+	strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex])
+
 	if strategy.PosLongSize == 0 {
 		//if two green candles in a row, buy
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {

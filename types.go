@@ -244,3 +244,22 @@ func (strat *StrategySimulator) CloseLong(price, orderSize float64) {
 	}
 	strat.availableEquity = strat.totalEquity
 }
+
+func (strat *StrategySimulator) CheckPositions(open, high, low, close float64) {
+	if strat.PosLongSize > 0 {
+		//check SL
+		var sl float64
+		for i := 1; i < len(strat.Actions); i++ {
+			index := len(strat.Actions) - i
+			if strat.Actions[index].Action == "ENTER" && sl == 0 {
+				sl = strat.Actions[index].SL
+				break
+			}
+		}
+		if low <= sl || close <= sl || open <= sl || high <= sl {
+			strat.CloseLong(close, 0)
+		}
+
+		//TODO: check TP
+	}
+}
