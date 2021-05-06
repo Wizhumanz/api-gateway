@@ -75,7 +75,7 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if (cTime.After(start) || cTime == start) && (cTime.Before(end) || cTime == start) {
 			finalRet = append(finalRet, c)
-		} else {
+		} else if cTime.After(end) {
 			break
 		}
 	}
