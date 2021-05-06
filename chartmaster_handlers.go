@@ -63,11 +63,17 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 	//filter by time
 	var finalRet []CandlestickChartData
 	format := "2006-01-02T15:04:05"
-	start, _ := time.Parse(r.URL.Query()["time_start"][0], format)
-	end, _ := time.Parse(r.URL.Query()["time_end"][0], format)
+	start, err := time.Parse(format, r.URL.Query()["time_start"][0])
+	if err != nil {
+		fmt.Println(err)
+	}
+	end, _ := time.Parse(format, r.URL.Query()["time_end"][0])
 	for _, c := range retData {
-		cTime, _ := time.Parse(c.DateTime, format)
-		if cTime.After(start) && cTime.Before(end) {
+		cTime, err2 := time.Parse(format, c.DateTime)
+		if err2 != nil {
+			fmt.Println(err)
+		}
+		if (cTime.After(start) || cTime == start) && (cTime.Before(end) || cTime == start) {
 			finalRet = append(finalRet, c)
 		} else {
 			break
