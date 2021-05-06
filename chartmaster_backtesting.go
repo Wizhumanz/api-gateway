@@ -2,20 +2,34 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 )
 
 //test strat to pass to backtest func, runs once per historical candlestick
 func strat1(open, high, low, close []float64, relCandleIndex int, strategy *StrategySimulator, storage *interface{}) {
+	accRiskPerTrade := 0.5
+	accSz := 1000
+	leverage := 25 //limits raw price SL %
+
 	if strategy.PosLongSize == 0 {
 		//if two green candles in a row, buy
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
 			// fmt.Printf("Buying at %v\n", close[relCandleIndex])
-			strategy.Buy(close[relCandleIndex], 1.3, true)
+			entryPrice := close[relCandleIndex]
+			slPrice := close[relCandleIndex-2]
+			rawRiskPerc := (entryPrice - slPrice) / entryPrice
+			accRiskedCap := accRiskPerTrade * float64(accSz)
+			posCap := (accRiskedCap / rawRiskPerc) / float64(leverage)
+			posSize := posCap / entryPrice
+			fmt.Printf("Entering with %v\n", posSize)
+			strategy.Buy(close[relCandleIndex], posSize, true)
+
 			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
 				Action: "ENTER",
 				Price:  close[relCandleIndex],
+				SL:     slPrice,
 			})
 			return
 		}
@@ -23,7 +37,7 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 		//if two red candles in a row, sell
 		if (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
-			strategy.CloseLong(close[relCandleIndex], 1.3)
+			strategy.CloseLong(close[relCandleIndex], 0)
 			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
 				Action: "SL",
 				Price:  close[relCandleIndex],

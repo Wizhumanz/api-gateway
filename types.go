@@ -234,7 +234,13 @@ func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bo
 }
 
 func (strat *StrategySimulator) CloseLong(price, orderSize float64) {
-	strat.totalEquity = strat.availableEquity + (orderSize * price)
+	//close entire long
+	if orderSize == 0 {
+		strat.totalEquity = strat.availableEquity + (strat.PosLongSize * price)
+		strat.PosLongSize = 0
+	} else {
+		strat.totalEquity = strat.availableEquity + (orderSize * price)
+		strat.PosLongSize = strat.PosLongSize - orderSize
+	}
 	strat.availableEquity = strat.totalEquity
-	strat.PosLongSize = strat.PosLongSize - orderSize
 }
