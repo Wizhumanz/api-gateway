@@ -37,6 +37,10 @@ var rdb *redis.Client
 var client *datastore.Client
 var ctx context.Context
 
+var candleDisplay []CandlestickChartData
+var profitCurveDisplay []ProfitCurveData
+var simTradeDisplay []SimulatedTradeData
+
 //websockets
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -62,6 +66,7 @@ func main() {
 
 	// getData()
 	// go saveJsonToRedis()
+	go runBacktest(strat1)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)

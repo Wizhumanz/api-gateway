@@ -83,7 +83,7 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(finalRet)
+	json.NewEncoder(w).Encode(candleDisplay)
 }
 
 func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +138,7 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(retData)
+	json.NewEncoder(w).Encode(profitCurveDisplay)
 }
 
 func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
@@ -196,5 +196,5 @@ func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(retData)
+	json.NewEncoder(w).Encode(simTradeDisplay)
 }
