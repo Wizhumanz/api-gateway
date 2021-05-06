@@ -22,43 +22,43 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		initDatastore()
 	}
 
-	//generate random OHLC data
-	min := 500000
-	max := 900000
-	minChange := -40000
-	maxChange := 45000
-	minWick := 1000
-	maxWick := 30000
-	startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
-	for i := 0; i < 250; i++ {
-		var new CandlestickChartData
+	// //generate random OHLC data
+	// min := 500000
+	// max := 900000
+	// minChange := -40000
+	// maxChange := 45000
+	// minWick := 1000
+	// maxWick := 30000
+	// startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
+	// for i := 0; i < 250; i++ {
+	// 	var new CandlestickChartData
 
-		//body
-		if i != 0 {
-			startDate = startDate.AddDate(0, 0, 1)
-			new = CandlestickChartData{
-				DateTime: startDate.Format("2006-01-02T15:04:05"),
-				Open:     retData[len(retData)-1].Close,
-			}
-		} else {
-			new = CandlestickChartData{
-				DateTime: startDate.Format("2006-01-02T15:04:05"),
-				Open:     float64(rand.Intn(max-min+1)+min) / 100,
-			}
-		}
-		new.Close = new.Open + (float64(rand.Intn(maxChange-minChange+1)+minChange) / 100)
+	// 	//body
+	// 	if i != 0 {
+	// 		startDate = startDate.AddDate(0, 0, 1)
+	// 		new = CandlestickChartData{
+	// 			DateTime: startDate.Format("2006-01-02T15:04:05"),
+	// 			Open:     retData[len(retData)-1].Close,
+	// 		}
+	// 	} else {
+	// 		new = CandlestickChartData{
+	// 			DateTime: startDate.Format("2006-01-02T15:04:05"),
+	// 			Open:     float64(rand.Intn(max-min+1)+min) / 100,
+	// 		}
+	// 	}
+	// 	new.Close = new.Open + (float64(rand.Intn(maxChange-minChange+1)+minChange) / 100)
 
-		//wick
-		if new.Close > new.Open {
-			new.High = new.Close + (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
-			new.Low = new.Open - (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
-		} else {
-			new.High = new.Open + (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
-			new.Low = new.Close - (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
-		}
+	// 	//wick
+	// 	if new.Close > new.Open {
+	// 		new.High = new.Close + (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
+	// 		new.Low = new.Open - (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
+	// 	} else {
+	// 		new.High = new.Open + (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
+	// 		new.Low = new.Close - (float64(rand.Intn(maxWick-minWick+1)+minWick) / 100)
+	// 	}
 
-		retData = append(retData, new)
-	}
+	// 	retData = append(retData, new)
+	// }
 
 	//filter by time
 	var finalRet []CandlestickChartData
@@ -68,7 +68,7 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	end, _ := time.Parse(format, r.URL.Query()["time_end"][0])
-	for _, c := range retData {
+	for _, c := range candleDisplay {
 		cTime, err2 := time.Parse(format, c.DateTime)
 		if err2 != nil {
 			fmt.Println(err)
@@ -83,7 +83,7 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(candleDisplay)
+	json.NewEncoder(w).Encode(finalRet)
 }
 
 func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
