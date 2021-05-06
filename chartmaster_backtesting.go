@@ -8,27 +8,27 @@ import (
 
 //test strat to pass to backtest func, runs once per historical candlestick
 func strat1(open, high, low, close []float64, relCandleIndex int, strategy *StrategySimulator, storage *interface{}) {
-	// if strategy.PosLongSize == 0 {
-	// 	//if two green candles in a row, buy
-	// 	if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
-	// 		strategy.Buy(close[relCandleIndex], 69.69, true)
-	// 		strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
-	// 			Action: "ENTER",
-	// 			Price:  close[relCandleIndex],
-	// 		})
-	// 		return
-	// 	}
-	// } else {
-	// 	//if two red candles in a row, sell
-	// 	if (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
-	// 		strategy.CloseLong(close[relCandleIndex], 69.69)
-	// 		strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
-	// 			Action: "SL",
-	// 			Price:  close[relCandleIndex],
-	// 		})
-	// 		return
-	// 	}
-	// }
+	if strategy.PosLongSize == 0 {
+		//if two green candles in a row, buy
+		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
+			strategy.Buy(close[relCandleIndex], 0.001, true)
+			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
+				Action: "ENTER",
+				Price:  close[relCandleIndex],
+			})
+			return
+		}
+	} else {
+		//if two red candles in a row, sell
+		if (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
+			strategy.CloseLong(close[relCandleIndex], 0.001)
+			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
+				Action: "SL",
+				Price:  close[relCandleIndex],
+			})
+			return
+		}
+	}
 
 	//if no action taken, add blank action to maintain index
 	strategy.Actions = append(strategy.Actions, StrategySimulatorAction{})
@@ -40,7 +40,7 @@ func resetDisplayVars() {
 	simTradeDisplay = []SimulatedTradeData{}
 }
 
-func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) CandlestickChartData {
+func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	newCandleD := CandlestickChartData{
 		DateTime: c.DateTime,
@@ -57,10 +57,27 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) Candl
 		newCandleD.StratExitPrice = strat.Actions[0].Price
 		// newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[0].SL)
 	}
-	return newCandleD
 
-	//TODO: profit curve
-	//TODO: sim trades
+	//profit curve
+	pd := ProfitCurveDataPoint{
+		DateTime: c.DateTime,
+		Equity:   strat.GetEquity(),
+	}
+
+	//sim trades
+	sd := SimulatedTradeDataPoint{}
+	if strat.Actions[relIndex].Action == "SL" || strat.Actions[relIndex].Action == "TP" {
+		sd.DateTime = c.DateTime
+		sd.Direction = "LONG"                               //TODO: fix later when strategy changes
+		sd.EntryPrice = strat.Actions[relIndex].Price - 1.0 //TODO: calculate actual entry price
+		sd.ExitPrice = strat.Actions[relIndex].Price
+		//TODO: add more props to strategy Actions
+		sd.PosSize = 69.69
+		sd.RiskedEquity = 699.69
+		sd.RawProfitPerc = 0.69
+	}
+
+	return newCandleD, pd, sd
 }
 
 func runBacktest(
@@ -89,7 +106,18 @@ func runBacktest(
 	strategySim := StrategySimulator{}
 	strategySim.Init(1000)
 	var storage interface{}
+
 	resetDisplayVars()
+	profitCurveDisplay = []ProfitCurveData{
+		{
+			Label: "strat1",
+		},
+	}
+	simTradeDisplay = []SimulatedTradeData{
+		{
+			Label: "strat1",
+		},
+	}
 
 	allOpens := []float64{}
 	allHighs := []float64{}
@@ -102,7 +130,9 @@ func runBacktest(
 		allCloses = append(allCloses, candle.Close)
 		userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
 		//build display data using strategySim
-		newCData := saveDisplayData(candle, strategySim, i)
+		newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i)
 		candleDisplay = append(candleDisplay, newCData)
+		profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
+		simTradeDisplay[0].Data = append(simTradeDisplay[0].Data, simTradeData)
 	}
 }

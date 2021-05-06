@@ -124,7 +124,7 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 				new.Equity = math.Abs(retData[j].Data[latestIndex].Equity + change)
 			}
 
-			new.Date = startDate.Format("2006-01-02")
+			new.DateTime = startDate.Format("2006-01-02")
 
 			//randomize period skip
 			randSkip := (rand.Intn(maxPeriodChange-minPeriodChange+1) + minPeriodChange)
@@ -182,7 +182,7 @@ func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
 			new.RiskedEquity = (float64(rand.Intn(maxPrice-minPrice+1)+minPrice) / 100) / 5
 			new.RawProfitPerc = (float64(rand.Intn(maxRawProfit-minRawProfit+1)+minRawProfit) / 10)
 
-			new.Date = startDate.Format("2006-01-02")
+			new.DateTime = startDate.Format("2006-01-02")
 
 			//randomize period skip
 			randSkip := (rand.Intn(maxPeriodChange-minPeriodChange+1) + minPeriodChange)

@@ -163,8 +163,8 @@ type CandlestickChartData struct {
 }
 
 type ProfitCurveDataPoint struct {
-	Date   string  `json:"Date"`
-	Equity float64 `json:"Equity"`
+	DateTime string  `json:"Date"`
+	Equity   float64 `json:"Equity"`
 }
 
 type ProfitCurveData struct {
@@ -173,7 +173,7 @@ type ProfitCurveData struct {
 }
 
 type SimulatedTradeDataPoint struct {
-	Date          string  `json:"Date"`
+	DateTime      string  `json:"Date"`
 	Direction     string  `json:"Direction"`
 	EntryPrice    float64 `json:"EntryPrice"`
 	ExitPrice     float64 `json:"ExitPrice"`
@@ -210,6 +210,10 @@ type StrategySimulator struct {
 
 func (strat *StrategySimulator) Init(e float64) {
 	strat.equity = e
+}
+
+func (strat *StrategySimulator) GetEquity() float64 {
+	return strat.equity
 }
 
 func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bool) {
