@@ -202,27 +202,29 @@ type StrategySimulatorAction struct {
 }
 
 type StrategySimulator struct {
-	PosLongSize  float64
-	PosShortSize float64
-	equity       float64
-	Actions      []StrategySimulatorAction
+	PosLongSize     float64
+	PosShortSize    float64
+	totalEquity     float64
+	availableEquity float64
+	Actions         []StrategySimulatorAction
 }
 
 func (strat *StrategySimulator) Init(e float64) {
-	strat.equity = e
+	strat.totalEquity = e
+	strat.availableEquity = e
 }
 
 func (strat *StrategySimulator) GetEquity() float64 {
-	return strat.equity
+	return strat.totalEquity
 }
 
 func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bool) {
-	if (orderSize * price) > strat.equity {
-		fmt.Println(colorRed + "Order size exceeds simulated capital" + colorReset)
-		return
-	}
+	// if (orderSize * price) > strat.availableEquity {
+	// 	log.Fatal(colorRed + "Order size exceeds available equity" + colorReset)
+	// 	return
+	// }
 
-	strat.equity = strat.equity - (orderSize * price)
+	strat.availableEquity = strat.availableEquity - (orderSize * price)
 
 	if directionIsLong {
 		strat.PosLongSize = orderSize
@@ -232,6 +234,7 @@ func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bo
 }
 
 func (strat *StrategySimulator) CloseLong(price, orderSize float64) {
-	strat.equity = strat.equity + (orderSize * price)
+	strat.totalEquity = strat.availableEquity + (orderSize * price)
+	strat.availableEquity = strat.totalEquity
 	strat.PosLongSize = strat.PosLongSize - orderSize
 }

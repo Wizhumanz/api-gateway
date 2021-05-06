@@ -11,7 +11,8 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	if strategy.PosLongSize == 0 {
 		//if two green candles in a row, buy
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
-			strategy.Buy(close[relCandleIndex], 0.001, true)
+			// fmt.Printf("Buying at %v\n", close[relCandleIndex])
+			strategy.Buy(close[relCandleIndex], 1.3, true)
 			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
 				Action: "ENTER",
 				Price:  close[relCandleIndex],
@@ -21,7 +22,8 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	} else {
 		//if two red candles in a row, sell
 		if (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
-			strategy.CloseLong(close[relCandleIndex], 0.001)
+			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
+			strategy.CloseLong(close[relCandleIndex], 1.3)
 			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
 				Action: "SL",
 				Price:  close[relCandleIndex],
@@ -87,7 +89,7 @@ func runBacktest(
 	format := "2006-01-02T15:04:05"
 	startDateTime, _ := time.Parse(format, "2021-05-01T00:00:00") //TODO: get this from func arg
 	data := []Candlestick{}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		var new Candlestick
 		ctx := context.Background()
 		key := "BTCUSDT:1MIN:" + startDateTime.Format(format) + ".0000000Z"
