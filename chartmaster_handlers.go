@@ -37,13 +37,13 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 		if i != 0 {
 			startDate = startDate.AddDate(0, 0, 1)
 			new = CandlestickChartData{
-				Date: startDate.Format("2006-01-02"),
-				Open: retData[len(retData)-1].Close,
+				DateTime: startDate.Format("2006-01-02"),
+				Open:     retData[len(retData)-1].Close,
 			}
 		} else {
 			new = CandlestickChartData{
-				Date: startDate.Format("2006-01-02"),
-				Open: float64(rand.Intn(max-min+1)+min) / 100,
+				DateTime: startDate.Format("2006-01-02"),
+				Open:     float64(rand.Intn(max-min+1)+min) / 100,
 			}
 		}
 		new.Close = new.Open + (float64(rand.Intn(maxChange-minChange+1)+minChange) / 100)
@@ -79,11 +79,11 @@ func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//generate random profit data
-	minChange := -60
-	maxChange := 80
+	minChange := -110
+	maxChange := 150
 	minPeriodChange := 0
 	maxPeriodChange := 4
-	for j := 0; j < 3; j++ {
+	for j := 0; j < 10; j++ {
 		startEquity := 1000
 		startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
 		retData = append(retData, ProfitCurveData{

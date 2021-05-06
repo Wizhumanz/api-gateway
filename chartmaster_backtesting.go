@@ -1,5 +1,11 @@
 package main
 
+import "fmt"
+
+var candleDisplay []CandlestickChartData
+var profitCurveDisplay []ProfitCurveData
+var simTradeDisplay []SimulatedTradeData
+
 //test strat to pass to backtest func, runs once per historical candlestick
 func strat1(open, high, low, close []float64, relCandleIndex int, strategy *StrategySimulator, storage *interface{}) {
 	if strategy.PosLongSize == 0 {
@@ -15,9 +21,38 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	}
 }
 
+func resetDisplayVars() {
+	candleDisplay = []CandlestickChartData{}
+	profitCurveDisplay = []ProfitCurveData{}
+	simTradeDisplay = []SimulatedTradeData{}
+}
+
+func saveDisplayData(c Candlestick, strat StrategySimulator) {
+	//candlestick
+	newCandleD := CandlestickChartData{
+		DateTime: c.DateTime,
+		Open:     c.Open,
+		High:     c.High,
+		Low:      c.Low,
+		Close:    c.Close,
+	}
+	//strategy enter/exit/label
+	if strat.Actions[0].Action == "ENTER" {
+		newCandleD.StratEnterPrice = strat.Actions[0].Price
+		newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[0].SL)
+	} else if strat.Actions[0].Action == "EXIT" {
+		newCandleD.StratExitPrice = strat.Actions[0].Price
+		newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[0].SL)
+	}
+	candleDisplay = append(candleDisplay, newCandleD)
+
+	//TODO: profit curve
+	//TODO: sim trades
+}
+
 func runBacktest(
 	userStrat func(float64, float64, float64, float64, int, *StrategySimulator, *interface{}),
-) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+) {
 	//TODO: get all candlestick data for selected backtest period
 	data := []Candlestick{}
 	strategySim := StrategySimulator{}
@@ -26,8 +61,8 @@ func runBacktest(
 
 	for i, candle := range data {
 		userStrat(candle.Open, candle.High, candle.Low, candle.Close, i, &strategySim, &storage)
-		//TODO: build display data as well using strategySim
+		//build display data using strategySim
+		resetDisplayVars()
+		saveDisplayData(candle, strategySim)
 	}
-
-	return nil, nil, nil
 }

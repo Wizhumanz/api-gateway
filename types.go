@@ -139,11 +139,14 @@ type ScatterData struct {
 }
 
 type CandlestickChartData struct {
-	Date  string  `json:"Date"`
-	Open  float64 `json:"Open"`
-	High  float64 `json:"High"`
-	Low   float64 `json:"Low"`
-	Close float64 `json:"Close"`
+	DateTime        string  `json:"Date"`
+	Open            float64 `json:"Open"`
+	High            float64 `json:"High"`
+	Low             float64 `json:"Low"`
+	Close           float64 `json:"Close"`
+	StratEnterPrice float64 `json:"StratEnterPrice"`
+	StratExitPrice  float64 `json:"StratExitPrice"`
+	Label           string  `json:"Label"`
 }
 
 type ProfitCurveDataPoint struct {
@@ -172,16 +175,24 @@ type SimulatedTradeData struct {
 }
 
 type Candlestick struct {
-	Open  float64
-	High  float64
-	Low   float64
-	Close float64
+	DateTime string
+	Open     float64
+	High     float64
+	Low      float64
+	Close    float64
+}
+
+type StrategySimulatorAction struct {
+	Action string
+	Price  float64
+	SL     float64
 }
 
 type StrategySimulator struct {
 	PosLongSize  float64
 	PosShortSize float64
 	equity       float64
+	Actions      []StrategySimulatorAction
 }
 
 func (strat *StrategySimulator) Init(e float64) {
