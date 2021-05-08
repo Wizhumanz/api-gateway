@@ -206,19 +206,20 @@ type StrategySimulator struct {
 	PosShortSize    float64
 	totalEquity     float64
 	availableEquity float64
-	Actions         []StrategySimulatorAction
+	Actions         map[int]StrategySimulatorAction //map bar index to action that occured at that index
 }
 
 func (strat *StrategySimulator) Init(e float64) {
 	strat.totalEquity = e
 	strat.availableEquity = e
+	strat.Actions = map[int]StrategySimulatorAction{}
 }
 
 func (strat *StrategySimulator) GetEquity() float64 {
 	return strat.totalEquity
 }
 
-func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bool) {
+func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLong bool, cIndex int) {
 	// if (orderSize * price) > strat.availableEquity {
 	// 	log.Fatal(colorRed + "Order size exceeds available equity" + colorReset)
 	// 	return
@@ -231,9 +232,15 @@ func (strat *StrategySimulator) Buy(price, orderSize float64, directionIsLong bo
 	} else {
 		strat.PosShortSize = orderSize
 	}
+
+	strat.Actions[cIndex] = StrategySimulatorAction{
+		Action: "ENTER",
+		Price:  price,
+		SL:     sl,
+	}
 }
 
-func (strat *StrategySimulator) CloseLong(price, orderSize float64) {
+func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int) {
 	//close entire long
 	if orderSize == 0 {
 		strat.totalEquity = strat.availableEquity + (strat.PosLongSize * price)
@@ -243,21 +250,26 @@ func (strat *StrategySimulator) CloseLong(price, orderSize float64) {
 		strat.PosLongSize = strat.PosLongSize - orderSize
 	}
 	strat.availableEquity = strat.totalEquity
+
+	strat.Actions[cIndex] = StrategySimulatorAction{
+		Action: "SL",
+		Price:  price,
+	}
 }
 
-func (strat *StrategySimulator) CheckPositions(open, high, low, close float64) {
+func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, cIndex int) {
 	if strat.PosLongSize > 0 {
-		//check SL
+		//get SL
 		var sl float64
-		for i := 1; i < len(strat.Actions); i++ {
-			index := len(strat.Actions) - i
-			if strat.Actions[index].Action == "ENTER" && sl == 0 {
-				sl = strat.Actions[index].SL
+		for _, act := range strat.Actions {
+			if act.Action == "ENTER" && sl == 0 {
+				sl = act.SL
 				break
 			}
 		}
+		//check SL
 		if low <= sl || close <= sl || open <= sl || high <= sl {
-			strat.CloseLong(close, 0)
+			strat.CloseLong(close, 0, cIndex)
 		}
 
 		//TODO: check TP

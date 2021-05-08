@@ -13,8 +13,6 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	accSz := 1000
 	leverage := 25 //limits raw price SL %
 
-	strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex])
-
 	if strategy.PosLongSize == 0 {
 		//if two green candles in a row, buy
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
@@ -26,30 +24,19 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 			posCap := (accRiskedCap / rawRiskPerc) / float64(leverage)
 			posSize := posCap / entryPrice
 			fmt.Printf("Entering with %v\n", posSize)
-			strategy.Buy(close[relCandleIndex], posSize, true)
-
-			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
-				Action: "ENTER",
-				Price:  close[relCandleIndex],
-				SL:     slPrice,
-			})
+			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 			return
 		}
 	} else {
+		strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
+
 		//if two red candles in a row, sell
 		if (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
-			strategy.CloseLong(close[relCandleIndex], 0)
-			strategy.Actions = append(strategy.Actions, StrategySimulatorAction{
-				Action: "SL",
-				Price:  close[relCandleIndex],
-			})
+			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
 			return
 		}
 	}
-
-	//if no action taken, add blank action to maintain index
-	strategy.Actions = append(strategy.Actions, StrategySimulatorAction{})
 }
 
 func resetDisplayVars() {
