@@ -104,7 +104,7 @@ func runBacktest(
 	format := "2006-01-02T15:04:05"
 	startDateTime, _ := time.Parse(format, "2021-05-01T00:00:00") //TODO: get this from func arg
 	data := []Candlestick{}
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 300; i++ {
 		var new Candlestick
 		ctx := context.Background()
 		key := "BTCUSDT:1MIN:" + startDateTime.Format(format) + ".0000000Z"
@@ -121,7 +121,7 @@ func runBacktest(
 	}
 
 	strategySim := StrategySimulator{}
-	strategySim.Init(1000)
+	strategySim.Init(500)
 	var storage interface{}
 
 	resetDisplayVars()

@@ -152,7 +152,7 @@ type RawOHLCGetResp struct {
 }
 
 type CandlestickChartData struct {
-	DateTime        string  `json:"Date"`
+	DateTime        string  `json:"DateTime"`
 	Open            float64 `json:"Open"`
 	High            float64 `json:"High"`
 	Low             float64 `json:"Low"`
@@ -163,7 +163,7 @@ type CandlestickChartData struct {
 }
 
 type ProfitCurveDataPoint struct {
-	DateTime string  `json:"Date"`
+	DateTime string  `json:"DateTime"`
 	Equity   float64 `json:"Equity"`
 }
 
@@ -173,7 +173,7 @@ type ProfitCurveData struct {
 }
 
 type SimulatedTradeDataPoint struct {
-	DateTime      string  `json:"Date"`
+	DateTime      string  `json:"DateTime"`
 	Direction     string  `json:"Direction"`
 	EntryPrice    float64 `json:"EntryPrice"`
 	ExitPrice     float64 `json:"ExitPrice"`
