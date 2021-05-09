@@ -8,7 +8,7 @@ import (
 )
 
 //test strat to pass to backtest func, runs once per historical candlestick
-func strat1(open, high, low, close []float64, relCandleIndex int, strategy *StrategySimulator, storage *interface{}) {
+func strat1(open, high, low, close []float64, relCandleIndex int, strategy *StrategySimulator, storage *interface{}) string {
 	accRiskPerTrade := 0.5
 	accSz := 1000
 	leverage := 25 //limits raw price SL %
@@ -18,25 +18,27 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
 			// fmt.Printf("Buying at %v\n", close[relCandleIndex])
 			entryPrice := close[relCandleIndex]
-			slPrice := close[relCandleIndex-2]
+			slPrice := low[relCandleIndex-1]
 			rawRiskPerc := (entryPrice - slPrice) / entryPrice
 			accRiskedCap := accRiskPerTrade * float64(accSz)
 			posCap := (accRiskedCap / rawRiskPerc) / float64(leverage)
 			posSize := posCap / entryPrice
-			fmt.Printf("Entering with %v\n", posSize)
+			// fmt.Printf("Entering with %v\n", posSize)
 			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
-			return
+			return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize)
 		}
 	} else {
-		strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
+		sl := strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
 
 		//if two red candles in a row, sell
-		if (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
+		if (strategy.PosLongSize > 0) && (open[relCandleIndex] > close[relCandleIndex]) && (open[relCandleIndex-1] > close[relCandleIndex-1]) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
-			return
+			return fmt.Sprintf("▼ %.2f", sl)
 		}
 	}
+
+	return ""
 }
 
 func resetDisplayVars() {
@@ -45,7 +47,7 @@ func resetDisplayVars() {
 	simTradeDisplay = []SimulatedTradeData{}
 }
 
-func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
+func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label string) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	newCandleD := CandlestickChartData{
 		DateTime: c.DateTime,
@@ -54,12 +56,21 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) (Cand
 		Low:      c.Low,
 		Close:    c.Close,
 	}
-	//strategy enter/exit/label
+	//strategy enter/exit
 	if strat.Actions[relIndex].Action == "ENTER" {
 		newCandleD.StratEnterPrice = strat.Actions[relIndex].Price
-		newCandleD.Label = fmt.Sprintf("SL = %v", strat.Actions[relIndex].SL)
 	} else if strat.Actions[relIndex].Action == "SL" {
 		newCandleD.StratExitPrice = strat.Actions[relIndex].Price
+	}
+	//label
+	if label != "" {
+		newCandleD.Label = label
+	} else {
+		// if strat.Actions[relIndex].Action == "ENTER" {
+		// 	newCandleD.Label = fmt.Sprintf("<SL=\n%v", strat.Actions[relIndex].SL)
+		// } else if strat.Actions[relIndex].Action == "SL" {
+		// 	newCandleD.Label = fmt.Sprintf("<SL=%.2f / low=%.2f", strat.Actions[relIndex].SL, c.Low)
+		// }
 	}
 
 	//profit curve
@@ -85,7 +96,7 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int) (Cand
 }
 
 func runBacktest(
-	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}),
+	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 ) {
 	//get all candlestick data for selected backtest period
 	format := "2006-01-02T15:04:05"
@@ -132,9 +143,9 @@ func runBacktest(
 		allHighs = append(allHighs, candle.High)
 		allLows = append(allLows, candle.Low)
 		allCloses = append(allCloses, candle.Close)
-		userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+		lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
 		//build display data using strategySim
-		newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i)
+		newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i, lb)
 		candleDisplay = append(candleDisplay, newCData)
 		profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
 		if simTradeData.DateTime != "" {

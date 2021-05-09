@@ -257,12 +257,12 @@ func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int) 
 	}
 }
 
-func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, cIndex int) {
+func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, cIndex int) float64 {
+	var sl float64
 	if strat.PosLongSize > 0 {
 		//get SL
-		var sl float64
 		for _, act := range strat.Actions {
-			if act.Action == "ENTER" && sl == 0 {
+			if act.Action == "ENTER" {
 				sl = act.SL
 				break
 			}
@@ -274,4 +274,6 @@ func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, c
 
 		//TODO: check TP
 	}
+
+	return sl
 }
