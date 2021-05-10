@@ -66,7 +66,6 @@ func main() {
 
 	// getData()
 	// go saveJsonToRedis()
-	go runBacktest(strat1)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
@@ -97,6 +96,7 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/candlestick").HandlerFunc(indexChartmasterHandler)
 	router.Methods("GET", "OPTIONS").Path("/profitCurve").HandlerFunc(profitCurveHandler)
 	router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
+	router.Methods("GET", "OPTIONS").Path("/backtest").HandlerFunc(backtestHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()

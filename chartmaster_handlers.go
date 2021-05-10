@@ -198,3 +198,19 @@ func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(simTradeDisplay)
 }
+
+func backtestHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	ticker := r.URL.Query()["ticker"][0]
+	period := r.URL.Query()["period"][0]
+	runBacktest(strat1, ticker, period)
+
+	// return
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	// json.NewEncoder(w).Encode(finalRet)
+}

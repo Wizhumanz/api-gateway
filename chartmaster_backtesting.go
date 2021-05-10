@@ -97,6 +97,7 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 
 func runBacktest(
 	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
+	ticker, period string,
 ) {
 	//get all candlestick data for selected backtest period
 	format := "2006-01-02T15:04:05"
