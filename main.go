@@ -41,6 +41,8 @@ var candleDisplay []CandlestickChartData
 var profitCurveDisplay []ProfitCurveData
 var simTradeDisplay []SimulatedTradeData
 
+var periodDurationMap map[string]time.Duration
+
 //websockets
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -65,6 +67,10 @@ func main() {
 	// log.Fatal(http.ListenAndServe(addr, nil))
 
 	// go saveJsonToRedis()
+
+	periodDurationMap["1MIN"] = 1 * time.Minute
+	periodDurationMap["5MIN"] = 5 * time.Minute
+	periodDurationMap["15MIN"] = 15 * time.Minute
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)

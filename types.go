@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"cloud.google.com/go/datastore"
 )
@@ -138,19 +140,6 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
-type RawOHLCGetResp struct {
-	PeriodStart string  `json:"time_period_start"`
-	PeriodEnd   string  `json:"time_period_end"`
-	TimeOpen    string  `json:"time_open"`
-	TimeClose   string  `json:"time_close"`
-	Open        float64 `json:"price_open"`
-	High        float64 `json:"price_high"`
-	Low         float64 `json:"price_low"`
-	Close       float64 `json:"price_close"`
-	Volume      float64 `json:"volume_traded"`
-	TradesCount float64 `json:"trades_count"`
-}
-
 type CandlestickChartData struct {
 	DateTime        string  `json:"DateTime"`
 	Open            float64 `json:"Open"`
@@ -188,11 +177,38 @@ type SimulatedTradeData struct {
 }
 
 type Candlestick struct {
-	DateTime string
-	Open     float64
-	High     float64
-	Low      float64
-	Close    float64
+	DateTime    string
+	PeriodStart string  `json:"time_period_start"`
+	PeriodEnd   string  `json:"time_period_end"`
+	TimeOpen    string  `json:"time_open"`
+	TimeClose   string  `json:"time_close"`
+	Open        float64 `json:"price_open"`
+	High        float64 `json:"price_high"`
+	Low         float64 `json:"price_low"`
+	Close       float64 `json:"price_close"`
+	Volume      float64 `json:"volume_traded"`
+	TradesCount float64 `json:"trades_count"`
+}
+
+func (c *Candlestick) Create(redisData map[string]string) {
+	c.Open, _ = strconv.ParseFloat(redisData["open"], 32)
+	c.High, _ = strconv.ParseFloat(redisData["high"], 32)
+	c.Low, _ = strconv.ParseFloat(redisData["low"], 32)
+	c.Close, _ = strconv.ParseFloat(redisData["close"], 32)
+	c.Volume, _ = strconv.ParseFloat(redisData["volume"], 32)
+	c.TradesCount, _ = strconv.ParseFloat(redisData["tradesCount"], 32)
+	c.TimeOpen = redisData["timeOpen"]
+	c.TimeClose = redisData["timeClose"]
+	c.PeriodStart = redisData["periodStart"]
+	c.PeriodEnd = redisData["periodEnd"]
+	redisKeyFormat := "2006-01-02T15:04:05.9999999Z"
+	t, timeErr := time.Parse(redisKeyFormat, redisData["periodStart"])
+	if timeErr != nil {
+		fmt.Println(timeErr)
+		return
+	}
+	format := "2006-01-02T15:04:05"
+	c.DateTime = t.Format(format)
 }
 
 type StrategySimulatorAction struct {

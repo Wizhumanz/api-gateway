@@ -98,6 +98,7 @@ func runBacktest(
 	ticker, period string,
 	startTime, endTime time.Time,
 ) {
+	//get candles to test strat
 	var periodCandles []Candlestick
 	format := "2006-01-02T15:04:05"
 	//check if data exists in cache
@@ -106,61 +107,46 @@ func runBacktest(
 	testRes, _ := rdb.HGetAll(ctx, testKey).Result()
 	if (testRes["open"] == "") && (testRes["close"] == "") {
 		//if no data in cache, do fresh GET and save to cache
-		periodCandles = getCandleData(ticker, period, startTime, endTime)
+		periodCandles = fetchCandleData(ticker, period, startTime, endTime)
+	} else {
+		//otherwise, get data in cache
+		periodCandles = getCachedCandleData(ticker, period, startTime, endTime)
 	}
-	fmt.Println(periodCandles)
 
-	// //get all candlestick data for selected backtest period
-	// startDateTime, _ := time.Parse(format, "2021-05-01T00:00:00") //TODO: get this from func arg
-	// data := []Candlestick{}
-	// for i := 0; i < 300; i++ {
-	// 	var new Candlestick
-	// 	ctx := context.Background()
-	// 	key := "BTCUSDT:1MIN:" + startDateTime.Format(format) + ".0000000Z"
-	// 	res, _ := rdb.HGetAll(ctx, key).Result()
+	//init strat testing
+	strategySim := StrategySimulator{}
+	strategySim.Init(500) //TODO: take func arg
+	var storage interface{}
 
-	// 	new.DateTime = startDateTime.Format(format)
-	// 	new.Open, _ = strconv.ParseFloat(res["open"], 32)
-	// 	new.High, _ = strconv.ParseFloat(res["high"], 32)
-	// 	new.Low, _ = strconv.ParseFloat(res["low"], 32)
-	// 	new.Close, _ = strconv.ParseFloat(res["close"], 32)
-	// 	data = append(data, new)
+	resetDisplayVars()
+	profitCurveDisplay = []ProfitCurveData{
+		{
+			Label: "strat1", //TODO: prep for dynamic strategy param values
+		},
+	}
+	simTradeDisplay = []SimulatedTradeData{
+		{
+			Label: "strat1",
+		},
+	}
 
-	// 	startDateTime = startDateTime.Add(1 * time.Minute)
-	// }
-
-	// strategySim := StrategySimulator{}
-	// strategySim.Init(500)
-	// var storage interface{}
-
-	// resetDisplayVars()
-	// profitCurveDisplay = []ProfitCurveData{
-	// 	{
-	// 		Label: "strat1",
-	// 	},
-	// }
-	// simTradeDisplay = []SimulatedTradeData{
-	// 	{
-	// 		Label: "strat1",
-	// 	},
-	// }
-
-	// allOpens := []float64{}
-	// allHighs := []float64{}
-	// allLows := []float64{}
-	// allCloses := []float64{}
-	// for i, candle := range data {
-	// 	allOpens = append(allOpens, candle.Open)
-	// 	allHighs = append(allHighs, candle.High)
-	// 	allLows = append(allLows, candle.Low)
-	// 	allCloses = append(allCloses, candle.Close)
-	// 	lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
-	// 	//build display data using strategySim
-	// 	newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i, lb)
-	// 	candleDisplay = append(candleDisplay, newCData)
-	// 	profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
-	// 	if simTradeData.DateTime != "" {
-	// 		simTradeDisplay[0].Data = append(simTradeDisplay[0].Data, simTradeData)
-	// 	}
-	// }
+	//run strat on each candle
+	allOpens := []float64{}
+	allHighs := []float64{}
+	allLows := []float64{}
+	allCloses := []float64{}
+	for i, candle := range periodCandles {
+		allOpens = append(allOpens, candle.Open)
+		allHighs = append(allHighs, candle.High)
+		allLows = append(allLows, candle.Low)
+		allCloses = append(allCloses, candle.Close)
+		lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+		//build display data using strategySim
+		newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i, lb)
+		candleDisplay = append(candleDisplay, newCData)
+		profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
+		if simTradeData.DateTime != "" {
+			simTradeDisplay[0].Data = append(simTradeDisplay[0].Data, simTradeData)
+		}
+	}
 }
