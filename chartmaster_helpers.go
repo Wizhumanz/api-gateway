@@ -35,6 +35,8 @@ func cacheCandleData(candles []Candlestick) {
 }
 
 func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick {
+	fmt.Printf("FETCHING from time %v\n", start.Format(httpTimeFormat))
+
 	//send request
 	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
 	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s&limit=100000",
@@ -63,16 +65,24 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 }
 
 func getCachedCandleData(ticker, period string, start, end time.Time) []Candlestick {
+	fmt.Printf("Getting cache from time %v\n", start.Format(httpTimeFormat))
+
 	var retCandles []Candlestick
 	checkEnd := end.Add(periodDurationMap[period])
 	for cTime := start; cTime.Before(checkEnd); cTime = cTime.Add(periodDurationMap[period]) {
 		key := "BTCUSDT:1MIN:" + cTime.Format(httpTimeFormat) + ".0000000Z"
-		fmt.Println(key)
 		cachedData, _ := rdb.HGetAll(ctx, key).Result()
 
-		newCandle := Candlestick{}
-		newCandle.Create(cachedData)
-		retCandles = append(retCandles, newCandle)
+		//if candle not found in cache, fetch new
+		if cachedData["open"] == "" {
+			fetchedCandles := fetchCandleData(ticker, period, cTime, end)
+			retCandles = append(retCandles, fetchedCandles...)
+			return retCandles
+		} else {
+			newCandle := Candlestick{}
+			newCandle.Create(cachedData)
+			retCandles = append(retCandles, newCandle)
+		}
 	}
 
 	return retCandles

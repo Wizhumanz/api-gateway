@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -193,7 +192,6 @@ type Candlestick struct {
 }
 
 func (c *Candlestick) Create(redisData map[string]string) {
-	fmt.Println(redisData)
 	c.Open, _ = strconv.ParseFloat(redisData["open"], 32)
 	c.High, _ = strconv.ParseFloat(redisData["high"], 32)
 	c.Low, _ = strconv.ParseFloat(redisData["low"], 32)
@@ -206,7 +204,7 @@ func (c *Candlestick) Create(redisData map[string]string) {
 	c.PeriodEnd = redisData["periodEnd"]
 	t, timeErr := time.Parse(httpTimeFormat, strings.Split(redisData["periodStart"], ".")[0])
 	if timeErr != nil {
-		log.Fatal(timeErr)
+		fmt.Errorf("&v", timeErr)
 		return
 	}
 	c.DateTime = t.Format(httpTimeFormat)
