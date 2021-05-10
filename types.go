@@ -201,14 +201,12 @@ func (c *Candlestick) Create(redisData map[string]string) {
 	c.TimeClose = redisData["timeClose"]
 	c.PeriodStart = redisData["periodStart"]
 	c.PeriodEnd = redisData["periodEnd"]
-	redisKeyFormat := "2006-01-02T15:04:05.9999999Z"
-	t, timeErr := time.Parse(redisKeyFormat, redisData["periodStart"])
+	t, timeErr := time.Parse(redisKeyTimeFormat, redisData["periodStart"])
 	if timeErr != nil {
 		fmt.Println(timeErr)
 		return
 	}
-	format := "2006-01-02T15:04:05"
-	c.DateTime = t.Format(format)
+	c.DateTime = t.Format(httpTimeFormat)
 }
 
 type StrategySimulatorAction struct {

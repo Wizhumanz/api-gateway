@@ -23,8 +23,7 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 
 	//filter by time
 	var finalRet []CandlestickChartData
-	format := "2006-01-02T15:04:05"
-	start, err := time.Parse(format, r.URL.Query()["time_start"][0])
+	start, err := time.Parse(httpTimeFormat, r.URL.Query()["time_start"][0])
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -129,12 +128,11 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 
 	ticker := r.URL.Query()["ticker"][0]
 	period := r.URL.Query()["period"][0]
-	format := "2006-01-02T15:04:05"
-	start, err := time.Parse(format, r.URL.Query()["time_start"][0])
+	start, err := time.Parse(httpTimeFormat, r.URL.Query()["time_start"][0])
 	if err != nil {
 		fmt.Println(err)
 	}
-	end, err2 := time.Parse(format, r.URL.Query()["time_end"][0])
+	end, err2 := time.Parse(httpTimeFormat, r.URL.Query()["time_end"][0])
 	if err2 != nil {
 		fmt.Println(err)
 	}

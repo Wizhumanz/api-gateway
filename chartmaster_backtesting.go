@@ -100,10 +100,9 @@ func runBacktest(
 ) {
 	//get candles to test strat
 	var periodCandles []Candlestick
-	format := "2006-01-02T15:04:05"
 	//check if data exists in cache
 	redisKeyPrefix := ticker + ":" + period + ":"
-	testKey := redisKeyPrefix + startTime.Format(format) + ".0000000Z"
+	testKey := redisKeyPrefix + startTime.Format(httpTimeFormat) + ".0000000Z"
 	testRes, _ := rdb.HGetAll(ctx, testKey).Result()
 	if (testRes["open"] == "") && (testRes["close"] == "") {
 		//if no data in cache, do fresh GET and save to cache

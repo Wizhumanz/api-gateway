@@ -36,13 +36,12 @@ func cacheCandleData(candles []Candlestick) {
 
 func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick {
 	//send request
-	format := "2006-01-02T15:04:05"
 	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
 	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s&limit=100000",
 		base,
 		period,
-		start.Format(format),
-		end.Format(format))
+		start.Format(httpTimeFormat),
+		end.Format(httpTimeFormat))
 	req, _ := http.NewRequest("GET", full, nil)
 	req.Header.Add("X-CoinAPI-Key", "4D684039-406E-451F-BB2B-6BDC123808E1")
 	client := &http.Client{}
@@ -65,10 +64,9 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 
 func getCachedCandleData(ticker, period string, start, end time.Time) []Candlestick {
 	var retCandles []Candlestick
-	redisKeyFormat := "2006-01-02T15:04:05.9999999Z"
 	checkEnd := end.Add(periodDurationMap[period])
 	for cTime := start; cTime.Before(checkEnd); cTime.Add(periodDurationMap[period]) {
-		key := "BTCUSDT:1MIN:" + cTime.Format(redisKeyFormat)
+		key := "BTCUSDT:1MIN:" + cTime.Format(redisKeyTimeFormat)
 		cachedData, _ := rdb.HGetAll(ctx, key).Result()
 
 		newCandle := Candlestick{}
@@ -106,12 +104,12 @@ func generateRandomCandles() {
 		if i != 0 {
 			startDate = startDate.AddDate(0, 0, 1)
 			new = CandlestickChartData{
-				DateTime: startDate.Format("2006-01-02T15:04:05"),
+				DateTime: startDate.Format(httpTimeFormat),
 				Open:     retData[len(retData)-1].Close,
 			}
 		} else {
 			new = CandlestickChartData{
-				DateTime: startDate.Format("2006-01-02T15:04:05"),
+				DateTime: startDate.Format(httpTimeFormat),
 				Open:     float64(rand.Intn(max-min+1)+min) / 100,
 			}
 		}
