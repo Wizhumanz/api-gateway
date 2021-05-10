@@ -27,9 +27,9 @@ func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	end, _ := time.Parse(format, r.URL.Query()["time_end"][0])
+	end, _ := time.Parse(httpTimeFormat, r.URL.Query()["time_end"][0])
 	for _, c := range candleDisplay {
-		cTime, err2 := time.Parse(format, c.DateTime)
+		cTime, err2 := time.Parse(httpTimeFormat, c.DateTime)
 		if err2 != nil {
 			fmt.Println(err)
 		}

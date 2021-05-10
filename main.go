@@ -43,7 +43,6 @@ var simTradeDisplay []SimulatedTradeData
 
 var periodDurationMap = map[string]time.Duration{}
 var httpTimeFormat string
-var redisKeyTimeFormat string
 
 //websockets
 var upgrader = websocket.Upgrader{
@@ -57,7 +56,6 @@ var wsConnections map[string]*websocket.Conn
 
 func main() {
 	httpTimeFormat = "2006-01-02T15:04:05"
-	redisKeyTimeFormat = "2006-01-02T15:04:05.9999999Z"
 
 	rand.Seed(time.Now().UTC().UnixNano())
 

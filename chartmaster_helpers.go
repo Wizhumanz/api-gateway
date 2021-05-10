@@ -65,8 +65,9 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 func getCachedCandleData(ticker, period string, start, end time.Time) []Candlestick {
 	var retCandles []Candlestick
 	checkEnd := end.Add(periodDurationMap[period])
-	for cTime := start; cTime.Before(checkEnd); cTime.Add(periodDurationMap[period]) {
-		key := "BTCUSDT:1MIN:" + cTime.Format(redisKeyTimeFormat)
+	for cTime := start; cTime.Before(checkEnd); cTime = cTime.Add(periodDurationMap[period]) {
+		key := "BTCUSDT:1MIN:" + cTime.Format(httpTimeFormat) + ".0000000Z"
+		fmt.Println(key)
 		cachedData, _ := rdb.HGetAll(ctx, key).Result()
 
 		newCandle := Candlestick{}
