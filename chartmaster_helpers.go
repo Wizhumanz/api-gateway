@@ -19,7 +19,6 @@ func getCandleData(ticker, period string, start, end time.Time) []Candlestick {
 		period,
 		start.Format(format),
 		end.Format(format))
-	fmt.Println(full)
 	req, _ := http.NewRequest("GET", full, nil)
 	req.Header.Add("X-CoinAPI-Key", "4D684039-406E-451F-BB2B-6BDC123808E1")
 	client := &http.Client{}
