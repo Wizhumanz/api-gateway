@@ -41,7 +41,7 @@ var candleDisplay []CandlestickChartData
 var profitCurveDisplay []ProfitCurveData
 var simTradeDisplay []SimulatedTradeData
 
-var periodDurationMap map[string]time.Duration
+var periodDurationMap = map[string]time.Duration{}
 
 //websockets
 var upgrader = websocket.Upgrader{
