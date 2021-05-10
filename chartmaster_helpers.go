@@ -5,12 +5,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"time"
 )
 
-func getData() {
-	ctx := context.Background()
-	res, _ := rdb.HGetAll(ctx, "BTCUSDT:1MIN:2021-03-03T00:47:00.0000000Z").Result()
-	fmt.Println(res["open"])
+func getCandleData(ticker, period string, start, end time.Time) []Candlestick {
+	//send request
+	format := "2006-01-02T15:04:05"
+	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
+	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s&limit=100000",
+		base,
+		period,
+		start.Format(format),
+		end.Format(format))
+	fmt.Println(full)
+	req, _ := http.NewRequest("GET", full, nil)
+	req.Header.Add("X-CoinAPI-Key", "4D684039-406E-451F-BB2B-6BDC123808E1")
+	client := &http.Client{}
+	response, err := client.Do(req)
+
+	if err != nil {
+		log.Fatalf("An Error Occured %v", err)
+	} else {
+		body, _ := ioutil.ReadAll(response.Body)
+		log.Println(string(body))
+	}
+
+	//parse data
+
+	return []Candlestick{}
 }
 
 func saveJsonToRedis() {

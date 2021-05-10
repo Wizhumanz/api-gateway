@@ -207,7 +207,16 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 
 	ticker := r.URL.Query()["ticker"][0]
 	period := r.URL.Query()["period"][0]
-	runBacktest(strat1, ticker, period)
+	format := "2006-01-02T15:04:05"
+	start, err := time.Parse(format, r.URL.Query()["time_start"][0])
+	if err != nil {
+		fmt.Println(err)
+	}
+	end, err2 := time.Parse(format, r.URL.Query()["time_end"][0])
+	if err2 != nil {
+		fmt.Println(err)
+	}
+	runBacktest(strat1, ticker, period, start, end)
 
 	// return
 	w.Header().Set("Content-Type", "application/json")

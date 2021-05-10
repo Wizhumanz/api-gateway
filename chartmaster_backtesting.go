@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -98,59 +96,71 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 func runBacktest(
 	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 	ticker, period string,
+	startTime, endTime time.Time,
 ) {
-	//get all candlestick data for selected backtest period
+	var periodCandles []Candlestick
 	format := "2006-01-02T15:04:05"
-	startDateTime, _ := time.Parse(format, "2021-05-01T00:00:00") //TODO: get this from func arg
-	data := []Candlestick{}
-	for i := 0; i < 300; i++ {
-		var new Candlestick
-		ctx := context.Background()
-		key := "BTCUSDT:1MIN:" + startDateTime.Format(format) + ".0000000Z"
-		res, _ := rdb.HGetAll(ctx, key).Result()
-
-		new.DateTime = startDateTime.Format(format)
-		new.Open, _ = strconv.ParseFloat(res["open"], 32)
-		new.High, _ = strconv.ParseFloat(res["high"], 32)
-		new.Low, _ = strconv.ParseFloat(res["low"], 32)
-		new.Close, _ = strconv.ParseFloat(res["close"], 32)
-		data = append(data, new)
-
-		startDateTime = startDateTime.Add(1 * time.Minute)
+	//check if data exists in cache
+	redisKeyPrefix := ticker + ":" + period + ":"
+	testKey := redisKeyPrefix + startTime.Format(format) + ".0000000Z"
+	testRes, _ := rdb.HGetAll(ctx, testKey).Result()
+	if (testRes["open"] == "") && (testRes["close"] == "") {
+		//if no data in cache, do fresh GET and save to cache
+		periodCandles = getCandleData(ticker, period, startTime, endTime)
 	}
+	fmt.Println(periodCandles)
 
-	strategySim := StrategySimulator{}
-	strategySim.Init(500)
-	var storage interface{}
+	// //get all candlestick data for selected backtest period
+	// startDateTime, _ := time.Parse(format, "2021-05-01T00:00:00") //TODO: get this from func arg
+	// data := []Candlestick{}
+	// for i := 0; i < 300; i++ {
+	// 	var new Candlestick
+	// 	ctx := context.Background()
+	// 	key := "BTCUSDT:1MIN:" + startDateTime.Format(format) + ".0000000Z"
+	// 	res, _ := rdb.HGetAll(ctx, key).Result()
 
-	resetDisplayVars()
-	profitCurveDisplay = []ProfitCurveData{
-		{
-			Label: "strat1",
-		},
-	}
-	simTradeDisplay = []SimulatedTradeData{
-		{
-			Label: "strat1",
-		},
-	}
+	// 	new.DateTime = startDateTime.Format(format)
+	// 	new.Open, _ = strconv.ParseFloat(res["open"], 32)
+	// 	new.High, _ = strconv.ParseFloat(res["high"], 32)
+	// 	new.Low, _ = strconv.ParseFloat(res["low"], 32)
+	// 	new.Close, _ = strconv.ParseFloat(res["close"], 32)
+	// 	data = append(data, new)
 
-	allOpens := []float64{}
-	allHighs := []float64{}
-	allLows := []float64{}
-	allCloses := []float64{}
-	for i, candle := range data {
-		allOpens = append(allOpens, candle.Open)
-		allHighs = append(allHighs, candle.High)
-		allLows = append(allLows, candle.Low)
-		allCloses = append(allCloses, candle.Close)
-		lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
-		//build display data using strategySim
-		newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i, lb)
-		candleDisplay = append(candleDisplay, newCData)
-		profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
-		if simTradeData.DateTime != "" {
-			simTradeDisplay[0].Data = append(simTradeDisplay[0].Data, simTradeData)
-		}
-	}
+	// 	startDateTime = startDateTime.Add(1 * time.Minute)
+	// }
+
+	// strategySim := StrategySimulator{}
+	// strategySim.Init(500)
+	// var storage interface{}
+
+	// resetDisplayVars()
+	// profitCurveDisplay = []ProfitCurveData{
+	// 	{
+	// 		Label: "strat1",
+	// 	},
+	// }
+	// simTradeDisplay = []SimulatedTradeData{
+	// 	{
+	// 		Label: "strat1",
+	// 	},
+	// }
+
+	// allOpens := []float64{}
+	// allHighs := []float64{}
+	// allLows := []float64{}
+	// allCloses := []float64{}
+	// for i, candle := range data {
+	// 	allOpens = append(allOpens, candle.Open)
+	// 	allHighs = append(allHighs, candle.High)
+	// 	allLows = append(allLows, candle.Low)
+	// 	allCloses = append(allCloses, candle.Close)
+	// 	lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+	// 	//build display data using strategySim
+	// 	newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i, lb)
+	// 	candleDisplay = append(candleDisplay, newCData)
+	// 	profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
+	// 	if simTradeData.DateTime != "" {
+	// 		simTradeDisplay[0].Data = append(simTradeDisplay[0].Data, simTradeData)
+	// 	}
+	// }
 }
