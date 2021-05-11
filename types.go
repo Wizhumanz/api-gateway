@@ -141,6 +141,13 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
+type CoinAPITicker struct {
+	ID         string `json:"symbol_id"`
+	ExchangeID string `json:"symbol_id_exchange"`
+	BaseAsset  string `json:"asset_id_base"`
+	QuoteAsset string `json:"asset_id_quote"`
+}
+
 type CandlestickChartData struct {
 	DateTime        string  `json:"DateTime"`
 	Open            float64 `json:"Open"`

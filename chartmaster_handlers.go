@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -154,4 +155,23 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	// json.NewEncoder(w).Encode(finalRet)
+}
+
+func getTickersHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	data, err := ioutil.ReadFile("./json-data/symbols-binance-fut-perp.json")
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	var t []CoinAPITicker
+	json.Unmarshal(data, &t)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(t)
 }

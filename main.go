@@ -119,6 +119,7 @@ func main() {
 	// router.Methods("GET", "OPTIONS").Path("/profitCurve").HandlerFunc(profitCurveHandler)
 	// router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtest").HandlerFunc(backtestHandler)
+	router.Methods("GET", "OPTIONS").Path("/getChartmasterTickers").HandlerFunc(getTickersHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
 	msngr.InitRedis()
