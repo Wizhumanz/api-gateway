@@ -13,7 +13,7 @@ import (
 )
 
 func cacheCandleData(candles []Candlestick, ticker, period string) {
-	fmt.Printf("Adding %v candles to cache\n", len(candles))
+	fmt.Printf("Adding %v candles to cache %v %v\n", len(candles), ticker, period)
 
 	//progress indicator
 	indicatorParts := 30
@@ -45,6 +45,7 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 		period,
 		start.Format(httpTimeFormat),
 		end.Format(httpTimeFormat))
+
 	req, _ := http.NewRequest("GET", full, nil)
 	req.Header.Add("X-CoinAPI-Key", "A2642A7A-A8C8-48C1-83CE-8D258BD7BBF5")
 	client := &http.Client{}
