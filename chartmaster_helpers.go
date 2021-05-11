@@ -12,7 +12,7 @@ import (
 )
 
 func cacheCandleData(candles []Candlestick) {
-	fmt.Println("Adding to cache")
+	fmt.Printf("Adding %v candles to cache\n", len(candles))
 
 	//progress indicator
 	indicatorParts := 30
@@ -35,17 +35,17 @@ func cacheCandleData(candles []Candlestick) {
 }
 
 func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick {
-	fmt.Printf("FETCHING from time %v\n", start.Format(httpTimeFormat))
+	fmt.Printf("FETCHING from %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
 
 	//send request
 	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
-	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s&limit=100000",
+	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s",
 		base,
 		period,
 		start.Format(httpTimeFormat),
 		end.Format(httpTimeFormat))
 	req, _ := http.NewRequest("GET", full, nil)
-	req.Header.Add("X-CoinAPI-Key", "4D684039-406E-451F-BB2B-6BDC123808E1")
+	req.Header.Add("X-CoinAPI-Key", "A2642A7A-A8C8-48C1-83CE-8D258BD7BBF5")
 	client := &http.Client{}
 	response, err := client.Do(req)
 
@@ -56,16 +56,22 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 
 	//parse data
 	body, _ := ioutil.ReadAll(response.Body)
+	fmt.Println(string(body))
 	var jStruct []Candlestick
 	json.Unmarshal(body, &jStruct)
 	//save data to cache so don't have to fetch again
-	go cacheCandleData(jStruct)
+	if len(jStruct) > 0 {
+		go cacheCandleData(jStruct)
+	} else {
 
+	}
+
+	fmt.Println("Fresh fetch complete")
 	return jStruct
 }
 
 func getCachedCandleData(ticker, period string, start, end time.Time) []Candlestick {
-	fmt.Printf("Getting cache from time %v\n", start.Format(httpTimeFormat))
+	fmt.Printf("CACHE getting from %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
 
 	var retCandles []Candlestick
 	checkEnd := end.Add(periodDurationMap[period])
@@ -75,9 +81,24 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 
 		//if candle not found in cache, fetch new
 		if cachedData["open"] == "" {
-			fetchedCandles := fetchCandleData(ticker, period, cTime, end)
+			//find end time for fetch
+			var fetchEndTime time.Time
+			calcTime := cTime
+			for {
+				calcTime = calcTime.Add(periodDurationMap[period])
+				key := "BTCUSDT:1MIN:" + calcTime.Format(httpTimeFormat) + ".0000000Z"
+				cached, _ := rdb.HGetAll(ctx, key).Result()
+				//find index where next cache starts again, or break if passed end time of backtest
+				if (cached["open"] != "") || (calcTime.After(end)) {
+					fetchEndTime = calcTime
+					break
+				}
+			}
+			//fetch missing candles
+			fetchedCandles := fetchCandleData(ticker, period, cTime, fetchEndTime)
 			retCandles = append(retCandles, fetchedCandles...)
-			return retCandles
+			//start getting cache again from last fetch time
+			cTime = fetchEndTime.Add(-periodDurationMap[period])
 		} else {
 			newCandle := Candlestick{}
 			newCandle.Create(cachedData)
@@ -85,6 +106,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 		}
 	}
 
+	fmt.Println("Cache fetch complete")
 	return retCandles
 }
 

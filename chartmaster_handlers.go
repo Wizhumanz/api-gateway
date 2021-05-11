@@ -121,6 +121,8 @@ func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func backtestHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL)
+
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
