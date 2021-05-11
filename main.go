@@ -61,13 +61,12 @@ func main() {
 
 	initRedis()
 	initDatastore()
+
 	// http.Handle("/", http.FileServer(http.Dir(".")))
 	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
 	// addr := "localhost:4243"
 	// log.Printf("Listening on %s", addr)
 	// log.Fatal(http.ListenAndServe(addr, nil))
-
-	// go saveJsonToRedis()
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
 	periodDurationMap["2MIN"] = 2 * time.Minute

@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -119,6 +120,18 @@ func saveJsonToRedis() {
 	var jStruct []Candlestick
 	json.Unmarshal(data, &jStruct)
 	cacheCandleData(jStruct)
+}
+
+func renameKeys() {
+	keys, _ := rdb.Keys(ctx, "*").Result()
+	var splitKeys = map[string]string{}
+	for _, k := range keys {
+		splitKeys[k] = "BINANCEFTS_PERP_BTC_USDT:" + strings.SplitN(k, ":", 2)[1]
+	}
+
+	// for k, v := range splitKeys {
+	// 	rdb.Rename(ctx, k, v)
+	// }
 }
 
 func generateRandomCandles() {
