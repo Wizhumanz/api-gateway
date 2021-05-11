@@ -61,6 +61,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	wsConnections = make(map[string]*websocket.Conn)
+	wsConnectionsChartmaster = make(map[string]*websocket.Conn)
 
 	initRedis()
 	initDatastore()
