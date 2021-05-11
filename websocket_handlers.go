@@ -41,3 +41,23 @@ func wsConnectHandler(w http.ResponseWriter, r *http.Request) {
 
 	go readIncomingWsMsg(ws)
 }
+
+func wsChartmasterConnectHandler(w http.ResponseWriter, r *http.Request) {
+	// setupCORS(&w, r)
+	// if (*r).Method == "OPTIONS" {
+	// 	return
+	// }
+
+	ws, _ := upgrader.Upgrade(w, r, nil)
+	log.Println("Client Connected")
+
+	//save connection globally
+	wsConnectionsChartmaster[mux.Vars(r)["id"]] = ws
+
+	err := ws.WriteMessage(1, []byte("Yonkers Chartmaster"))
+	if err != nil {
+		log.Println(err)
+	}
+
+	go readIncomingWsMsg(ws)
+}

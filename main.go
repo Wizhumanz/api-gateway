@@ -53,6 +53,7 @@ var upgrader = websocket.Upgrader{
 
 //all connected clients (url map to *websocket.Conn)
 var wsConnections map[string]*websocket.Conn
+var wsConnectionsChartmaster map[string]*websocket.Conn
 
 func main() {
 	httpTimeFormat = "2006-01-02T15:04:05"
@@ -96,6 +97,7 @@ func main() {
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
+	router.Methods("GET", "OPTIONS").Path("/ws-cm/{id}").HandlerFunc(wsChartmasterConnectHandler)
 
 	router.Methods("GET", "OPTIONS").Path("/stacked").HandlerFunc(stackedHandler)
 	router.Methods("GET", "OPTIONS").Path("/pie").HandlerFunc(pieHandler)
