@@ -70,8 +70,24 @@ func main() {
 	// go saveJsonToRedis()
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
+	periodDurationMap["2MIN"] = 2 * time.Minute
+	periodDurationMap["3MIN"] = 3 * time.Minute
+	periodDurationMap["4MIN"] = 4 * time.Minute
 	periodDurationMap["5MIN"] = 5 * time.Minute
+	periodDurationMap["6MIN"] = 6 * time.Minute
+	periodDurationMap["10MIN"] = 10 * time.Minute
 	periodDurationMap["15MIN"] = 15 * time.Minute
+	periodDurationMap["20MIN"] = 20 * time.Minute
+	periodDurationMap["30MIN"] = 30 * time.Minute
+	periodDurationMap["1HRS"] = 1 * time.Hour
+	periodDurationMap["2HRS"] = 2 * time.Hour
+	periodDurationMap["3HRS"] = 3 * time.Hour
+	periodDurationMap["4HRS"] = 4 * time.Hour
+	periodDurationMap["6HRS"] = 6 * time.Hour
+	periodDurationMap["8HRS"] = 8 * time.Hour
+	periodDurationMap["12HRS"] = 12 * time.Hour
+	periodDurationMap["1DAY"] = 24 * time.Hour
+	periodDurationMap["2DAY"] = 48 * time.Hour
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
