@@ -39,12 +39,6 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	return ""
 }
 
-func resetDisplayVars() {
-	candleDisplay = []CandlestickChartData{}
-	profitCurveDisplay = []ProfitCurveData{}
-	simTradeDisplay = []SimulatedTradeData{}
-}
-
 func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label string) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	newCandleD := CandlestickChartData{
@@ -97,7 +91,11 @@ func runBacktest(
 	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 	ticker, period string,
 	startTime, endTime time.Time,
-) {
+) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+	var retCandles []CandlestickChartData
+	var retProfitCurve []ProfitCurveData
+	var retSimTrades []SimulatedTradeData
+
 	//get candles to test strat
 	var periodCandles []Candlestick
 	//check if data exists in cache
@@ -117,13 +115,12 @@ func runBacktest(
 	strategySim.Init(500) //TODO: take func arg
 	var storage interface{}
 
-	resetDisplayVars()
-	profitCurveDisplay = []ProfitCurveData{
+	retProfitCurve = []ProfitCurveData{
 		{
 			Label: "strat1", //TODO: prep for dynamic strategy param values
 		},
 	}
-	simTradeDisplay = []SimulatedTradeData{
+	retSimTrades = []SimulatedTradeData{
 		{
 			Label: "strat1",
 		},
@@ -140,14 +137,16 @@ func runBacktest(
 		allLows = append(allLows, candle.Low)
 		allCloses = append(allCloses, candle.Close)
 		lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+
 		//build display data using strategySim
 		newCData, pcData, simTradeData := saveDisplayData(candle, strategySim, i, lb)
-		candleDisplay = append(candleDisplay, newCData)
-		profitCurveDisplay[0].Data = append(profitCurveDisplay[0].Data, pcData)
+		retCandles = append(retCandles, newCData)
+		retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
 		if simTradeData.DateTime != "" {
-			simTradeDisplay[0].Data = append(simTradeDisplay[0].Data, simTradeData)
+			retSimTrades[0].Data = append(retSimTrades[0].Data, simTradeData)
 		}
 	}
 
 	fmt.Println(colorGreen + "Backtest complete!" + colorReset)
+	return retCandles, retProfitCurve, retSimTrades
 }

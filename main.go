@@ -37,10 +37,6 @@ var rdb *redis.Client
 var client *datastore.Client
 var ctx context.Context
 
-var candleDisplay []CandlestickChartData
-var profitCurveDisplay []ProfitCurveData
-var simTradeDisplay []SimulatedTradeData
-
 var periodDurationMap = map[string]time.Duration{}
 var httpTimeFormat string
 
@@ -104,9 +100,9 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/pie").HandlerFunc(pieHandler)
 	router.Methods("GET", "OPTIONS").Path("/scatter").HandlerFunc(scatterHandler)
 
-	router.Methods("GET", "OPTIONS").Path("/candlestick").HandlerFunc(indexChartmasterHandler)
-	router.Methods("GET", "OPTIONS").Path("/profitCurve").HandlerFunc(profitCurveHandler)
-	router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
+	// router.Methods("GET", "OPTIONS").Path("/candlestick").HandlerFunc(indexChartmasterHandler)
+	// router.Methods("GET", "OPTIONS").Path("/profitCurve").HandlerFunc(profitCurveHandler)
+	// router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtest").HandlerFunc(backtestHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
