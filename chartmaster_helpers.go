@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func cacheCandleData(candles []Candlestick) {
+func cacheCandleData(candles []Candlestick, ticker, period string) {
 	fmt.Printf("Adding %v candles to cache\n", len(candles))
 
 	//progress indicator
@@ -25,7 +25,7 @@ func cacheCandleData(candles []Candlestick) {
 	for i, c := range candles {
 		// fmt.Println(c)
 		ctx := context.Background()
-		key := "BTCUSDT:1MIN:" + c.PeriodStart
+		key := ticker + ":" + period + ":" + c.PeriodStart
 		rdb.HMSet(ctx, key, "open", c.Open, "high", c.High, "low", c.Low, "close", c.Close, "volume", c.Volume, "tradesCount", c.TradesCount, "timeOpen", c.TimeOpen, "timeClose", c.TimeClose, "periodStart", c.PeriodStart, "periodEnd", c.PeriodEnd)
 
 		if (i > 1) && ((i % lenPart) == 0) {
@@ -62,9 +62,7 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 	json.Unmarshal(body, &jStruct)
 	//save data to cache so don't have to fetch again
 	if len(jStruct) > 0 {
-		go cacheCandleData(jStruct)
-	} else {
-
+		go cacheCandleData(jStruct, ticker, period)
 	}
 
 	fmt.Println("Fresh fetch complete")
@@ -77,7 +75,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	var retCandles []Candlestick
 	checkEnd := end.Add(periodDurationMap[period])
 	for cTime := start; cTime.Before(checkEnd); cTime = cTime.Add(periodDurationMap[period]) {
-		key := "BTCUSDT:1MIN:" + cTime.Format(httpTimeFormat) + ".0000000Z"
+		key := ticker + ":" + period + ":" + cTime.Format(httpTimeFormat) + ".0000000Z"
 		cachedData, _ := rdb.HGetAll(ctx, key).Result()
 
 		//if candle not found in cache, fetch new
@@ -87,7 +85,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 			calcTime := cTime
 			for {
 				calcTime = calcTime.Add(periodDurationMap[period])
-				key := "BTCUSDT:1MIN:" + calcTime.Format(httpTimeFormat) + ".0000000Z"
+				key := ticker + ":" + period + ":" + calcTime.Format(httpTimeFormat) + ".0000000Z" //TODO: update for diff period
 				cached, _ := rdb.HGetAll(ctx, key).Result()
 				//find index where next cache starts again, or break if passed end time of backtest
 				if (cached["open"] != "") || (calcTime.After(end)) {
@@ -119,7 +117,7 @@ func saveJsonToRedis() {
 
 	var jStruct []Candlestick
 	json.Unmarshal(data, &jStruct)
-	cacheCandleData(jStruct)
+	// go cacheCandleData(jStruct, ticker, period)
 }
 
 func renameKeys() {
