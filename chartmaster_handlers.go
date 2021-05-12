@@ -194,3 +194,29 @@ func getTickersHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(t)
 }
+
+func loadBacktestResultHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	userID := r.URL.Query()["user"][0]
+	// buckets, _ := listBuckets()
+	// fmt.Println(buckets)
+	// fmt.Println("res-" + userID)
+	// var bucketName string
+	// for _, bn := range buckets {
+	// 	if bn == "res-"+userID {
+	// 		bucketName = bn
+	// 	}
+	// }
+	// fmt.Println(bucketName)
+
+	bucketData := listFiles("res-" + userID)
+	fmt.Println(bucketData)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(bucketData)
+}

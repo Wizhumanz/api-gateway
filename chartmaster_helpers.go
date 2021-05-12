@@ -212,6 +212,33 @@ func listBuckets() ([]string, error) {
 	return buckets, nil
 }
 
+// listFiles lists objects within specified bucket.
+func listFiles(bucket string) []string {
+	// bucket := "bucket-name"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		fmt.Println("Error")
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	var buckets []string
+	it := client.Bucket(bucket).Objects(ctx, nil)
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err == nil {
+			buckets = append(buckets, attrs.Name)
+		}
+	}
+	return buckets
+}
+
 func saveJsonToRedis() {
 	data, err := ioutil.ReadFile("./mar-apr2021.json")
 	if err != nil {
