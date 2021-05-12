@@ -143,12 +143,34 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	//send display data on ws stream
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
-		c, _ := json.Marshal(candles)
-		ws.WriteMessage(1, c)
 		pc, _ := json.Marshal(profitCurve)
 		ws.WriteMessage(1, pc)
 		st, _ := json.Marshal(simTrades)
 		ws.WriteMessage(1, st)
+
+		//create result ID to identify packets of the same result set
+		rid := fmt.Sprintf("%v", time.Now().UnixNano())
+
+		half := len(candles) / 2
+		fmt.Println("Sending half 1")
+		h1 := WebsocketCandlestickPacket{
+			ResultID: rid,
+			Data:     candles[:half],
+		}
+		c1, _ := json.Marshal(h1)
+		fmt.Println(h1)
+		ws.WriteMessage(1, c1) //TODO: split up data if too much to send in one msg
+
+		time.Sleep(2 * time.Second)
+
+		fmt.Println("Sending half 2")
+		h2 := WebsocketCandlestickPacket{
+			ResultID: rid,
+			Data:     candles[half:],
+		}
+		c2, _ := json.Marshal(h2)
+		fmt.Println(h2)
+		ws.WriteMessage(1, c2)
 	}
 
 	// return
