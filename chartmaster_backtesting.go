@@ -6,13 +6,16 @@ import (
 )
 
 //test strat to pass to backtest func, runs once per historical candlestick
-func strat1(open, high, low, close []float64, relCandleIndex int, strategy *StrategySimulator, storage *interface{}) string {
+func strat1(
+	open, high, low, close []float64,
+	relCandleIndex int,
+	strategy *StrategySimulator,
+	storage *interface{}) string {
 	accRiskPerTrade := 0.5
 	accSz := 1000
 	leverage := 25 //limits raw price SL %
 
 	if strategy.PosLongSize == 0 && relCandleIndex > 0 {
-		//if two green candles in a row, buy
 		if close[relCandleIndex] > (1.0005 * open[relCandleIndex]) {
 			// fmt.Printf("Buying at %v\n", close[relCandleIndex])
 			entryPrice := close[relCandleIndex]
@@ -28,8 +31,7 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	} else if relCandleIndex > 0 {
 		sl := strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
 
-		//if two red candles in a row, sell
-		if (strategy.PosLongSize > 0) && (close[relCandleIndex] > (1.0003 * open[relCandleIndex])) {
+		if (strategy.PosLongSize > 0) && (close[relCandleIndex] < (1.0003 * open[relCandleIndex])) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
 			return fmt.Sprintf("▼ %.2f", sl)
