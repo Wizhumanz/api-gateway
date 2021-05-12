@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"cloud.google.com/go/storage"
 )
 
 func cacheCandleData(candles []Candlestick, ticker, period string) {
@@ -112,9 +116,17 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 
 // makeBacktestResFile creates backtest result file with passed args and returns the name of the new file.
 func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData) string {
+	//only save candlesticks which are modified
+	saveCandles := []CandlestickChartData{}
+	for _, candle := range c {
+		if (candle.StratEnterPrice != 0) || (candle.StratExitPrice != 0) || (candle.Label != "") {
+			saveCandles = append(saveCandles, candle)
+		}
+	}
+
 	data := BacktestResFile{
-		ModifiedCandlesticks: c, //TODO: only save modified candlesticks for space saving
-		ProfitCurve:          p,
+		ModifiedCandlesticks: saveCandles,
+		ProfitCurve:          p, //optimize for when equity doesn't change
 		SimulatedTrades:      s,
 	}
 	file, _ := json.MarshalIndent(data, "", " ")
@@ -122,6 +134,42 @@ func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []Simu
 	_ = ioutil.WriteFile(fileName, file, 0644)
 
 	return fileName
+}
+
+func saveBacktestRes(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData, rid string) {
+	resFileName := makeBacktestResFile(c, p, s)
+
+	//cloud storage connection config
+	bucketName := rid
+	storageClient, _ := storage.NewClient(ctx)
+	defer storageClient.Close()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+	//create new bucket
+	bucket := storageClient.Bucket(bucketName)
+	if err := bucket.Create(ctx, googleProjectID, nil); err != nil {
+		fmt.Printf("Failed to create bucket: %v", err)
+	}
+
+	object := "res.json"
+	// Open local file
+	f, err := os.Open(resFileName)
+	if err != nil {
+		fmt.Printf("os.Open: %v", err)
+	}
+	defer f.Close()
+	ctx2, cancel := context.WithTimeout(ctx, time.Second*50)
+	defer cancel()
+
+	// upload object with storage.Writer
+	wc := storageClient.Bucket(bucketName).Object(object).NewWriter(ctx2)
+	if _, err = io.Copy(wc, f); err != nil {
+		fmt.Printf("io.Copy: %v", err)
+	}
+	if err := wc.Close(); err != nil {
+		fmt.Printf("Writer.Close: %v", err)
+	}
+
 }
 
 func saveJsonToRedis() {

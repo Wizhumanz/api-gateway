@@ -122,11 +122,15 @@ import (
 func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(r.URL)
 
+	//create result ID for websocket packets + res storage
+	rid := fmt.Sprintf("%v", time.Now().UnixNano())
+
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
 	}
 
+	//get backtest res
 	userID := r.URL.Query()["user"][0]
 	ticker := r.URL.Query()["ticker"][0]
 	period := r.URL.Query()["period"][0]
@@ -140,14 +144,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end)
 
-	_ = makeBacktestResFile(candles, profitCurve, simTrades)
-	// data, err := ioutil.ReadFile(f)
-	// if err != nil {
-	// 	fmt.Print(err)
-	// }
-
-	// var jStruct []Candlestick
-	// json.Unmarshal(data, &jStruct)
+	go saveBacktestRes(candles, profitCurve, simTrades, rid)
 
 	//send display data on ws stream
 	ws := wsConnectionsChartmaster[userID]
@@ -157,28 +154,18 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 		st, _ := json.Marshal(simTrades)
 		ws.WriteMessage(1, st)
 
-		//create result ID to identify packets of the same result set
-		rid := fmt.Sprintf("%v", time.Now().UnixNano())
-
 		half := len(candles) / 2
-		fmt.Println("Sending half 1")
 		h1 := WebsocketCandlestickPacket{
 			ResultID: rid,
 			Data:     candles[:half],
 		}
 		c1, _ := json.Marshal(h1)
-		fmt.Println(h1)
 		ws.WriteMessage(1, c1) //TODO: split up data if too much to send in one msg
-
-		time.Sleep(2 * time.Second)
-
-		fmt.Println("Sending half 2")
 		h2 := WebsocketCandlestickPacket{
 			ResultID: rid,
 			Data:     candles[half:],
 		}
 		c2, _ := json.Marshal(h2)
-		fmt.Println(h2)
 		ws.WriteMessage(1, c2)
 	}
 
