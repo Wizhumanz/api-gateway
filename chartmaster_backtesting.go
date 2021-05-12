@@ -16,7 +16,7 @@ func strat1(
 	leverage := 25 //limits raw price SL %
 
 	if strategy.PosLongSize == 0 && relCandleIndex > 0 {
-		if close[relCandleIndex] > (1.0005 * open[relCandleIndex]) {
+		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
 			// fmt.Printf("Buying at %v\n", close[relCandleIndex])
 			entryPrice := close[relCandleIndex]
 			slPrice := low[relCandleIndex-1]
@@ -31,7 +31,7 @@ func strat1(
 	} else if relCandleIndex > 0 {
 		sl := strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
 
-		if (strategy.PosLongSize > 0) && (close[relCandleIndex] < (1.0003 * open[relCandleIndex])) {
+		if (strategy.PosLongSize > 0) && (close[relCandleIndex] < open[relCandleIndex]) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
 			return fmt.Sprintf("▼ %.2f", sl)
