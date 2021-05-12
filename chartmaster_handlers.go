@@ -140,6 +140,15 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end)
 
+	_ = makeBacktestResFile(candles, profitCurve, simTrades)
+	// data, err := ioutil.ReadFile(f)
+	// if err != nil {
+	// 	fmt.Print(err)
+	// }
+
+	// var jStruct []Candlestick
+	// json.Unmarshal(data, &jStruct)
+
 	//send display data on ws stream
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {

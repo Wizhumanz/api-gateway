@@ -189,6 +189,12 @@ type SimulatedTradeData struct {
 	Data  []SimulatedTradeDataPoint `json:"Data"`
 }
 
+type BacktestResFile struct {
+	ModifiedCandlesticks []CandlestickChartData `json:"ModifiedCandlesticks"`
+	ProfitCurve          []ProfitCurveData      `json:"ProfitCurve"`
+	SimulatedTrades      []SimulatedTradeData   `json:"SimulatedTrades"`
+}
+
 type Candlestick struct {
 	DateTime    string
 	PeriodStart string  `json:"time_period_start"`

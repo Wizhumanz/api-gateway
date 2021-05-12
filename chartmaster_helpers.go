@@ -110,6 +110,20 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	return retCandles
 }
 
+// makeBacktestResFile creates backtest result file with passed args and returns the name of the new file.
+func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData) string {
+	data := BacktestResFile{
+		ModifiedCandlesticks: c, //TODO: only save modified candlesticks for space saving
+		ProfitCurve:          p,
+		SimulatedTrades:      s,
+	}
+	file, _ := json.MarshalIndent(data, "", " ")
+	fileName := fmt.Sprintf("%v.json", time.Now().Unix())
+	_ = ioutil.WriteFile(fileName, file, 0644)
+
+	return fileName
+}
+
 func saveJsonToRedis() {
 	data, err := ioutil.ReadFile("./mar-apr2021.json")
 	if err != nil {
