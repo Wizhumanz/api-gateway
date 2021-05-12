@@ -183,6 +183,9 @@ func saveBacktestRes(
 	if err := wc.Close(); err != nil {
 		fmt.Printf("Writer.Close: %v", err)
 	}
+
+	//remove local file
+	_ = os.Remove(resFileName)
 }
 
 // listBuckets lists buckets in the project.
