@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 )
 
 func cacheCandleData(candles []Candlestick, ticker, period string) {
@@ -136,22 +137,36 @@ func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []Simu
 	return fileName
 }
 
-func saveBacktestRes(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData, rid string) {
+func saveBacktestRes(
+	c []CandlestickChartData,
+	p []ProfitCurveData,
+	s []SimulatedTradeData,
+	rid, reqBucketname string) {
 	resFileName := makeBacktestResFile(c, p, s)
 
-	//cloud storage connection config
-	bucketName := rid
 	storageClient, _ := storage.NewClient(ctx)
 	defer storageClient.Close()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-	//create new bucket
-	bucket := storageClient.Bucket(bucketName)
-	if err := bucket.Create(ctx, googleProjectID, nil); err != nil {
-		fmt.Printf("Failed to create bucket: %v", err)
+
+	//if bucket doesn't exist, create new
+	buckets, _ := listBuckets()
+	var bucketName string
+	for _, bn := range buckets {
+		if bn == reqBucketname {
+			bucketName = bn
+		}
+	}
+	if bucketName == "" {
+		bucket := storageClient.Bucket(reqBucketname)
+		if err := bucket.Create(ctx, googleProjectID, nil); err != nil {
+			fmt.Printf("Failed to create bucket: %v", err)
+		}
+		bucketName = reqBucketname
 	}
 
-	object := "res.json"
+	//create obj
+	object := rid + ".json"
 	// Open local file
 	f, err := os.Open(resFileName)
 	if err != nil {
@@ -160,7 +175,6 @@ func saveBacktestRes(c []CandlestickChartData, p []ProfitCurveData, s []Simulate
 	defer f.Close()
 	ctx2, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
-
 	// upload object with storage.Writer
 	wc := storageClient.Bucket(bucketName).Object(object).NewWriter(ctx2)
 	if _, err = io.Copy(wc, f); err != nil {
@@ -169,7 +183,33 @@ func saveBacktestRes(c []CandlestickChartData, p []ProfitCurveData, s []Simulate
 	if err := wc.Close(); err != nil {
 		fmt.Printf("Writer.Close: %v", err)
 	}
+}
 
+// listBuckets lists buckets in the project.
+func listBuckets() ([]string, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("storage.NewClient: %v", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	var buckets []string
+	it := client.Buckets(ctx, googleProjectID)
+	for {
+		battrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		buckets = append(buckets, battrs.Name)
+	}
+	return buckets, nil
 }
 
 func saveJsonToRedis() {

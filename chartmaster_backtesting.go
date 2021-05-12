@@ -11,7 +11,7 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 	accSz := 1000
 	leverage := 25 //limits raw price SL %
 
-	if strategy.PosLongSize == 0 {
+	if strategy.PosLongSize == 0 && relCandleIndex > 0 {
 		//if two green candles in a row, buy
 		if close[relCandleIndex] > (1.0005 * open[relCandleIndex]) {
 			// fmt.Printf("Buying at %v\n", close[relCandleIndex])
@@ -25,7 +25,7 @@ func strat1(open, high, low, close []float64, relCandleIndex int, strategy *Stra
 			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 			return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize)
 		}
-	} else {
+	} else if relCandleIndex > 0 {
 		sl := strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
 
 		//if two red candles in a row, sell
