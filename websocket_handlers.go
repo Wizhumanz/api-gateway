@@ -29,7 +29,6 @@ func wsConnectHandler(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	ws, _ := upgrader.Upgrade(w, r, nil)
-	log.Println("Client Connected")
 
 	//save connection globally
 	wsConnections[mux.Vars(r)["id"]] = ws
@@ -49,7 +48,6 @@ func wsChartmasterConnectHandler(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	ws, _ := upgrader.Upgrade(w, r, nil)
-	log.Println("Client Connected")
 
 	//save connection globally
 	wsConnectionsChartmaster[mux.Vars(r)["id"]] = ws

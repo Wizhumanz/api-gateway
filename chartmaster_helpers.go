@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/gorilla/websocket"
 	"google.golang.org/api/iterator"
 )
 
@@ -175,6 +176,15 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 	return newCandleD, pd, sd
 }
 
+func streamCandlesData(ws *websocket.Conn, candles []CandlestickChartData, resID string) {
+	packet := WebsocketCandlestickPacket{
+		ResultID: resID,
+		Data:     candles,
+	}
+	data, _ := json.Marshal(packet)
+	ws.WriteMessage(1, data)
+}
+
 func streamBacktestData(userID, resID string, packetSize int, candles []CandlestickChartData, profitCurve []ProfitCurveData, simTrades []SimulatedTradeData) {
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
@@ -185,12 +195,7 @@ func streamBacktestData(userID, resID string, packetSize int, candles []Candlest
 
 		if len(candles) < packetSize {
 			//if res smaller than packet size, send all at once
-			packet := WebsocketCandlestickPacket{
-				ResultID: resID,
-				Data:     candles,
-			}
-			c1, _ := json.Marshal(packet)
-			ws.WriteMessage(1, c1)
+			streamCandlesData(ws, candles, resID)
 		} else {
 			//else, send by packet size
 			maxIndex := len(candles) - 1
@@ -199,12 +204,7 @@ func streamBacktestData(userID, resID string, packetSize int, candles []Candlest
 				if endIndex > maxIndex {
 					endIndex = maxIndex + 1
 				}
-				packet := WebsocketCandlestickPacket{
-					ResultID: resID,
-					Data:     candles[i:endIndex],
-				}
-				c1, _ := json.Marshal(packet)
-				ws.WriteMessage(1, c1)
+				streamCandlesData(ws, candles[i:endIndex], resID)
 				// fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
 			}
 		}

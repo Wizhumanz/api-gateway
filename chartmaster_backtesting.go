@@ -45,6 +45,7 @@ func runBacktest(
 	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 	ticker, period string,
 	startTime, endTime time.Time,
+	packetSize int, candlesPacketSender func([]CandlestickChartData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
@@ -85,6 +86,7 @@ func runBacktest(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
+	lastPacketEndIndex := 0
 	for i, candle := range periodCandles {
 		allOpens = append(allOpens, candle.Open)
 		allHighs = append(allHighs, candle.High)
@@ -104,6 +106,13 @@ func runBacktest(
 		}
 		if simTradeData.DateTime != "" {
 			retSimTrades[0].Data = append(retSimTrades[0].Data, simTradeData)
+		}
+
+		//periodically stream candlestick data back to client
+		if (((i + 1) % packetSize) == 0) || (i >= len(periodCandles)-1) {
+			fmt.Printf("Sent candles %v to %v\n", lastPacketEndIndex, i)
+			candlesPacketSender(retCandles[lastPacketEndIndex:i])
+			lastPacketEndIndex = i
 		}
 	}
 

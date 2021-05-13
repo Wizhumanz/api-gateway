@@ -41,13 +41,18 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	if err2 != nil {
 		fmt.Println(err)
 	}
-	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end)
+	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end, candlePacketSize, func(c []CandlestickChartData) {
+		ws := wsConnectionsChartmaster[userID]
+		if ws != nil {
+			streamCandlesData(ws, c, rid)
+		}
+	})
 
 	//save result to bucket
 	bucketName := "res-" + userID
 	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, r.URL.Query()["time_start"][0], r.URL.Query()["time_end"][0])
 
-	go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
+	// go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
