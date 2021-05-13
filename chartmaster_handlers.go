@@ -150,7 +150,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end)
 
 	bucketName := "res-" + userID
-	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName)
+	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, r.URL.Query()["time_start"][0], r.URL.Query()["time_end"][0])
 
 	//send display data on ws stream
 	ws := wsConnectionsChartmaster[userID]

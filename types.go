@@ -190,6 +190,10 @@ type SimulatedTradeData struct {
 }
 
 type BacktestResFile struct {
+	Ticker               string                 `json:"Ticker"`
+	Period               string                 `json:"Period"`
+	Start                string                 `json:"Start"`
+	End                  string                 `json:"End"`
 	ModifiedCandlesticks []CandlestickChartData `json:"ModifiedCandlesticks"`
 	ProfitCurve          []ProfitCurveData      `json:"ProfitCurve"`
 	SimulatedTrades      []SimulatedTradeData   `json:"SimulatedTrades"`

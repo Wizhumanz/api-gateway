@@ -143,7 +143,7 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 
 	//profit curve
 	var pd ProfitCurveDataPoint
-	//only add data point if changed from last point OR 1st datapoint
+	//only add data point if changed from last point OR 1st or 2nd datapoint
 	if (relIndex == 0) || (strat.GetEquity() != profitCurveSoFar[len(profitCurveSoFar)-1].Equity) {
 		pd = ProfitCurveDataPoint{
 			DateTime: c.DateTime,
@@ -168,17 +168,21 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 }
 
 // makeBacktestResFile creates backtest result file with passed args and returns the name of the new file.
-func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData) string {
+func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData, ticker, period, start, end string) string {
 	//only save candlesticks which are modified
 	saveCandles := []CandlestickChartData{}
 	for i, candle := range c {
-		//only save first + last candles, and candles with entry/exit/label
+		//only save first or last candles, and candles with entry/exit/label
 		if ((candle.StratEnterPrice != 0) || (candle.StratExitPrice != 0) || (candle.Label != "")) || ((i == 0) || (i == len(c)-1)) {
 			saveCandles = append(saveCandles, candle)
 		}
 	}
 
 	data := BacktestResFile{
+		Ticker:               ticker,
+		Period:               period,
+		Start:                start,
+		End:                  end,
 		ModifiedCandlesticks: saveCandles,
 		ProfitCurve:          p, //optimize for when equity doesn't change
 		SimulatedTrades:      s,
@@ -194,8 +198,8 @@ func saveBacktestRes(
 	c []CandlestickChartData,
 	p []ProfitCurveData,
 	s []SimulatedTradeData,
-	rid, reqBucketname string) {
-	resFileName := makeBacktestResFile(c, p, s)
+	rid, reqBucketname, ticker, period, start, end string) {
+	resFileName := makeBacktestResFile(c, p, s, ticker, period, start, end)
 
 	storageClient, _ := storage.NewClient(ctx)
 	defer storageClient.Close()
@@ -243,7 +247,21 @@ func saveBacktestRes(
 
 func completeBacktestResFile(rawData BacktestResFile) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//candlestick data
-	return nil, nil, nil
+	candles := rawData.ModifiedCandlesticks
+	timePeriod := t2.Sub(t1)
+	chronoCandleDatetime := t1
+	for i, c := range candles {
+		var ac CandlestickChartData
+		candleTime, _ := time.Parse(httpTimeFormat, c.DateTime)
+		//if candle skips, fetch data
+		if (i != 0) && (candleTime != chronoCandleDatetime) {
+			ac = getCachedCandleData()
+		}
+
+		//keep chrono incrementing
+		chronoCandleDatetime = chronoCandleDatetime.Add(timePeriod)
+	}
+
 }
 
 // listBuckets lists buckets in the project.
