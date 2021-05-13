@@ -17,6 +17,14 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+func copyObjs(base []Candlestick, copyer func(Candlestick) CandlestickChartData) []CandlestickChartData {
+	var ret []CandlestickChartData
+	for _, obj := range base {
+		ret = append(ret, copyer(obj))
+	}
+	return ret
+}
+
 func cacheCandleData(candles []Candlestick, ticker, period string) {
 	fmt.Printf("Adding %v candles to cache %v %v\n", len(candles), ticker, period)
 
@@ -248,27 +256,64 @@ func saveBacktestRes(
 func completeBacktestResFile(rawData BacktestResFile) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//candlestick data
 	var completeCandles []CandlestickChartData
-	candles := rawData.ModifiedCandlesticks
 	start, _ := time.Parse(httpTimeFormat, rawData.Start)
-	// end, _ := time.Parse(httpTimeFormat, rawData.End)
-	chronoCandleDatetime := start
-	for i, c := range candles {
-		var ac []CandlestickChartData
-		candleTime, _ := time.Parse(httpTimeFormat, c.DateTime)
-		//if candle skips, fetch data
-		if (i != 0) && (candleTime != chronoCandleDatetime) {
-			fetchStart := chronoCandleDatetime
-			fetchEnd := candleTime.Add(-1 * periodDurationMap[rawData.Period])
-			//TODO: convert from Candlestick to CandlestickChartData
-			ac = getCachedCandleData(rawData.Ticker, rawData.Period, fetchStart, fetchEnd)
+	end, _ := time.Parse(httpTimeFormat, rawData.End)
+	//fetch all standard data
+	blankCandles := copyObjs(getCachedCandleData(rawData.Ticker, rawData.Period, start, end),
+		func(obj Candlestick) CandlestickChartData {
+			chartC := CandlestickChartData{
+				DateTime: obj.DateTime,
+				Open:     obj.Open,
+				High:     obj.High,
+				Low:      obj.Low,
+				Close:    obj.Close,
+			}
+			return chartC
+		})
+	//update with added info if exists in res file
+	for _, candle := range blankCandles {
+		var candleToAdd CandlestickChartData
+		for _, rCan := range rawData.ModifiedCandlesticks {
+			if rCan.DateTime == candle.DateTime {
+				candleToAdd = rCan
+			}
+		}
+		if candleToAdd.DateTime == "" || candleToAdd.Open == 0 {
+			candleToAdd = candle
 		}
 
-		completeCandles = append(completeCandles, ac...)
-		//keep chrono incrementing
-		chronoCandleDatetime = chronoCandleDatetime.Add(periodDurationMap[rawData.Period])
+		completeCandles = append(completeCandles, candleToAdd)
 	}
 
-	return nil, nil, nil
+	// candles := rawData.ModifiedCandlesticks
+	// chronoCandleDatetime := start
+	// for i, c := range candles {
+	// 	var ac []CandlestickChartData
+	// 	candleTime, _ := time.Parse(httpTimeFormat, c.DateTime)
+	// 	//if candle skips, fetch data
+	// 	if (i != 0) && (candleTime != chronoCandleDatetime) {
+	// 		fetchStart := chronoCandleDatetime
+	// 		fetchEnd := candleTime.Add(-1 * periodDurationMap[rawData.Period])
+	// 		//convert from Candlestick to CandlestickChartData
+	// 		ac = copyObjs(getCachedCandleData(rawData.Ticker, rawData.Period, fetchStart, fetchEnd),
+	// 			func(obj Candlestick) CandlestickChartData {
+	// 				chartC := CandlestickChartData{
+	// 					DateTime: obj.DateTime,
+	// 					Open:     obj.Open,
+	// 					High:     obj.High,
+	// 					Low:      obj.Low,
+	// 					Close:    obj.Close,
+	// 				}
+	// 				return chartC
+	// 			})
+	// 	}
+
+	// 	completeCandles = append(completeCandles, ac...)
+	// 	//keep chrono incrementing
+	// 	chronoCandleDatetime = chronoCandleDatetime.Add(periodDurationMap[rawData.Period])
+	// }
+
+	return completeCandles, nil, nil
 }
 
 // listBuckets lists buckets in the project.
