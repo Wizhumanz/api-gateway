@@ -203,9 +203,9 @@ func streamBacktestData(userID, resID string, packetSize int, candles []Candlest
 					ResultID: resID,
 					Data:     candles[i:endIndex],
 				}
-				// c1, _ := json.Marshal(packet)
-				// ws.WriteMessage(1, c1)
-				fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
+				c1, _ := json.Marshal(packet)
+				ws.WriteMessage(1, c1)
+				// fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
 			}
 		}
 	}
