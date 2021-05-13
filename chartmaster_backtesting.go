@@ -47,29 +47,11 @@ func runBacktest(
 	startTime, endTime time.Time,
 	packetSize int, candlesPacketSender func([]CandlestickChartData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+	//init
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
 	var retSimTrades []SimulatedTradeData
-
-	//get candles to test strat
-	var periodCandles []Candlestick
-	//check if data exists in cache
-	redisKeyPrefix := ticker + ":" + period + ":"
-	testKey := redisKeyPrefix + startTime.Format(httpTimeFormat) + ".0000000Z"
-	testRes, _ := rdb.HGetAll(ctx, testKey).Result()
-	if (testRes["open"] == "") && (testRes["close"] == "") {
-		//if no data in cache, do fresh GET and save to cache
-		periodCandles = fetchCandleData(ticker, period, startTime, endTime)
-	} else {
-		//otherwise, get data in cache
-		periodCandles = getCachedCandleData(ticker, period, startTime, endTime)
-	}
-
-	//init strat testing
-	strategySim := StrategySimulator{}
-	strategySim.Init(500) //TODO: take func arg
 	var storage interface{}
-
 	retProfitCurve = []ProfitCurveData{
 		{
 			Label: "strat1", //TODO: prep for dynamic strategy param values
@@ -80,40 +62,72 @@ func runBacktest(
 			Label: "strat1",
 		},
 	}
+	strategySim := StrategySimulator{}
+	strategySim.Init(500) //TODO: take func arg
 
-	//run strat on each candle
+	//run backtest in chunks for client stream responsiveness
 	allOpens := []float64{}
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
 	lastPacketEndIndex := 0
-	for i, candle := range periodCandles {
-		allOpens = append(allOpens, candle.Open)
-		allHighs = append(allHighs, candle.High)
-		allLows = append(allLows, candle.Low)
-		allCloses = append(allCloses, candle.Close)
-		//TODO: build results and run for different param sets
-		lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
-
-		//build display data using strategySim
-		var newCData CandlestickChartData
-		var pcData ProfitCurveDataPoint
-		var simTradeData SimulatedTradeDataPoint
-		newCData, pcData, simTradeData = saveDisplayData(candle, strategySim, i, lb, retProfitCurve[0].Data)
-		retCandles = append(retCandles, newCData)
-		if pcData.Equity > 0 {
-			retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
-		}
-		if simTradeData.DateTime != "" {
-			retSimTrades[0].Data = append(retSimTrades[0].Data, simTradeData)
+	fetchCandlesStart := startTime
+	for {
+		if fetchCandlesStart.After(endTime) {
+			break
 		}
 
-		//periodically stream candlestick data back to client
-		if (((i + 1) % packetSize) == 0) || (i >= len(periodCandles)-1) {
-			fmt.Printf("Sent candles %v to %v\n", lastPacketEndIndex, i)
-			candlesPacketSender(retCandles[lastPacketEndIndex:i])
-			lastPacketEndIndex = i
+		//get all candles of chunk
+		var periodCandles []Candlestick
+
+		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * time.Duration(packetSize))
+		if fetchCandlesEnd.After(endTime) {
+			fetchCandlesEnd = endTime
 		}
+
+		//check if candles exist in cache
+		redisKeyPrefix := ticker + ":" + period + ":"
+		testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
+		testRes, _ := rdb.HGetAll(ctx, testKey).Result()
+		if (testRes["open"] == "") && (testRes["close"] == "") {
+			//if no data in cache, do fresh GET and save to cache
+			periodCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		} else {
+			//otherwise, get data in cache
+			periodCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		}
+
+		//run strat for all chunk's candles
+		for i, candle := range periodCandles {
+			allOpens = append(allOpens, candle.Open)
+			allHighs = append(allHighs, candle.High)
+			allLows = append(allLows, candle.Low)
+			allCloses = append(allCloses, candle.Close)
+			//TODO: build results and run for different param sets
+			lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+
+			//build display data using strategySim
+			var newCData CandlestickChartData
+			var pcData ProfitCurveDataPoint
+			var simTradeData SimulatedTradeDataPoint
+			newCData, pcData, simTradeData = saveDisplayData(candle, strategySim, i, lb, retProfitCurve[0].Data)
+			retCandles = append(retCandles, newCData)
+			if pcData.Equity > 0 {
+				retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
+			}
+			if simTradeData.DateTime != "" {
+				retSimTrades[0].Data = append(retSimTrades[0].Data, simTradeData)
+			}
+		}
+
+		//stream data back to client in every chunk
+		packetEndIndex := lastPacketEndIndex + packetSize
+		fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndex, packetEndIndex)
+		candlesPacketSender(retCandles[lastPacketEndIndex:packetEndIndex])
+		lastPacketEndIndex = packetEndIndex
+
+		//increment
+		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
 
 	fmt.Println(colorGreen + "Backtest complete!" + colorReset)
