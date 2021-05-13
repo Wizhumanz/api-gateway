@@ -234,10 +234,14 @@ func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
 	defer rc.Close()
 
 	backtestResByteArr, _ := ioutil.ReadAll(rc)
-	fmt.Println(string(backtestResByteArr))
+	// fmt.Println(string(backtestResByteArr))
+	var rawRes BacktestResFile
+	json.Unmarshal(backtestResByteArr, &rawRes)
 
 	//rehydrate backtest results
+	// candles, profitCurve, simTrades := completeBacktestResFile(rawRes)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(string(backtestResByteArr))
+	json.NewEncoder(w).Encode(rawRes)
 }
