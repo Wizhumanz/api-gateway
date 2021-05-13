@@ -247,21 +247,28 @@ func saveBacktestRes(
 
 func completeBacktestResFile(rawData BacktestResFile) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//candlestick data
+	var completeCandles []CandlestickChartData
 	candles := rawData.ModifiedCandlesticks
-	timePeriod := t2.Sub(t1)
-	chronoCandleDatetime := t1
+	start, _ := time.Parse(httpTimeFormat, rawData.Start)
+	// end, _ := time.Parse(httpTimeFormat, rawData.End)
+	chronoCandleDatetime := start
 	for i, c := range candles {
-		var ac CandlestickChartData
+		var ac []CandlestickChartData
 		candleTime, _ := time.Parse(httpTimeFormat, c.DateTime)
 		//if candle skips, fetch data
 		if (i != 0) && (candleTime != chronoCandleDatetime) {
-			ac = getCachedCandleData()
+			fetchStart := chronoCandleDatetime
+			fetchEnd := candleTime.Add(-1 * periodDurationMap[rawData.Period])
+			//TODO: convert from Candlestick to CandlestickChartData
+			ac = getCachedCandleData(rawData.Ticker, rawData.Period, fetchStart, fetchEnd)
 		}
 
+		completeCandles = append(completeCandles, ac...)
 		//keep chrono incrementing
-		chronoCandleDatetime = chronoCandleDatetime.Add(timePeriod)
+		chronoCandleDatetime = chronoCandleDatetime.Add(periodDurationMap[rawData.Period])
 	}
 
+	return nil, nil, nil
 }
 
 // listBuckets lists buckets in the project.
