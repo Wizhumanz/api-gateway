@@ -7,126 +7,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 )
 
-// func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
-// 	// var retData []CandlestickChartData
-
-// 	setupCORS(&w, r)
-// 	if (*r).Method == "OPTIONS" {
-// 		return
-// 	}
-
-// 	if flag.Lookup("test.v") != nil {
-// 		initDatastore()
-// 	}
-
-// 	//filter by time
-// 	var finalRet []CandlestickChartData
-// 	start, err := time.Parse(httpTimeFormat, r.URL.Query()["time_start"][0])
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	end, _ := time.Parse(httpTimeFormat, r.URL.Query()["time_end"][0])
-// 	for _, c := range candleDisplay {
-// 		cTime, err2 := time.Parse(httpTimeFormat, c.DateTime)
-// 		if err2 != nil {
-// 			fmt.Println(err)
-// 		}
-// 		if (cTime.After(start) || cTime == start) && (cTime.Before(end) || cTime == start) {
-// 			finalRet = append(finalRet, c)
-// 		} else if cTime.After(end) {
-// 			break
-// 		}
-// 	}
-
-// 	// return
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(finalRet)
-// }
-
-// func profitCurveHandler(w http.ResponseWriter, r *http.Request) {
-// 	setupCORS(&w, r)
-// 	if (*r).Method == "OPTIONS" {
-// 		return
-// 	}
-
-// 	if flag.Lookup("test.v") != nil {
-// 		initDatastore()
-// 	}
-
-// 	// return
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(profitCurveDisplay)
-// }
-
-// func simulatedTradesHandler(w http.ResponseWriter, r *http.Request) {
-// 	var retData []SimulatedTradeData
-
-// 	setupCORS(&w, r)
-// 	if (*r).Method == "OPTIONS" {
-// 		return
-// 	}
-
-// 	if flag.Lookup("test.v") != nil {
-// 		initDatastore()
-// 	}
-
-// 	//generate random trade entry data
-// 	minPrice := 500000  //divided by 100
-// 	maxPrice := 900000  //divided by 100
-// 	minChange := -5000  //divided by 100
-// 	maxChange := 5000   //divided by 100
-// 	minSize := 5        //divided by 1000
-// 	maxSize := 400      //divided by 1000
-// 	minRawProfit := -25 //divided by 10
-// 	maxRawProfit := 40  //divided by 10
-// 	minPeriodChange := 0
-// 	maxPeriodChange := 4
-// 	for j := 0; j < 3; j++ {
-// 		startDate := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.Now().UTC().Location())
-// 		retData = append(retData, SimulatedTradeData{
-// 			Label: fmt.Sprintf("Param %v", j+1),
-// 			Data:  []SimulatedTradeDataPoint{},
-// 		})
-
-// 		for i := 0; i < 40; i++ {
-// 			var new SimulatedTradeDataPoint
-
-// 			//randomize trade data
-// 			new.Direction = "LONG"
-// 			new.EntryPrice = (float64(rand.Intn(maxPrice-minPrice+1)+minPrice) / 100)
-// 			new.ExitPrice = new.EntryPrice + (float64(rand.Intn(maxChange-minChange+1)+minChange) / 100)
-// 			new.PosSize = (float64(rand.Intn(maxSize-minSize+1)+minSize) / 1000)
-// 			new.RiskedEquity = (float64(rand.Intn(maxPrice-minPrice+1)+minPrice) / 100) / 5
-// 			new.RawProfitPerc = (float64(rand.Intn(maxRawProfit-minRawProfit+1)+minRawProfit) / 10)
-
-// 			new.DateTime = startDate.Format("2006-01-02")
-
-// 			//randomize period skip
-// 			randSkip := (rand.Intn(maxPeriodChange-minPeriodChange+1) + minPeriodChange)
-// 			i = i + randSkip
-
-// 			startDate = startDate.AddDate(0, 0, randSkip+1)
-// 			retData[j].Data = append(retData[j].Data, new)
-// 		}
-// 	}
-
-// 	// return
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(simTradeDisplay)
-// }
-
 func backtestHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL)
-
 	//create result ID for websocket packets + res storage
 	rid := fmt.Sprintf("%v", time.Now().UnixNano())
 
@@ -139,6 +27,12 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query()["user"][0]
 	ticker := r.URL.Query()["ticker"][0]
 	period := r.URL.Query()["period"][0]
+	candlePacketSize, err := strconv.Atoi(r.URL.Query()["candlePacketSize"][0])
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	start, err := time.Parse(httpTimeFormat, r.URL.Query()["time_start"][0])
 	if err != nil {
 		fmt.Println(err)
@@ -149,31 +43,11 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end)
 
+	//save result to bucket
 	bucketName := "res-" + userID
 	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, r.URL.Query()["time_start"][0], r.URL.Query()["time_end"][0])
 
-	//send display data on ws stream
-	ws := wsConnectionsChartmaster[userID]
-	if ws != nil {
-		pc, _ := json.Marshal(profitCurve)
-		ws.WriteMessage(1, pc)
-		st, _ := json.Marshal(simTrades)
-		ws.WriteMessage(1, st)
-
-		half := len(candles) / 2
-		h1 := WebsocketCandlestickPacket{
-			ResultID: rid,
-			Data:     candles[half:],
-		}
-		c1, _ := json.Marshal(h1)
-		ws.WriteMessage(1, c1)
-		h2 := WebsocketCandlestickPacket{
-			ResultID: rid,
-			Data:     candles[:half],
-		}
-		c2, _ := json.Marshal(h2)
-		ws.WriteMessage(1, c2)
-	}
+	go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
 
 	// return
 	w.Header().Set("Content-Type", "application/json")
@@ -220,6 +94,16 @@ func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	candlePacketSize, err := strconv.Atoi(r.URL.Query()["candlePacketSize"][0])
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	//create result ID for websocket packets + res storage
+	rid := fmt.Sprintf("%v", time.Now().UnixNano())
+
 	//get backtest hist file
 	storageClient, _ := storage.NewClient(ctx)
 	defer storageClient.Close()
@@ -245,6 +129,8 @@ func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
 		ProfitCurve:          profitCurve,
 		SimulatedTrades:      simTrades,
 	}
+
+	go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

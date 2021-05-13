@@ -175,6 +175,42 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 	return newCandleD, pd, sd
 }
 
+func streamBacktestData(userID, resID string, packetSize int, candles []CandlestickChartData, profitCurve []ProfitCurveData, simTrades []SimulatedTradeData) {
+	ws := wsConnectionsChartmaster[userID]
+	if ws != nil {
+		pc, _ := json.Marshal(profitCurve)
+		ws.WriteMessage(1, pc)
+		st, _ := json.Marshal(simTrades)
+		ws.WriteMessage(1, st)
+
+		if len(candles) < packetSize {
+			//if res smaller than packet size, send all at once
+			packet := WebsocketCandlestickPacket{
+				ResultID: resID,
+				Data:     candles,
+			}
+			c1, _ := json.Marshal(packet)
+			ws.WriteMessage(1, c1)
+		} else {
+			//else, send by packet size
+			maxIndex := len(candles) - 1
+			for i := 0; i < maxIndex; i = i + packetSize {
+				endIndex := i + packetSize
+				if endIndex > maxIndex {
+					endIndex = maxIndex + 1
+				}
+				packet := WebsocketCandlestickPacket{
+					ResultID: resID,
+					Data:     candles[i:endIndex],
+				}
+				// c1, _ := json.Marshal(packet)
+				// ws.WriteMessage(1, c1)
+				fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
+			}
+		}
+	}
+}
+
 // makeBacktestResFile creates backtest result file with passed args and returns the name of the new file.
 func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData, ticker, period, start, end string) string {
 	//only save candlesticks which are modified
@@ -285,35 +321,7 @@ func completeBacktestResFile(rawData BacktestResFile) ([]CandlestickChartData, [
 		completeCandles = append(completeCandles, candleToAdd)
 	}
 
-	// candles := rawData.ModifiedCandlesticks
-	// chronoCandleDatetime := start
-	// for i, c := range candles {
-	// 	var ac []CandlestickChartData
-	// 	candleTime, _ := time.Parse(httpTimeFormat, c.DateTime)
-	// 	//if candle skips, fetch data
-	// 	if (i != 0) && (candleTime != chronoCandleDatetime) {
-	// 		fetchStart := chronoCandleDatetime
-	// 		fetchEnd := candleTime.Add(-1 * periodDurationMap[rawData.Period])
-	// 		//convert from Candlestick to CandlestickChartData
-	// 		ac = copyObjs(getCachedCandleData(rawData.Ticker, rawData.Period, fetchStart, fetchEnd),
-	// 			func(obj Candlestick) CandlestickChartData {
-	// 				chartC := CandlestickChartData{
-	// 					DateTime: obj.DateTime,
-	// 					Open:     obj.Open,
-	// 					High:     obj.High,
-	// 					Low:      obj.Low,
-	// 					Close:    obj.Close,
-	// 				}
-	// 				return chartC
-	// 			})
-	// 	}
-
-	// 	completeCandles = append(completeCandles, ac...)
-	// 	//keep chrono incrementing
-	// 	chronoCandleDatetime = chronoCandleDatetime.Add(periodDurationMap[rawData.Period])
-	// }
-
-	return completeCandles, nil, nil
+	return completeCandles, rawData.ProfitCurve, rawData.SimulatedTrades
 }
 
 // listBuckets lists buckets in the project.
