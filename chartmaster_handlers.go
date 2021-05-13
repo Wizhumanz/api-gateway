@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
+
+	"cloud.google.com/go/storage"
+	"github.com/gorilla/mux"
 )
 
 // func indexChartmasterHandler(w http.ResponseWriter, r *http.Request) {
@@ -207,4 +212,32 @@ func getBacktestHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(bucketData)
+}
+
+func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	//get backtest hist file
+	storageClient, _ := storage.NewClient(ctx)
+	defer storageClient.Close()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	userID := r.URL.Query()["user"][0]
+	bucketName := "res-" + userID
+	backtestResID, _ := url.QueryUnescape(mux.Vars(r)["id"])
+	objName := backtestResID + ".json"
+	rc, _ := storageClient.Bucket(bucketName).Object(objName).NewReader(ctx)
+	defer rc.Close()
+
+	backtestResByteArr, _ := ioutil.ReadAll(rc)
+	fmt.Println(string(backtestResByteArr))
+
+	//rehydrate backtest results
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(string(backtestResByteArr))
 }
