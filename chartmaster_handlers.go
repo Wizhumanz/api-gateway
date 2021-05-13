@@ -163,13 +163,13 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 		half := len(candles) / 2
 		h1 := WebsocketCandlestickPacket{
 			ResultID: rid,
-			Data:     candles[:half],
+			Data:     candles[half:],
 		}
 		c1, _ := json.Marshal(h1)
-		ws.WriteMessage(1, c1) //TODO: split up data if too much to send in one msg
+		ws.WriteMessage(1, c1)
 		h2 := WebsocketCandlestickPacket{
 			ResultID: rid,
-			Data:     candles[half:],
+			Data:     candles[:half],
 		}
 		c2, _ := json.Marshal(h2)
 		ws.WriteMessage(1, c2)
