@@ -310,35 +310,58 @@ func completeBacktestResFile(
 	userID, rid string,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
-	//candlestick data
+	//init
 	var completeCandles []CandlestickChartData
 	start, _ := time.Parse(httpTimeFormat, rawData.Start)
 	end, _ := time.Parse(httpTimeFormat, rawData.End)
-	//fetch all standard data
-	blankCandles := copyObjs(getCachedCandleData(rawData.Ticker, rawData.Period, start, end),
-		func(obj Candlestick) CandlestickChartData {
-			chartC := CandlestickChartData{
-				DateTime: obj.DateTime,
-				Open:     obj.Open,
-				High:     obj.High,
-				Low:      obj.Low,
-				Close:    obj.Close,
-			}
-			return chartC
-		})
-	//update with added info if exists in res file
-	for _, candle := range blankCandles {
-		var candleToAdd CandlestickChartData
-		for _, rCan := range rawData.ModifiedCandlesticks {
-			if rCan.DateTime == candle.DateTime {
-				candleToAdd = rCan
-			}
-		}
-		if candleToAdd.DateTime == "" || candleToAdd.Open == 0 {
-			candleToAdd = candle
+	fetchCandlesStart := start
+
+	//complete in chunks
+	for {
+		if fetchCandlesStart.After(end) {
+			break
 		}
 
-		completeCandles = append(completeCandles, candleToAdd)
+		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[rawData.Period] * time.Duration(packetSize))
+		if fetchCandlesEnd.After(end) {
+			fetchCandlesEnd = end
+		}
+
+		//fetch all standard data
+		var chunkCandles []CandlestickChartData
+		blankCandles := copyObjs(getCachedCandleData(rawData.Ticker, rawData.Period, fetchCandlesStart, fetchCandlesEnd),
+			func(obj Candlestick) CandlestickChartData {
+				chartC := CandlestickChartData{
+					DateTime: obj.DateTime,
+					Open:     obj.Open,
+					High:     obj.High,
+					Low:      obj.Low,
+					Close:    obj.Close,
+				}
+				return chartC
+			})
+		//update with added info if exists in res file
+		for _, candle := range blankCandles {
+			var candleToAdd CandlestickChartData
+			for _, rCan := range rawData.ModifiedCandlesticks {
+				if rCan.DateTime == candle.DateTime {
+					candleToAdd = rCan
+				}
+			}
+			if candleToAdd.DateTime == "" || candleToAdd.Open == 0 {
+				candleToAdd = candle
+			}
+
+			chunkCandles = append(chunkCandles, candleToAdd)
+		}
+		completeCandles = append(completeCandles, chunkCandles...)
+
+		//stream data back to client in every chunk
+		fmt.Printf("Sending candles %v to %v\n", fetchCandlesStart, fetchCandlesEnd)
+		packetSender(userID, rid, chunkCandles, rawData.ProfitCurve, rawData.SimulatedTrades)
+
+		//increment
+		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[rawData.Period])
 	}
 
 	return completeCandles, rawData.ProfitCurve, rawData.SimulatedTrades

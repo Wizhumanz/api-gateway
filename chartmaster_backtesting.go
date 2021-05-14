@@ -47,6 +47,14 @@ func runBacktest(
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+
+	fmt.Println(userID)
+	fmt.Println(ticker)
+	fmt.Println(period)
+	fmt.Println(packetSize)
+	fmt.Println(startTime)
+	fmt.Println(endTime)
+
 	//init
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
