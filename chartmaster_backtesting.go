@@ -45,7 +45,7 @@ func runBacktest(
 	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 	ticker, period string,
 	startTime, endTime time.Time,
-	packetSize int, packetSender func([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
+	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//init
 	var retCandles []CandlestickChartData

@@ -176,44 +176,50 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 	return newCandleD, pd, sd
 }
 
-func streamCandlesData(ws *websocket.Conn, candles []CandlestickChartData, resID string) {
-	packet := WebsocketCandlestickPacket{
+func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
+	packet := WebsocketPacket{
 		ResultID: resID,
-		Data:     candles,
+		Data:     chartData,
 	}
 	data, _ := json.Marshal(packet)
 	ws.WriteMessage(1, data)
 }
 
-func streamBacktestData(userID, resID string, packetSize int, candles []CandlestickChartData, profitCurve []ProfitCurveData, simTrades []SimulatedTradeData) {
+func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
-		if len(profitCurve) > 0 {
-			pc, _ := json.Marshal(profitCurve)
-			ws.WriteMessage(1, pc)
-		}
-		if len(simTrades) > 0 {
-			st, _ := json.Marshal(simTrades)
-			ws.WriteMessage(1, st)
+		//profit curve
+		if len(pc) > 0 {
+			var pcStreamData []interface{}
+			for _, pCurve := range pc {
+				pcStreamData = append(pcStreamData, pCurve)
+			}
+			streamPacket(ws, pcStreamData, rid)
 		}
 
-		if len(candles) > 0 {
-			if len(candles) < packetSize {
-				//if res smaller than packet size, send all at once
-				streamCandlesData(ws, candles, resID)
+		//sim trades
+		if len(st) > 0 {
+			var stStreamData []interface{}
+			for _, trade := range st {
+				stStreamData = append(stStreamData, trade)
+			}
+			streamPacket(ws, stStreamData, rid)
+		}
+
+		//candlesticks
+		var pushCandles []CandlestickChartData
+		for _, candle := range c {
+			if candle.DateTime == "" {
+
 			} else {
-				//else, send by packet size
-				maxIndex := len(candles) - 1
-				for i := 0; i < maxIndex; i = i + packetSize {
-					endIndex := i + packetSize
-					if endIndex > maxIndex {
-						endIndex = maxIndex + 1
-					}
-					streamCandlesData(ws, candles[i:endIndex], resID)
-					// fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
-				}
+				pushCandles = append(pushCandles, candle)
 			}
 		}
+		var cStreamData []interface{}
+		for _, can := range pushCandles {
+			cStreamData = append(cStreamData, can)
+		}
+		streamPacket(ws, cStreamData, rid)
 	}
 }
 
@@ -295,7 +301,10 @@ func saveBacktestRes(
 	_ = os.Remove(resFileName)
 }
 
-func completeBacktestResFile(rawData BacktestResFile) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+func completeBacktestResFile(
+	rawData BacktestResFile,
+	packetSize int, packetSender func([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
+) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//candlestick data
 	var completeCandles []CandlestickChartData
 	start, _ := time.Parse(httpTimeFormat, rawData.Start)

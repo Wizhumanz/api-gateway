@@ -148,9 +148,9 @@ type CoinAPITicker struct {
 	QuoteAsset string `json:"asset_id_quote"`
 }
 
-type WebsocketCandlestickPacket struct {
-	ResultID string                 `json:"ResultID"`
-	Data     []CandlestickChartData `json:"Data"`
+type WebsocketPacket struct {
+	ResultID string        `json:"ResultID"`
+	Data     []interface{} `json:"Data"`
 }
 
 type CandlestickChartData struct {

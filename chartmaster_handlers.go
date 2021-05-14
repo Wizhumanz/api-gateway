@@ -45,22 +45,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var candles []CandlestickChartData
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
-	candles, profitCurve, simTrades = runBacktest(strat1, ticker, period, start, end, candlePacketSize, func(c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
-		ws := wsConnectionsChartmaster[userID]
-		if ws != nil {
-			var pushCandles []CandlestickChartData
-			for _, candle := range c {
-				if candle.DateTime == "" {
-
-				} else {
-					pushCandles = append(pushCandles, candle)
-				}
-			}
-			streamCandlesData(ws, pushCandles, rid)
-
-			streamBacktestData(userID, rid, candlePacketSize, nil, pc, st)
-		}
-	})
+	candles, profitCurve, simTrades = runBacktest(strat1, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
 	//save result to bucket
 	bucketName := "res-" + userID
@@ -142,7 +127,7 @@ func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(backtestResByteArr, &rawRes)
 
 	//rehydrate backtest results
-	candles, profitCurve, simTrades := completeBacktestResFile(rawRes)
+	candles, profitCurve, simTrades := completeBacktestResFile(rawRes, candlePacketSize)
 	ret := BacktestResFile{
 		ModifiedCandlesticks: candles,
 		ProfitCurve:          profitCurve,
