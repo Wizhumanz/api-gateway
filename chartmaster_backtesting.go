@@ -45,7 +45,7 @@ func runBacktest(
 	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 	ticker, period string,
 	startTime, endTime time.Time,
-	packetSize int, candlesPacketSender func([]CandlestickChartData),
+	packetSize int, packetSender func([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//init
 	var retCandles []CandlestickChartData
@@ -123,7 +123,7 @@ func runBacktest(
 		//stream data back to client in every chunk
 		packetEndIndex := lastPacketEndIndex + packetSize
 		fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndex, packetEndIndex)
-		candlesPacketSender(retCandles[lastPacketEndIndex:packetEndIndex])
+		packetSender(retCandles[lastPacketEndIndex:packetEndIndex], retProfitCurve, retSimTrades)
 		lastPacketEndIndex = packetEndIndex
 
 		//increment

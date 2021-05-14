@@ -188,24 +188,30 @@ func streamCandlesData(ws *websocket.Conn, candles []CandlestickChartData, resID
 func streamBacktestData(userID, resID string, packetSize int, candles []CandlestickChartData, profitCurve []ProfitCurveData, simTrades []SimulatedTradeData) {
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
-		pc, _ := json.Marshal(profitCurve)
-		ws.WriteMessage(1, pc)
-		st, _ := json.Marshal(simTrades)
-		ws.WriteMessage(1, st)
+		if len(profitCurve) > 0 {
+			pc, _ := json.Marshal(profitCurve)
+			ws.WriteMessage(1, pc)
+		}
+		if len(simTrades) > 0 {
+			st, _ := json.Marshal(simTrades)
+			ws.WriteMessage(1, st)
+		}
 
-		if len(candles) < packetSize {
-			//if res smaller than packet size, send all at once
-			streamCandlesData(ws, candles, resID)
-		} else {
-			//else, send by packet size
-			maxIndex := len(candles) - 1
-			for i := 0; i < maxIndex; i = i + packetSize {
-				endIndex := i + packetSize
-				if endIndex > maxIndex {
-					endIndex = maxIndex + 1
+		if len(candles) > 0 {
+			if len(candles) < packetSize {
+				//if res smaller than packet size, send all at once
+				streamCandlesData(ws, candles, resID)
+			} else {
+				//else, send by packet size
+				maxIndex := len(candles) - 1
+				for i := 0; i < maxIndex; i = i + packetSize {
+					endIndex := i + packetSize
+					if endIndex > maxIndex {
+						endIndex = maxIndex + 1
+					}
+					streamCandlesData(ws, candles[i:endIndex], resID)
+					// fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
 				}
-				streamCandlesData(ws, candles[i:endIndex], resID)
-				// fmt.Printf("%v to %v, len = %v \n", i, endIndex, len(packet.Data))
 			}
 		}
 	}

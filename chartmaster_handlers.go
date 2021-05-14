@@ -41,18 +41,24 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	if err2 != nil {
 		fmt.Println(err)
 	}
-	candles, profitCurve, simTrades := runBacktest(strat1, ticker, period, start, end, candlePacketSize, func(c []CandlestickChartData) {
+
+	var candles []CandlestickChartData
+	var profitCurve []ProfitCurveData
+	var simTrades []SimulatedTradeData
+	candles, profitCurve, simTrades = runBacktest(strat1, ticker, period, start, end, candlePacketSize, func(c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
 		ws := wsConnectionsChartmaster[userID]
 		if ws != nil {
 			var pushCandles []CandlestickChartData
 			for _, candle := range c {
 				if candle.DateTime == "" {
-					fmt.Println(candle)
+
 				} else {
 					pushCandles = append(pushCandles, candle)
 				}
 			}
 			streamCandlesData(ws, pushCandles, rid)
+
+			streamBacktestData(userID, rid, candlePacketSize, nil, pc, st)
 		}
 	})
 
