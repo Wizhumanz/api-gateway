@@ -45,7 +45,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var candles []CandlestickChartData
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
-	candles, profitCurve, simTrades = runBacktest(strat1, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+	candles, profitCurve, simTrades = runBacktest(strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
 	//save result to bucket
 	bucketName := "res-" + userID
@@ -113,7 +113,6 @@ func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
 	defer storageClient.Close()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-
 	userID := r.URL.Query()["user"][0]
 	bucketName := "res-" + userID
 	backtestResID, _ := url.QueryUnescape(mux.Vars(r)["id"])
@@ -122,19 +121,20 @@ func getBacktestResHandler(w http.ResponseWriter, r *http.Request) {
 	defer rc.Close()
 
 	backtestResByteArr, _ := ioutil.ReadAll(rc)
-	// fmt.Println(string(backtestResByteArr))
 	var rawRes BacktestResFile
 	json.Unmarshal(backtestResByteArr, &rawRes)
 
 	//rehydrate backtest results
-	candles, profitCurve, simTrades := completeBacktestResFile(rawRes, candlePacketSize)
+	candles, profitCurve, simTrades := completeBacktestResFile(rawRes, userID, rid, candlePacketSize, streamBacktestResData)
 	ret := BacktestResFile{
+		Ticker:               rawRes.Ticker,
+		Period:               rawRes.Period,
+		Start:                rawRes.Start,
+		End:                  rawRes.End,
 		ModifiedCandlesticks: candles,
 		ProfitCurve:          profitCurve,
 		SimulatedTrades:      simTrades,
 	}
-
-	go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

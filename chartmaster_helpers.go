@@ -186,6 +186,10 @@ func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 }
 
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
+	// fmt.Printf("Candles len = %v\n", len(c))
+	// fmt.Printf("ProfitCurve len = %v\n", len(pc[0].Data))
+	// fmt.Printf("SimTrades len = %v\n", len(st[0].Data))
+
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
 		//profit curve
@@ -303,7 +307,8 @@ func saveBacktestRes(
 
 func completeBacktestResFile(
 	rawData BacktestResFile,
-	packetSize int, packetSender func([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
+	userID, rid string,
+	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//candlestick data
 	var completeCandles []CandlestickChartData
