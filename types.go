@@ -164,6 +164,15 @@ type CandlestickChartData struct {
 	Label           string  `json:"Label"`
 }
 
+type Backtest struct {
+	Ticker           string `json:"ticker"`
+	Period           string `json:"period"`
+	TimeStart        string `json:"time_start"`
+	TimeEnd          string `json:"time_end"`
+	CandlePacketSize string `json:"candlePacketSize"`
+	User             string `json:"user"`
+}
+
 type ProfitCurveDataPoint struct {
 	DateTime string  `json:"DateTime"`
 	Equity   float64 `json:"Equity"`

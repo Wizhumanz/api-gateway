@@ -23,21 +23,28 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var backtest Backtest
+	err := json.NewDecoder(r.Body).Decode(&backtest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	//get backtest res
-	userID := r.URL.Query()["user"][0]
-	ticker := r.URL.Query()["ticker"][0]
-	period := r.URL.Query()["period"][0]
-	candlePacketSize, err := strconv.Atoi(r.URL.Query()["candlePacketSize"][0])
+	userID := backtest.User
+	ticker := backtest.Ticker
+	period := backtest.Period
+	candlePacketSize, err := strconv.Atoi(backtest.CandlePacketSize)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	start, err := time.Parse(httpTimeFormat, r.URL.Query()["time_start"][0])
+	start, err := time.Parse(httpTimeFormat, backtest.TimeStart)
 	if err != nil {
 		fmt.Println(err)
 	}
-	end, err2 := time.Parse(httpTimeFormat, r.URL.Query()["time_end"][0])
+	end, err2 := time.Parse(httpTimeFormat, backtest.TimeEnd)
 	if err2 != nil {
 		fmt.Println(err)
 	}
@@ -49,7 +56,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 
 	//save result to bucket
 	bucketName := "res-" + userID
-	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, r.URL.Query()["time_start"][0], r.URL.Query()["time_end"][0])
+	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, backtest.TimeStart, backtest.TimeEnd)
 
 	// go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
 
