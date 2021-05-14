@@ -122,6 +122,9 @@ func runBacktest(
 
 		//stream data back to client in every chunk
 		packetEndIndex := lastPacketEndIndex + packetSize
+		if packetEndIndex > len(retCandles) {
+			packetEndIndex = len(retCandles) - 1
+		}
 		fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndex, packetEndIndex)
 		packetSender(userID, rid, retCandles[lastPacketEndIndex:packetEndIndex], retProfitCurve, retSimTrades)
 		lastPacketEndIndex = packetEndIndex
