@@ -11,7 +11,7 @@ func strat1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) string {
-	accRiskPerTrade := 0.5
+	accRiskPerTrade := 0.3
 	accSz := 1000
 	leverage := 25 //limits raw price SL %
 
@@ -26,6 +26,7 @@ func strat1(
 			posSize := posCap / entryPrice
 			// fmt.Printf("Entering with %v\n", posSize)
 			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
+			fmt.Printf("BUY IN %v\n", close[relCandleIndex])
 			return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize)
 		}
 	} else if relCandleIndex > 0 {
@@ -34,6 +35,7 @@ func strat1(
 		if (strategy.PosLongSize > 0) && (close[relCandleIndex] < open[relCandleIndex]) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
+			fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
 			return fmt.Sprintf("▼ %.2f", sl)
 		}
 	}

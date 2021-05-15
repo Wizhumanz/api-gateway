@@ -242,9 +242,10 @@ func (c *Candlestick) Create(redisData map[string]string) {
 }
 
 type StrategySimulatorAction struct {
-	Action string
-	Price  float64
-	SL     float64
+	Action  string
+	Price   float64
+	SL      float64
+	PosSize float64
 }
 
 type StrategySimulator struct {
@@ -280,9 +281,10 @@ func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLon
 	}
 
 	strat.Actions[cIndex] = StrategySimulatorAction{
-		Action: "ENTER",
-		Price:  price,
-		SL:     sl,
+		Action:  "ENTER",
+		Price:   price,
+		SL:      sl,
+		PosSize: orderSize,
 	}
 }
 
@@ -316,6 +318,7 @@ func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, c
 		//check SL
 		if low <= sl || close <= sl || open <= sl || high <= sl {
 			strat.CloseLong(close, 0, cIndex)
+			fmt.Printf("SL EXIT %v\n", close)
 		}
 
 		//TODO: check TP

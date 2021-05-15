@@ -163,14 +163,24 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 	//sim trades
 	sd := SimulatedTradeDataPoint{}
 	if strat.Actions[relIndex].Action == "SL" || strat.Actions[relIndex].Action == "TP" {
+		//find entry conditions
+		var entryPrice float64
+		var size float64
+		for i := 1; i < len(strat.Actions)-1; i++ {
+			current := strat.Actions[relIndex-i]
+			if current.Action == "ENTER" {
+				entryPrice = current.Price
+				size = current.PosSize
+			}
+		}
+
 		sd.DateTime = c.DateTime
-		sd.Direction = "LONG"                               //TODO: fix later when strategy changes
-		sd.EntryPrice = strat.Actions[relIndex].Price - 1.0 //TODO: calculate actual entry price
+		sd.Direction = "LONG" //TODO: fix later when strategy changes
+		sd.EntryPrice = entryPrice
 		sd.ExitPrice = strat.Actions[relIndex].Price
-		//TODO: add more props to strategy Actions
-		sd.PosSize = 69.69
-		sd.RiskedEquity = 699.69
-		sd.RawProfitPerc = 0.69
+		sd.PosSize = size
+		sd.RiskedEquity = size * entryPrice
+		sd.RawProfitPerc = ((sd.ExitPrice - sd.EntryPrice) / sd.EntryPrice) * 100
 	}
 
 	return newCandleD, pd, sd
