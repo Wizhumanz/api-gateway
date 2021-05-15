@@ -173,19 +173,26 @@ func runBacktest(
 		}
 		// fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndexCandles, packetEndIndex)
 		pcFetchEndIndex := len(retProfitCurve[0].Data)
+		packetPC := retProfitCurve[0].Data[lastPacketEndIndexPC:pcFetchEndIndex]
 		stFetchEndIndex := len(retSimTrades[0].Data)
+		packetSt := retSimTrades[0].Data[lastPacketEndIndexSimT:stFetchEndIndex]
+
+		for _, st := range packetSt {
+			fmt.Println(st)
+		}
+
 		packetSender(userID, rid,
 			retCandles[lastPacketEndIndexCandles:packetEndIndex],
 			[]ProfitCurveData{
 				{
 					Label: "strat1", //TODO: prep for dynamic strategy param values
-					Data:  retProfitCurve[0].Data[lastPacketEndIndexPC:pcFetchEndIndex],
+					Data:  packetPC,
 				},
 			},
 			[]SimulatedTradeData{
 				{
 					Label: "strat1",
-					Data:  retSimTrades[0].Data[lastPacketEndIndexSimT:stFetchEndIndex],
+					Data:  packetSt,
 				},
 			})
 
