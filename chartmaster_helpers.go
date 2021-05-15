@@ -27,8 +27,7 @@ func copyObjs(base []Candlestick, copyer func(Candlestick) CandlestickChartData)
 }
 
 func cacheCandleData(candles []Candlestick, ticker, period string) {
-	fmt.Printf("Adding %v candles to cache %v %v\n", len(candles), ticker, period)
-
+	// fmt.Printf("Adding %v candles to cache %v %v\n", len(candles), ticker, period)
 	//progress indicator
 	indicatorParts := 30
 	totalLen := len(candles)
@@ -72,7 +71,6 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 
 	//parse data
 	body, _ := ioutil.ReadAll(response.Body)
-	fmt.Println(string(body))
 	var jStruct []Candlestick
 	json.Unmarshal(body, &jStruct)
 	//save data to cache so don't have to fetch again
@@ -196,10 +194,6 @@ func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 }
 
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
-	fmt.Printf("Candles len = %v\n", len(c))
-	fmt.Printf("ProfitCurve %v to %v\n", pc[0].Data[0].DateTime, pc[0].Data[len(pc[0].Data)-1].DateTime)
-	fmt.Printf("SimTrades %v to %v\n\n", st[0].Data[0].DateTime, st[0].Data[len(st[0].Data)-1].DateTime)
-
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
 		//profit curve
@@ -367,7 +361,7 @@ func completeBacktestResFile(
 		completeCandles = append(completeCandles, chunkCandles...)
 
 		//stream data back to client in every chunk
-		fmt.Printf("Sending candles %v to %v\n", fetchCandlesStart, fetchCandlesEnd)
+		// fmt.Printf("Sending candles %v to %v\n", fetchCandlesStart, fetchCandlesEnd)
 		packetSender(userID, rid, chunkCandles, rawData.ProfitCurve, rawData.SimulatedTrades)
 
 		//increment
@@ -410,7 +404,7 @@ func listFiles(bucket string) []string {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		fmt.Println("Error")
+		fmt.Println(err)
 	}
 	defer client.Close()
 

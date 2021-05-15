@@ -178,11 +178,6 @@ func runBacktest(
 		packetPC := retProfitCurve[0].Data[lastPacketEndIndexPC:pcFetchEndIndex]
 		stFetchEndIndex := len(retSimTrades[0].Data)
 		packetSt := retSimTrades[0].Data[lastPacketEndIndexSimT:stFetchEndIndex]
-
-		for _, st := range packetSt {
-			fmt.Println(st)
-		}
-
 		packetSender(userID, rid,
 			retCandles[lastPacketEndIndexCandles:packetEndIndex],
 			[]ProfitCurveData{
