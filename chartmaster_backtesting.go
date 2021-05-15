@@ -124,6 +124,49 @@ func runBacktest(
 		}
 
 		//stream data back to client in every chunk
+		//rm duplicates
+		var uniquePCPoints []ProfitCurveDataPoint
+		for i, p := range retProfitCurve[0].Data {
+			if len(uniquePCPoints) == 0 {
+				if i != 0 {
+					uniquePCPoints = append(uniquePCPoints, p)
+				}
+			} else {
+				var found ProfitCurveDataPoint
+				for _, search := range uniquePCPoints {
+					if search.Equity == p.Equity {
+						found = search
+					}
+				}
+
+				if found.Equity == 0 && found.DateTime == "" {
+					uniquePCPoints = append(uniquePCPoints, p)
+				}
+			}
+		}
+		retProfitCurve[0].Data = uniquePCPoints
+
+		var uniqueStPoints []SimulatedTradeDataPoint
+		for i, p := range retSimTrades[0].Data {
+			if len(uniqueStPoints) == 0 {
+				if i != 0 {
+					uniqueStPoints = append(uniqueStPoints, p)
+				}
+			} else {
+				var found SimulatedTradeDataPoint
+				for _, search := range uniqueStPoints {
+					if search.DateTime == p.DateTime {
+						found = search
+					}
+				}
+
+				if found.EntryPrice == 0 && found.DateTime == "" {
+					uniqueStPoints = append(uniqueStPoints, p)
+				}
+			}
+		}
+		retSimTrades[0].Data = uniqueStPoints
+
 		packetEndIndex := lastPacketEndIndexCandles + packetSize
 		if packetEndIndex > len(retCandles) {
 			packetEndIndex = len(retCandles)
