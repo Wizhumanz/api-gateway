@@ -128,9 +128,9 @@ func runBacktest(
 		if packetEndIndex > len(retCandles) {
 			packetEndIndex = len(retCandles)
 		}
-		fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndexCandles, packetEndIndex)
-		pcFetchEndIndex := len(retProfitCurve)
-		stFetchEndIndex := len(retSimTrades)
+		// fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndexCandles, packetEndIndex)
+		pcFetchEndIndex := len(retProfitCurve[0].Data)
+		stFetchEndIndex := len(retSimTrades[0].Data)
 		packetSender(userID, rid,
 			retCandles[lastPacketEndIndexCandles:packetEndIndex],
 			[]ProfitCurveData{
@@ -148,8 +148,8 @@ func runBacktest(
 
 		//save last index for streaming next chunk
 		lastPacketEndIndexCandles = packetEndIndex
-		lastPacketEndIndexPC = pcFetchEndIndex
-		lastPacketEndIndexSimT = stFetchEndIndex
+		lastPacketEndIndexPC = pcFetchEndIndex - 1
+		lastPacketEndIndexSimT = stFetchEndIndex - 1
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}

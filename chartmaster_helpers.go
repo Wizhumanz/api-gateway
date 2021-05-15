@@ -187,8 +187,8 @@ func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
 	fmt.Printf("Candles len = %v\n", len(c))
-	fmt.Printf("ProfitCurve = %v\n", pc[0].Data)
-	fmt.Printf("SimTrades = %v\n", st[0].Data)
+	fmt.Printf("ProfitCurve %v to %v\n", pc[0].Data[0].DateTime, pc[0].Data[len(pc[0].Data)-1].DateTime)
+	fmt.Printf("SimTrades %v to %v\n\n", st[0].Data[0].DateTime, st[0].Data[len(st[0].Data)-1].DateTime)
 
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
