@@ -48,13 +48,6 @@ func runBacktest(
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 
-	fmt.Println(userID)
-	fmt.Println(ticker)
-	fmt.Println(period)
-	fmt.Println(packetSize)
-	fmt.Println(startTime)
-	fmt.Println(endTime)
-
 	//init
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
@@ -78,7 +71,9 @@ func runBacktest(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
-	lastPacketEndIndex := 0
+	lastPacketEndIndexCandles := 0
+	lastPacketEndIndexPC := 0
+	lastPacketEndIndexSimT := 0
 	fetchCandlesStart := startTime
 	for {
 		if fetchCandlesStart.After(endTime) {
@@ -129,14 +124,32 @@ func runBacktest(
 		}
 
 		//stream data back to client in every chunk
-		packetEndIndex := lastPacketEndIndex + packetSize
+		packetEndIndex := lastPacketEndIndexCandles + packetSize
 		if packetEndIndex > len(retCandles) {
-			packetEndIndex = len(retCandles) - 1
+			packetEndIndex = len(retCandles)
 		}
-		fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndex, packetEndIndex)
-		packetSender(userID, rid, retCandles[lastPacketEndIndex:packetEndIndex], retProfitCurve, retSimTrades)
-		lastPacketEndIndex = packetEndIndex
+		fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndexCandles, packetEndIndex)
+		pcFetchEndIndex := len(retProfitCurve)
+		stFetchEndIndex := len(retSimTrades)
+		packetSender(userID, rid,
+			retCandles[lastPacketEndIndexCandles:packetEndIndex],
+			[]ProfitCurveData{
+				{
+					Label: "strat1", //TODO: prep for dynamic strategy param values
+					Data:  retProfitCurve[0].Data[lastPacketEndIndexPC:pcFetchEndIndex],
+				},
+			},
+			[]SimulatedTradeData{
+				{
+					Label: "strat1",
+					Data:  retSimTrades[0].Data[lastPacketEndIndexSimT:stFetchEndIndex],
+				},
+			})
 
+		//save last index for streaming next chunk
+		lastPacketEndIndexCandles = packetEndIndex
+		lastPacketEndIndexPC = pcFetchEndIndex
+		lastPacketEndIndexSimT = stFetchEndIndex
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
