@@ -58,8 +58,6 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	bucketName := "res-" + userID
 	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, backtest.TimeStart, backtest.TimeEnd)
 
-	// go streamBacktestData(userID, rid, candlePacketSize, candles, profitCurve, simTrades)
-
 	// return
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
