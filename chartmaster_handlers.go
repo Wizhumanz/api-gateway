@@ -109,6 +109,27 @@ func shareResultHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(share)
 }
 
+func getShareResultHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	var shareResult ShareResult
+
+	shareID := r.URL.Query()["share"][0]
+	query := datastore.NewQuery("ShareResult").Filter("ShareID =", shareID)
+	t := client.Run(ctx, query)
+	_, error := t.Next(&shareResult)
+	if error != nil {
+		fmt.Println(error.Error())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(shareResult.ResultFileName)
+}
+
 func getTickersHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
