@@ -97,7 +97,7 @@ func createNewWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//set webhook URL
-	plainWebhookID := generateWebhookID(100)
+	plainWebhookID := generateRandomID(100)
 	webhookURL := "https://ana-api.myika.co/webhook/" + plainWebhookID
 
 	auth, _ := url.QueryUnescape(r.Header.Get("Authorization"))
