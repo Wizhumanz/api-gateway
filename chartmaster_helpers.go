@@ -425,6 +425,27 @@ func listFiles(bucket string) []string {
 	return buckets
 }
 
+func deleteFile(bucket, object string) error {
+	// bucket := "bucket-name"
+	// object := "object-name"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %v", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	o := client.Bucket(bucket).Object(object)
+	if err := o.Delete(ctx); err != nil {
+		return fmt.Errorf("Object(%q).Delete: %v", object, err)
+	}
+	// fmt.Fprintf(w, "Blob %v deleted.\n", object)
+	return nil
+}
+
 func saveJsonToRedis() {
 	data, err := ioutil.ReadFile("./mar-apr2021.json")
 	if err != nil {
