@@ -20,6 +20,7 @@ import (
 func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	//create result ID for websocket packets + res storage
 	rid := fmt.Sprintf("%v", time.Now().UnixNano())
+	fmt.Println("kms")
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -63,9 +64,20 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
 	candles, profitCurve, simTrades = runBacktest(strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+	fmt.Println("help")
+
+	// Delete an element in a bucket if len greater than 10
+	bucketName := "res-" + userID
+	fmt.Println(bucketName)
+	bucketData := listFiles(bucketName)
+	fmt.Println(bucketData)
+	fmt.Println("%d kms dude", len(bucketData))
+	if len(bucketData) >= 10 {
+		fmt.Println("help me plz")
+		deleteFile(bucketName, bucketData[0])
+	}
 
 	//save result to bucket
-	bucketName := "res-" + userID
 	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, backtest.TimeStart, backtest.TimeEnd)
 
 	// return
