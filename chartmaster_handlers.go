@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
+	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
 )
@@ -72,19 +75,31 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func shareResultHandler(w http.ResponseWriter, r *http.Request) {
-
-	// uniqueURL := fmt.Sprintf("%v", time.Now().UnixNano())
-
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
 	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
+	uniqueURL := fmt.Sprintf("%v", time.Now().UnixNano()) + generateRandomID(20)
+	fmt.Println(uniqueURL)
 
 	var share ShareResult
 	err := json.NewDecoder(r.Body).Decode(&share)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// add new row to DB
+	share.ShareID = uniqueURL
+	kind := "ShareResult"
+	newKey := datastore.IncompleteKey(kind, nil)
+	if _, err := client.Put(ctx, newKey, &share); err != nil {
+		log.Fatalf("Failed to delete Bot: %v", err)
 	}
 
 	fmt.Println(share)

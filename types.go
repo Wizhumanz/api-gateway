@@ -180,6 +180,7 @@ type ShareResult struct {
 	Title          string `json:"title"`
 	Description    string `json:"description"`
 	ResultFileName string `json:"resultFileName"`
+	ShareID        string `json:"shareId"`
 }
 
 type ProfitCurveDataPoint struct {
