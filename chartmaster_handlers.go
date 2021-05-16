@@ -71,6 +71,29 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	// json.NewEncoder(w).Encode(finalRet)
 }
 
+func shareResultHandler(w http.ResponseWriter, r *http.Request) {
+
+	// uniqueURL := fmt.Sprintf("%v", time.Now().UnixNano())
+
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	var share ShareResult
+	err := json.NewDecoder(r.Body).Decode(&share)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println(share)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(share)
+}
+
 func getTickersHandler(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
