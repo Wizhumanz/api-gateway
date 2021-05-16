@@ -118,6 +118,7 @@ func getShareResultHandler(w http.ResponseWriter, r *http.Request) {
 	var shareResult ShareResult
 
 	shareID := r.URL.Query()["share"][0]
+	fmt.Println(shareID)
 	query := datastore.NewQuery("ShareResult").Filter("ShareID =", shareID)
 	t := client.Run(ctx, query)
 	_, error := t.Next(&shareResult)
@@ -125,9 +126,49 @@ func getShareResultHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(error.Error())
 	}
 
+	// candlePacketSize, err := strconv.Atoi(r.URL.Query()["candlePacketSize"][0])
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
+
+	candlePacketSize := 100
+
+	//create result ID for websocket packets + res storage
+	rid := fmt.Sprintf("%v", time.Now().UnixNano())
+
+	//get backtest hist file
+	storageClient, _ := storage.NewClient(ctx)
+	defer storageClient.Close()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+	userID := shareResult.UserID
+	bucketName := "res-" + userID
+	backtestResID := shareResult.ResultFileName
+	objName := backtestResID + ".json"
+	rc, _ := storageClient.Bucket(bucketName).Object(objName).NewReader(ctx)
+	defer rc.Close()
+
+	backtestResByteArr, _ := ioutil.ReadAll(rc)
+	var rawRes BacktestResFile
+	json.Unmarshal(backtestResByteArr, &rawRes)
+
+	//rehydrate backtest results
+	candles, profitCurve, simTrades := completeBacktestResFile(rawRes, userID, rid, candlePacketSize, streamBacktestResData)
+	ret := BacktestResFile{
+		Ticker:               rawRes.Ticker,
+		Period:               rawRes.Period,
+		Start:                rawRes.Start,
+		End:                  rawRes.End,
+		ModifiedCandlesticks: candles,
+		ProfitCurve:          profitCurve,
+		SimulatedTrades:      simTrades,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(shareResult.ResultFileName)
+	json.NewEncoder(w).Encode(ret)
 }
 
 func getTickersHandler(w http.ResponseWriter, r *http.Request) {
