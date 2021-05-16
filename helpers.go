@@ -56,9 +56,10 @@ func decrypt(text string) string {
 	return string(data)
 }
 
-var nums = []rune("1234567890")
+var nums = []rune("1234567890abcdefghijklmnopqrstuvwxyz")
 
-func generateWebhookID(n int) string {
+// generateRandomID generates a random string of chars with length n
+func generateRandomID(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = nums[rand.Intn(len(nums))]
