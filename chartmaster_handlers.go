@@ -34,6 +34,13 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	userID := backtest.User
 	ticker := backtest.Ticker
 	period := backtest.Period
+	risk := backtest.Risk
+	leverage := backtest.Leverage
+	size := backtest.Size
+
+	fmt.Println(risk)
+	fmt.Println(leverage)
+	fmt.Println(size)
 	candlePacketSize, err := strconv.Atoi(backtest.CandlePacketSize)
 	if err != nil {
 		fmt.Println(err)

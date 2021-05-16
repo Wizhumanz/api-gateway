@@ -171,6 +171,9 @@ type Backtest struct {
 	TimeEnd          string `json:"time_end"`
 	CandlePacketSize string `json:"candlePacketSize"`
 	User             string `json:"user"`
+	Risk             string `json:"risk"`
+	Leverage         string `json:"leverage"`
+	Size             string `json:"size"`
 }
 
 type ProfitCurveDataPoint struct {
