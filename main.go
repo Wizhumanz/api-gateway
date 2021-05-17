@@ -128,7 +128,7 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory/{id}").HandlerFunc(getBacktestResHandler)
 
 	msngr.GoogleProjectID = "myika-anastasia"
-	msngr.InitRedis()
+	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
