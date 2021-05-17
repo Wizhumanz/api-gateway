@@ -30,10 +30,14 @@ var colorCyan = "\033[36m"
 var colorWhite = "\033[37m"
 
 var googleProjectID = "myika-anastasia"
-var redisHost = os.Getenv("REDISHOST")
-var redisPort = os.Getenv("REDISPORT")
-var redisPass = os.Getenv("REDISPASS")
-var rdb *redis.Client
+var redisHostMsngr = os.Getenv("REDISHOST_MSNGR")
+var redisPortMsngr = os.Getenv("REDISPORT_MSNGR")
+var redisPassMsngr = os.Getenv("REDISPASS_MSNGR")
+var rdbMsngr *redis.Client
+var redisHostChartmaster = os.Getenv("REDISHOST_CM")
+var redisPortChartmaster = os.Getenv("REDISPORT_CM")
+var redisPassChartmaster = os.Getenv("REDISPASS_CM")
+var rdbChartmaster *redis.Client
 var client *datastore.Client
 var ctx context.Context
 
@@ -59,7 +63,8 @@ func main() {
 	wsConnections = make(map[string]*websocket.Conn)
 	wsConnectionsChartmaster = make(map[string]*websocket.Conn)
 
-	initRedis()
+	initRedis(rdbMsngr, redisHostMsngr, redisPortMsngr, redisPassMsngr)
+	initRedis(rdbChartmaster, redisHostChartmaster, redisPortChartmaster, redisPassChartmaster)
 	initDatastore()
 
 	// http.Handle("/", http.FileServer(http.Dir(".")))

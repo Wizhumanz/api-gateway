@@ -35,4 +35,4 @@ deploy:
     - gcloud auth activate-service-account --key-file=$GCLOUD_ACC_KEY
     - gcloud config set project $GCLOUD_PROJECT_ID
     - gcloud builds submit --tag gcr.io/$GCLOUD_PROJECT_ID/api-gateway-$CI_COMMIT_SHORT_SHA
-    - gcloud beta run deploy api-gateway --image gcr.io/$GCLOUD_PROJECT_ID/api-gateway-$CI_COMMIT_SHORT_SHA --port 8000 --platform managed --min-instances 0 --max-instances 5 --allow-unauthenticated --region asia-southeast1 --memory 128Mi --cpu 1 --concurrency 5 --timeout 1000 --vpc-connector redis-streams --set-env-vars REDISHOST=$REDISHOST,REDISPORT=$REDISPORT,REDISPASS=$REDISPASS
+    - gcloud beta run deploy api-gateway --image gcr.io/$GCLOUD_PROJECT_ID/api-gateway-$CI_COMMIT_SHORT_SHA --port 8000 --platform managed --min-instances 0 --max-instances 5 --allow-unauthenticated --region asia-southeast1 --memory 128Mi --cpu 1 --concurrency 5 --timeout 1000 --vpc-connector redis-streams --set-env-vars REDISHOST_MSNGR=$REDISHOST_MSNGR,REDISPORT_MSNGR=$REDISPORT_MSNGR,REDISPASS_MSNGR=$REDISPASS_MSNGR

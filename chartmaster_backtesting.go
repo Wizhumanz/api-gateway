@@ -93,7 +93,7 @@ func runBacktest(
 		//check if candles exist in cache
 		redisKeyPrefix := ticker + ":" + period + ":"
 		testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
-		testRes, _ := rdb.HGetAll(ctx, testKey).Result()
+		testRes, _ := rdbMsngr.HGetAll(ctx, testKey).Result()
 		if (testRes["open"] == "") && (testRes["close"] == "") {
 			//if no data in cache, do fresh GET and save to cache
 			periodCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)

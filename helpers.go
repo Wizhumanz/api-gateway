@@ -67,24 +67,25 @@ func generateRandomID(n int) string {
 	return string(b)
 }
 
-func initRedis() {
+func initRedis(redisClient *redis.Client, host, port, pass string) {
 	// default to dev redis instance
-	if redisHost == "" {
-		redisHost = "127.0.0.1"
+	if host == "" {
+		host = "127.0.0.1"
 	}
-	if redisPort == "" {
-		redisPort = "6379"
+	if port == "" {
+		port = "6379"
 	}
-	fmt.Println("msngr connecting to Redis on " + redisHost + ":" + redisPort + " - " + redisPass)
-	rdb = redis.NewClient(&redis.Options{
-		Addr:        redisHost + ":" + redisPort,
-		Password:    redisPass,
+	fmt.Println("api-gateway connecting to Redis on " + host + ":" + port + " - " + pass)
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:        host + ":" + port,
+		Password:    pass,
 		IdleTimeout: -1,
 	})
+
 	ctx := context.Background()
-	rdb.Do(ctx, "AUTH", redisPass)
-	rdb.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
-	rdb.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
+	redisClient.Do(ctx, "AUTH", pass)
+	redisClient.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
+	redisClient.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
 }
 
 func initDatastore() {

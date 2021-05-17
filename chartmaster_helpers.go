@@ -39,7 +39,7 @@ func cacheCandleData(candles []Candlestick, ticker, period string) {
 		// fmt.Println(c)
 		ctx := context.Background()
 		key := ticker + ":" + period + ":" + c.PeriodStart
-		rdb.HMSet(ctx, key, "open", c.Open, "high", c.High, "low", c.Low, "close", c.Close, "volume", c.Volume, "tradesCount", c.TradesCount, "timeOpen", c.TimeOpen, "timeClose", c.TimeClose, "periodStart", c.PeriodStart, "periodEnd", c.PeriodEnd)
+		rdbMsngr.HMSet(ctx, key, "open", c.Open, "high", c.High, "low", c.Low, "close", c.Close, "volume", c.Volume, "tradesCount", c.TradesCount, "timeOpen", c.TimeOpen, "timeClose", c.TimeClose, "periodStart", c.PeriodStart, "periodEnd", c.PeriodEnd)
 
 		if (i > 1) && ((i % lenPart) == 0) {
 			fmt.Printf("Section %v of %v complete\n", (i / lenPart), indicatorParts)
@@ -89,7 +89,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	checkEnd := end.Add(periodDurationMap[period])
 	for cTime := start; cTime.Before(checkEnd); cTime = cTime.Add(periodDurationMap[period]) {
 		key := ticker + ":" + period + ":" + cTime.Format(httpTimeFormat) + ".0000000Z"
-		cachedData, _ := rdb.HGetAll(ctx, key).Result()
+		cachedData, _ := rdbMsngr.HGetAll(ctx, key).Result()
 
 		//if candle not found in cache, fetch new
 		if cachedData["open"] == "" {
@@ -99,7 +99,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 			for {
 				calcTime = calcTime.Add(periodDurationMap[period])
 				key := ticker + ":" + period + ":" + calcTime.Format(httpTimeFormat) + ".0000000Z" //TODO: update for diff period
-				cached, _ := rdb.HGetAll(ctx, key).Result()
+				cached, _ := rdbMsngr.HGetAll(ctx, key).Result()
 				//find index where next cache starts again, or break if passed end time of backtest
 				if (cached["open"] != "") || (calcTime.After(end)) {
 					fetchEndTime = calcTime
@@ -458,7 +458,7 @@ func saveJsonToRedis() {
 }
 
 func renameKeys() {
-	keys, _ := rdb.Keys(ctx, "*").Result()
+	keys, _ := rdbMsngr.Keys(ctx, "*").Result()
 	var splitKeys = map[string]string{}
 	for _, k := range keys {
 		splitKeys[k] = "BINANCEFTS_PERP_BTC_USDT:" + strings.SplitN(k, ":", 2)[1]
