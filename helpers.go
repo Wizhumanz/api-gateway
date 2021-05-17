@@ -67,25 +67,43 @@ func generateRandomID(n int) string {
 	return string(b)
 }
 
-func initRedis(redisClient *redis.Client, host, port, pass string) {
-	// default to dev redis instance
-	if host == "" {
-		host = "127.0.0.1"
+func initRedis() {
+	// msngr redis streams
+	if redisHostMsngr == "" {
+		redisHostMsngr = "127.0.0.1"
 	}
-	if port == "" {
-		port = "6379"
+	if redisPortMsngr == "" {
+		redisPortMsngr = "6379"
 	}
-	fmt.Println("api-gateway connecting to Redis on " + host + ":" + port + " - " + pass)
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:        host + ":" + port,
-		Password:    pass,
+	fmt.Println("api-gateway connecting to Redis on " + redisHostMsngr + ":" + redisPortMsngr + " - " + redisPassMsngr)
+	rdbMsngr = redis.NewClient(&redis.Options{
+		Addr:        redisHostMsngr + ":" + redisPortMsngr,
+		Password:    redisPassMsngr,
 		IdleTimeout: -1,
 	})
 
 	ctx := context.Background()
-	redisClient.Do(ctx, "AUTH", pass)
-	redisClient.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
-	redisClient.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
+	rdbMsngr.Do(ctx, "AUTH", redisPassMsngr)
+	rdbMsngr.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
+	rdbMsngr.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
+
+	// chartmaster
+	if redisHostChartmaster == "" {
+		redisHostMsngr = "127.0.0.1"
+	}
+	if redisPortChartmaster == "" {
+		redisPortMsngr = "6379"
+	}
+	fmt.Println("api-gateway connecting to Redis on " + redisHostChartmaster + ":" + redisPortChartmaster + " - " + redisPassChartmaster)
+	rdbChartmaster = redis.NewClient(&redis.Options{
+		Addr:        redisHostChartmaster + ":" + redisPortChartmaster,
+		Password:    redisPassChartmaster,
+		IdleTimeout: -1,
+	})
+
+	rdbChartmaster.Do(ctx, "AUTH", redisPassChartmaster)
+	rdbChartmaster.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
+	rdbChartmaster.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
 }
 
 func initDatastore() {

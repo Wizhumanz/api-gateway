@@ -26,7 +26,7 @@ func strat1(
 			posSize := posCap / entryPrice
 			// fmt.Printf("Entering with %v\n", posSize)
 			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
-			fmt.Printf("BUY IN %v\n", close[relCandleIndex])
+			// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
 			return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize)
 		}
 	} else if relCandleIndex > 0 {
@@ -35,7 +35,7 @@ func strat1(
 		if (strategy.PosLongSize > 0) && (close[relCandleIndex] < open[relCandleIndex]) {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
-			fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
+			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
 			return fmt.Sprintf("▼ %.2f", sl)
 		}
 	}
@@ -93,7 +93,7 @@ func runBacktest(
 		//check if candles exist in cache
 		redisKeyPrefix := ticker + ":" + period + ":"
 		testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
-		testRes, _ := rdbMsngr.HGetAll(ctx, testKey).Result()
+		testRes, _ := rdbChartmaster.HGetAll(ctx, testKey).Result()
 		if (testRes["open"] == "") && (testRes["close"] == "") {
 			//if no data in cache, do fresh GET and save to cache
 			periodCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)

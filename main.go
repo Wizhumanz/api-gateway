@@ -63,8 +63,7 @@ func main() {
 	wsConnections = make(map[string]*websocket.Conn)
 	wsConnectionsChartmaster = make(map[string]*websocket.Conn)
 
-	initRedis(rdbMsngr, redisHostMsngr, redisPortMsngr, redisPassMsngr)
-	initRedis(rdbChartmaster, redisHostChartmaster, redisPortChartmaster, redisPassChartmaster)
+	initRedis()
 	initDatastore()
 
 	// http.Handle("/", http.FileServer(http.Dir(".")))

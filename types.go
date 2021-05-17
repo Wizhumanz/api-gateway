@@ -321,7 +321,7 @@ func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, c
 		//check SL
 		if low <= sl || close <= sl || open <= sl || high <= sl {
 			strat.CloseLong(close, 0, cIndex)
-			fmt.Printf("SL EXIT %v\n", close)
+			// fmt.Printf("SL EXIT %v\n", close)
 		}
 
 		//TODO: check TP

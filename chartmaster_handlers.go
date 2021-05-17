@@ -17,7 +17,6 @@ import (
 func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	//create result ID for websocket packets + res storage
 	rid := fmt.Sprintf("%v", time.Now().UnixNano())
-	fmt.Println("kms")
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
