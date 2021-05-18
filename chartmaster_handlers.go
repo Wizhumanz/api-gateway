@@ -92,7 +92,7 @@ func getTickersHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Print(err)
 		}
 	} else {
-		data, err = ioutil.ReadFile("/srv/visitor/json-data/symbols-binance-fut-perp.json")
+		data, err = ioutil.ReadFile("/srv/json-data/symbols-binance-fut-perp.json")
 		if err != nil {
 			fmt.Print(err)
 		}
