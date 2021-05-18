@@ -3,8 +3,6 @@ WORKDIR /src
 COPY go.sum go.mod ./
 RUN go mod download
 COPY . .
-WORKDIR /json-data
-RUN symbols-binance-fut-perp.json
 RUN CGO_ENABLED=0 go build -o /bin/app .
 
 FROM alpine
