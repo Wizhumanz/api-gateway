@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -83,10 +84,18 @@ func getTickersHandler(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "OPTIONS" {
 		return
 	}
-
-	data, err := ioutil.ReadFile("./json-data/symbols-binance-fut-perp.json")
-	if err != nil {
-		fmt.Print(err)
+	var data []byte
+	var err error
+	if os.Getenv("ISTERMINAL") == "true" {
+		data, err = ioutil.ReadFile("./json-data/symbols-binance-fut-perp.json")
+		if err != nil {
+			fmt.Print(err)
+		}
+	} else {
+		data, err = ioutil.ReadFile("../../json-data/symbols-binance-fut-perp.json")
+		if err != nil {
+			fmt.Print(err)
+		}
 	}
 
 	var t []CoinAPITicker

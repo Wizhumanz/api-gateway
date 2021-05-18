@@ -12,6 +12,8 @@ export REDISPORT_CM=6379
 
 export REDISPASS_CM=chartm@\$terGainzSoW0W1828738701082877673617969420
 
+export ISTERMINAL=true
+
 go build -o build/api .
 
 build/api
