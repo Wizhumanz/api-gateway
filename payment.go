@@ -1,105 +1,291 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/stripe/stripe-go/v71"
+	portalsession "github.com/stripe/stripe-go/v71/billingportal/session"
 	"github.com/stripe/stripe-go/v71/checkout/session"
+	"github.com/stripe/stripe-go/webhook"
 )
 
-func createCheckoutSessionSecondTier(w http.ResponseWriter, req *http.Request) {
-	//Payment processing
-	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+// func createCheckoutSessionSecondTier(w http.ResponseWriter, req *http.Request) {
+// 	//Payment processing
+// 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
-	setupCORS(&w, req)
-	if (*req).Method == "OPTIONS" {
+// 	setupCORS(&w, req)
+// 	if (*req).Method == "OPTIONS" {
+// 		return
+// 	}
+
+// 	domain := "http://localhost:3000"
+// 	params := &stripe.CheckoutSessionParams{
+// 		PaymentMethodTypes: stripe.StringSlice([]string{
+// 			"card",
+// 		}),
+// 		LineItems: []*stripe.CheckoutSessionLineItemParams{
+// 			&stripe.CheckoutSessionLineItemParams{
+// 				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+// 					Currency: stripe.String(string(stripe.CurrencyUSD)),
+// 					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+// 						Name: stripe.String("Silver Tier"),
+// 					},
+// 					UnitAmount: stripe.Int64(14900),
+// 				},
+// 				Quantity: stripe.Int64(1),
+// 			},
+// 		},
+// 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+// 		SuccessURL: stripe.String(domain + "/"),
+// 		CancelURL:  stripe.String(domain + "/cancel.html"),
+// 	}
+
+// 	session, err := session.New(params)
+
+// 	if err != nil {
+// 		log.Printf("session.New: %v", err)
+// 	}
+
+// 	data := createCheckoutSessionResponse{
+// 		SessionID: session.ID,
+// 	}
+// 	fmt.Println(session.ID)
+
+// 	js, _ := json.Marshal(data)
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.Write(js)
+// }
+
+// func createCheckoutSessionThirdTier(w http.ResponseWriter, req *http.Request) {
+// 	//Payment processing
+// 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+
+// 	setupCORS(&w, req)
+// 	if (*req).Method == "OPTIONS" {
+// 		return
+// 	}
+
+// 	domain := "http://localhost:3000"
+// 	params := &stripe.CheckoutSessionParams{
+// 		PaymentMethodTypes: stripe.StringSlice([]string{
+// 			"card",
+// 		}),
+// 		LineItems: []*stripe.CheckoutSessionLineItemParams{
+// 			&stripe.CheckoutSessionLineItemParams{
+// 				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+// 					Currency: stripe.String(string(stripe.CurrencyUSD)),
+// 					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+// 						Name: stripe.String("Gold Tier"),
+// 					},
+// 					UnitAmount: stripe.Int64(33300),
+// 				},
+// 				Quantity: stripe.Int64(1),
+// 			},
+// 		},
+// 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+// 		SuccessURL: stripe.String(domain + "/"),
+// 		CancelURL:  stripe.String(domain + "/cancel.html"),
+// 	}
+
+// 	session, err := session.New(params)
+
+// 	if err != nil {
+// 		log.Printf("session.New: %v", err)
+// 	}
+
+// 	data := createCheckoutSessionResponse{
+// 		SessionID: session.ID,
+// 	}
+// 	fmt.Println(session.ID)
+
+// 	js, _ := json.Marshal(data)
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.Write(js)
+// }
+
+// // Set your secret key. Remember to switch to your live secret key in production.
+// // See your keys here: https://dashboard.stripe.com/apikeys
+
+func handleSetup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
-
-	domain := "http://localhost:3000"
-	params := &stripe.CheckoutSessionParams{
-		PaymentMethodTypes: stripe.StringSlice([]string{
-			"card",
-		}),
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			&stripe.CheckoutSessionLineItemParams{
-				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-					Currency: stripe.String(string(stripe.CurrencyUSD)),
-					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Name: stripe.String("Silver Tier"),
-					},
-					UnitAmount: stripe.Int64(14900),
-				},
-				Quantity: stripe.Int64(1),
-			},
-		},
-		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(domain + "/"),
-		CancelURL:  stripe.String(domain + "/cancel.html"),
-	}
-
-	session, err := session.New(params)
-
-	if err != nil {
-		log.Printf("session.New: %v", err)
-	}
-
-	data := createCheckoutSessionResponse{
-		SessionID: session.ID,
-	}
-	fmt.Println(session.ID)
-
-	js, _ := json.Marshal(data)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	writeJSON(w, struct {
+		PublishableKey string `json:"publishableKey"`
+		BasicPrice     string `json:"basicPrice"`
+		ProPrice       string `json:"proPrice"`
+	}{
+		PublishableKey: os.Getenv("STRIPE_PUBLISHABLE_KEY"),
+		BasicPrice:     os.Getenv("BASIC_PRICE_ID"),
+		ProPrice:       os.Getenv("PRO_PRICE_ID"),
+	}, nil)
 }
 
-func createCheckoutSessionThirdTier(w http.ResponseWriter, req *http.Request) {
-	//Payment processing
+func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
+
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
-	setupCORS(&w, req)
-	if (*req).Method == "OPTIONS" {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
 		return
 	}
 
+	if r.Method != "POST" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Price string `json:"priceId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, nil, err)
+		log.Printf("json.NewDecoder.Decode: %v", err)
+		return
+	}
 	domain := "http://localhost:3000"
 	params := &stripe.CheckoutSessionParams{
+		SuccessURL: stripe.String(domain + "/"),
+		CancelURL:  stripe.String(domain + "/canceled.html"),
 		PaymentMethodTypes: stripe.StringSlice([]string{
 			"card",
 		}),
+		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			&stripe.CheckoutSessionLineItemParams{
-				PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-					Currency: stripe.String(string(stripe.CurrencyUSD)),
-					ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-						Name: stripe.String("Gold Tier"),
-					},
-					UnitAmount: stripe.Int64(33300),
-				},
+			{
+				Price:    stripe.String(req.Price),
 				Quantity: stripe.Int64(1),
 			},
 		},
-		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(domain + "/"),
-		CancelURL:  stripe.String(domain + "/cancel.html"),
 	}
 
-	session, err := session.New(params)
-
+	s, err := session.New(params)
 	if err != nil {
-		log.Printf("session.New: %v", err)
+		writeJSON(w, nil, err)
+		return
 	}
 
-	data := createCheckoutSessionResponse{
-		SessionID: session.ID,
-	}
-	fmt.Println(session.ID)
+	writeJSON(w, struct {
+		SessionID string `json:"sessionId"`
+	}{
+		SessionID: s.ID,
+	}, nil)
+}
 
-	js, _ := json.Marshal(data)
+func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	sessionID := r.URL.Query().Get("sessionId")
+	s, err := session.Get(sessionID, nil)
+	writeJSON(w, s, err)
+}
+
+func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		SessionID string `json:"sessionId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, nil, err)
+		log.Printf("json.NewDecoder.Decode: %v", err)
+		return
+	}
+
+	// For demonstration purposes, we're using the Checkout session to retrieve the customer ID.
+	// Typically this is stored alongside the authenticated user in your database.
+	sessionID := req.SessionID
+	s, err := session.Get(sessionID, nil)
+	if err != nil {
+		writeJSON(w, nil, err)
+		return
+	}
+
+	// The URL to which the user is redirected when they are done managing
+	// billing in the portal.
+	returnURL := os.Getenv("DOMAIN")
+
+	params := &stripe.BillingPortalSessionParams{
+		Customer:  stripe.String(s.Customer.ID),
+		ReturnURL: stripe.String(returnURL),
+	}
+	ps, _ := portalsession.New(params)
+
+	writeJSON(w, struct {
+		URL string `json:"url"`
+	}{
+		URL: ps.URL,
+	}, nil)
+}
+
+func handleWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("ioutil.ReadAll: %v", err)
+		return
+	}
+
+	event, err := webhook.ConstructEvent(b, r.Header.Get("Stripe-Signature"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("webhook.ConstructEvent: %v", err)
+		return
+	}
+
+	if event.Type != "checkout.session.completed" {
+		return
+	}
+}
+
+type errResp struct {
+	Error struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func writeJSON(w http.ResponseWriter, v interface{}, err error) {
+	var respVal interface{}
+	if err != nil {
+		msg := err.Error()
+		var serr *stripe.Error
+		if errors.As(err, &serr) {
+			msg = serr.Msg
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		var e errResp
+		e.Error.Message = msg
+		respVal = e
+	} else {
+		respVal = v
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(respVal); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("json.NewEncoder.Encode: %v", err)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	if _, err := io.Copy(w, &buf); err != nil {
+		log.Printf("io.Copy: %v", err)
+		return
+	}
 }
