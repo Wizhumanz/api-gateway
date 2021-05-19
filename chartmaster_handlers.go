@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 
@@ -84,19 +83,15 @@ func getTickersHandler(w http.ResponseWriter, r *http.Request) {
 	if (*r).Method == "OPTIONS" {
 		return
 	}
-	var data []byte
-	var err error
-	if os.Getenv("ISTERMINAL") == "true" {
-		data, err = ioutil.ReadFile("./json-data/symbols-binance-fut-perp.json")
-		if err != nil {
-			fmt.Print(err)
-		}
-	} else {
-		data, err = ioutil.ReadFile("https://storage.googleapis.com/symbols-binance-fut-perp/symbols-binance-fut-perp.json")
-		if err != nil {
-			fmt.Print(err)
-		}
-	}
+
+	// Getting symbols-binance-fut-perp data from bucket
+	storageClient, _ := storage.NewClient(ctx)
+	defer storageClient.Close()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+	rc, _ := storageClient.Bucket("symbols-binance-fut-perp").Object("symbols-binance-fut-perp.json").NewReader(ctx)
+	defer rc.Close()
+	data, _ := ioutil.ReadAll(rc)
 
 	var t []CoinAPITicker
 	json.Unmarshal(data, &t)
