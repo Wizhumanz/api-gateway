@@ -109,7 +109,8 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
 	router.Methods("POST", "OPTIONS").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
-	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(createCheckoutSession)
+	router.Methods("POST", "OPTIONS").Path("/payment-second").HandlerFunc(createCheckoutSessionSecondTier)
+	router.Methods("POST", "OPTIONS").Path("/payment-third").HandlerFunc(createCheckoutSessionThirdTier)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
