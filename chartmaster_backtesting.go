@@ -11,8 +11,26 @@ func strat1(
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage *interface{}) string {
+	storage interface{}) (string, interface{}) {
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
+
+	// stored bool var is "lookForHigh"
+	stored, ok := storage.(bool)
+	if !ok {
+		if relCandleIndex == 0 {
+			stored = true
+		} else {
+			fmt.Errorf("storage obj assertion fail")
+			return "", storage
+		}
+	}
+	// lookForHigh := stored
+
+	//look for entry
+	if strategy.PosLongSize == 0 && relCandleIndex > 0 {
+	}
+
+	///
 
 	if strategy.PosLongSize == 0 && relCandleIndex > 0 {
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
@@ -26,7 +44,7 @@ func strat1(
 			// fmt.Printf("Entering with %v\n", posSize)
 			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 			// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
-			return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize)
+			return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize), stored
 		}
 	} else if relCandleIndex > 0 {
 		sl := strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
@@ -35,26 +53,26 @@ func strat1(
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
 			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
-			return fmt.Sprintf("▼ %.2f", sl)
+			return fmt.Sprintf("▼ %.2f", sl), stored
 		}
 	}
 
-	return ""
+	return "", stored
 }
 
 func runBacktest(
 	risk, lev, accSz float64,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
+	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, interface{}) (string, interface{}),
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 
 	//init
+	var store interface{} //save state between strategy executions on each candle
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
 	var retSimTrades []SimulatedTradeData
-	var storage interface{}
 	retProfitCurve = []ProfitCurveData{
 		{
 			Label: "strat1", //TODO: prep for dynamic strategy param values
@@ -103,19 +121,20 @@ func runBacktest(
 		}
 
 		//run strat for all chunk's candles
+		var label string
 		for i, candle := range periodCandles {
 			allOpens = append(allOpens, candle.Open)
 			allHighs = append(allHighs, candle.High)
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			lb := userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+			label, store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, i, &strategySim, &store)
 
 			//build display data using strategySim
 			var newCData CandlestickChartData
 			var pcData ProfitCurveDataPoint
 			var simTradeData SimulatedTradeDataPoint
-			newCData, pcData, simTradeData = saveDisplayData(candle, strategySim, i, lb, retProfitCurve[0].Data)
+			newCData, pcData, simTradeData = saveDisplayData(candle, strategySim, i, label, retProfitCurve[0].Data)
 			retCandles = append(retCandles, newCData)
 			if pcData.Equity > 0 {
 				retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
