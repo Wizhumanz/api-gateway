@@ -7,13 +7,12 @@ import (
 
 //test strat to pass to backtest func, runs once per historical candlestick
 func strat1(
+	risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) string {
-	accRiskPerTrade := 0.3
-	accSz := 1000
-	leverage := 25 //limits raw price SL %
+	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
 	if strategy.PosLongSize == 0 && relCandleIndex > 0 {
 		if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
@@ -21,8 +20,8 @@ func strat1(
 			entryPrice := close[relCandleIndex]
 			slPrice := low[relCandleIndex-1]
 			rawRiskPerc := (entryPrice - slPrice) / entryPrice
-			accRiskedCap := accRiskPerTrade * float64(accSz)
-			posCap := (accRiskedCap / rawRiskPerc) / float64(leverage)
+			accRiskedCap := (risk / 100) * float64(accSz)
+			posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
 			posSize := posCap / entryPrice
 			// fmt.Printf("Entering with %v\n", posSize)
 			strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
@@ -44,7 +43,8 @@ func strat1(
 }
 
 func runBacktest(
-	userStrat func([]float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
+	risk, lev, accSz float64,
+	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) string,
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
@@ -109,7 +109,7 @@ func runBacktest(
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			lb := userStrat(allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
+			lb := userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, i, &strategySim, &storage)
 
 			//build display data using strategySim
 			var newCData CandlestickChartData
