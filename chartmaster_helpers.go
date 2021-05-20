@@ -122,7 +122,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	return retCandles
 }
 
-func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label string, profitCurveSoFar []ProfitCurveDataPoint) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
+func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label string, labelBB int, profitCurveSoFar []ProfitCurveDataPoint) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	newCandleD := CandlestickChartData{
 		DateTime: c.DateTime,
@@ -139,7 +139,7 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 	}
 	//label
 	if label != "" {
-		newCandleD.Label = label
+		newCandleD.Label = label + "-" + fmt.Sprint(labelBB)
 	} else {
 		// if strat.Actions[relIndex].Action == "ENTER" {
 		// 	newCandleD.Label = fmt.Sprintf("<SL=\n%v", strat.Actions[relIndex].SL)
