@@ -60,9 +60,20 @@ func strat1(
 			}
 			if low[j+1] < low[j] && !found {
 				// fmt.Printf("Found PH at index %v", j)
-				stored.PivotHighs = append(stored.PivotHighs, j)
-				pivotBarsBack = relCandleIndex - j
-				pivotLabel = "H" + fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
+				//find highest high since last PL
+				newPHIndex := j
+				if len(stored.PivotLows) > 1 {
+					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+					for f := newPHIndex - 1; f >= latestPLIndex; f-- {
+						if high[f] > high[newPHIndex] {
+							newPHIndex = f
+						}
+					}
+				}
+
+				stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
+				pivotBarsBack = relCandleIndex - newPHIndex
+				pivotLabel = "H" //+ fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
 				stored.LookForHigh = false
 				foundPH = true
 				break
@@ -86,9 +97,20 @@ func strat1(
 			}
 			if high[j+1] > high[j] && !found {
 				// fmt.Printf("Found PL at index %v", j)
-				stored.PivotLows = append(stored.PivotLows, j)
-				pivotLabel = "L" + fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
-				pivotBarsBack = relCandleIndex - j
+				//find lowest low since last PL
+				newPLIndex := j
+				if len(stored.PivotHighs) > 1 {
+					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+					for f := newPLIndex - 1; f >= latestPHIndex; f-- {
+						if low[f] < low[newPLIndex] {
+							newPLIndex = f
+						}
+					}
+				}
+
+				stored.PivotLows = append(stored.PivotLows, newPLIndex)
+				pivotLabel = "L" //+ fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
+				pivotBarsBack = relCandleIndex - newPLIndex
 				stored.LookForHigh = true
 				foundPL = true
 			}
