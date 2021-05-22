@@ -38,9 +38,6 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	leverage := backtest.Leverage
 	size := backtest.Size
 
-	fmt.Println(risk)
-	fmt.Println(leverage)
-	fmt.Println(size)
 	candlePacketSize, err := strconv.Atoi(backtest.CandlePacketSize)
 	if err != nil {
 		fmt.Println(err)
@@ -56,10 +53,15 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
+	//strat params
+	rF, _ := strconv.ParseFloat(risk, 32)
+	lF, _ := strconv.ParseFloat(leverage, 32)
+	szF, _ := strconv.ParseFloat(size, 32)
+
 	var candles []CandlestickChartData
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
-	candles, profitCurve, simTrades = runBacktest(strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
 	// Delete an element in a bucket if len greater than 10
 	bucketName := "res-" + userID

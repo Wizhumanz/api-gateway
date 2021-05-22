@@ -122,8 +122,9 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	return retCandles
 }
 
-func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label string, profitCurveSoFar []ProfitCurveDataPoint) (CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
+func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategySimulator, relIndex int, label string, labelBB int, profitCurveSoFar []ProfitCurveDataPoint) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
+	retCandlesArr := cArr
 	newCandleD := CandlestickChartData{
 		DateTime: c.DateTime,
 		Open:     c.Open,
@@ -137,15 +138,11 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 	} else if strat.Actions[relIndex].Action == "SL" {
 		newCandleD.StratExitPrice = strat.Actions[relIndex].Price
 	}
-	//label
+	retCandlesArr = append(retCandlesArr, newCandleD)
+	//candle label
 	if label != "" {
-		newCandleD.Label = label
-	} else {
-		// if strat.Actions[relIndex].Action == "ENTER" {
-		// 	newCandleD.Label = fmt.Sprintf("<SL=\n%v", strat.Actions[relIndex].SL)
-		// } else if strat.Actions[relIndex].Action == "SL" {
-		// 	newCandleD.Label = fmt.Sprintf("<SL=%.2f / low=%.2f", strat.Actions[relIndex].SL, c.Low)
-		// }
+		index := len(cArr) - labelBB
+		cArr[index].Label = label
 	}
 
 	//profit curve
@@ -181,7 +178,7 @@ func saveDisplayData(c Candlestick, strat StrategySimulator, relIndex int, label
 		sd.RawProfitPerc = ((sd.ExitPrice - sd.EntryPrice) / sd.EntryPrice) * 100
 	}
 
-	return newCandleD, pd, sd
+	return retCandlesArr, pd, sd
 }
 
 func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
