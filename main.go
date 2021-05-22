@@ -112,6 +112,8 @@ func main() {
 	// router.Methods("POST", "OPTIONS").Path("/payment-second").HandlerFunc(createCheckoutSessionSecondTier)
 	// router.Methods("POST", "OPTIONS").Path("/payment-third").HandlerFunc(createCheckoutSessionThirdTier)
 	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(handleCreateCheckoutSession)
+	router.Methods("GET", "OPTIONS").Path("/checkout-session").HandlerFunc(handleCheckoutSession)
+	router.Methods("POST", "OPTIONS").Path("/customer-portal").HandlerFunc(handleCustomerPortal)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)

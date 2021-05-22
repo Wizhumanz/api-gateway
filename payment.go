@@ -130,7 +130,6 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
-
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	setupCORS(&w, r)
@@ -153,8 +152,8 @@ func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 	}
 	domain := "http://localhost:3000"
 	params := &stripe.CheckoutSessionParams{
-		SuccessURL: stripe.String(domain + "/"),
-		CancelURL:  stripe.String(domain + "/canceled.html"),
+		SuccessURL: stripe.String(domain + "/success?session_id={CHECKOUT_SESSION_ID}"),
+		CancelURL:  stripe.String(domain + "/canceled"),
 		PaymentMethodTypes: stripe.StringSlice([]string{
 			"card",
 		}),
@@ -181,6 +180,13 @@ func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
+	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
 	if r.Method != "GET" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
@@ -191,6 +197,10 @@ func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
 	if r.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
@@ -216,11 +226,11 @@ func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
 
 	// The URL to which the user is redirected when they are done managing
 	// billing in the portal.
-	returnURL := os.Getenv("DOMAIN")
-
+	// returnURL := os.Getenv("DOMAIN")
+	// fmt.Println("returnURL")
 	params := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(s.Customer.ID),
-		ReturnURL: stripe.String(returnURL),
+		ReturnURL: stripe.String("http://localhost:3000/success"),
 	}
 	ps, _ := portalsession.New(params)
 
@@ -250,8 +260,20 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if event.Type != "checkout.session.completed" {
-		return
+	switch event.Type {
+	case "checkout.session.completed":
+		// Payment is successful and the subscription is created.
+		// You should provision the subscription and save the customer ID to your database.
+	case "invoice.paid":
+		// Continue to provision the subscription as payments continue to be made.
+		// Store the status in your database and check when a user accesses your service.
+		// This approach helps you avoid hitting rate limits.
+	case "invoice.payment_failed":
+		// The payment failed or the customer does not have a valid payment method.
+		// The subscription becomes past_due. Notify your customer and send them to the
+		// customer portal to update their payment information.
+	default:
+		// unhandled event type
 	}
 }
 
