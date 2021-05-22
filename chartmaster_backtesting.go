@@ -47,14 +47,22 @@ func strat1(
 		if len(stored.PivotLows) == 0 {
 			startIndex = 1
 		} else {
-			startIndex = stored.PivotLows[len(stored.PivotLows)-1] + 1
+			startIndex = stored.PivotLows[len(stored.PivotLows)-1]
 		}
 		for j := startIndex; j < relCandleIndex-1; j++ {
-			if low[j+1] < low[j] {
+			//do not add same pivot again
+			found := false
+			for _, v := range stored.PivotHighs {
+				if v == j {
+					found = true
+					break
+				}
+			}
+			if low[j+1] < low[j] && !found {
 				// fmt.Printf("Found PH at index %v", j)
 				stored.PivotHighs = append(stored.PivotHighs, j)
-				pivotLabel = "H"
 				pivotBarsBack = relCandleIndex - j
+				pivotLabel = "H" + fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
 				stored.LookForHigh = false
 				foundPH = true
 				break
@@ -65,13 +73,21 @@ func strat1(
 		if len(stored.PivotHighs) == 0 {
 			startIndex = 1
 		} else {
-			startIndex = stored.PivotHighs[len(stored.PivotHighs)-1] + 1
+			startIndex = stored.PivotHighs[len(stored.PivotHighs)-1]
 		}
 		for j := startIndex; j < relCandleIndex-1; j++ {
-			if high[j+1] > high[j] {
+			//do not add same pivot again
+			found := false
+			for _, v := range stored.PivotHighs {
+				if v == j {
+					found = true
+					break
+				}
+			}
+			if high[j+1] > high[j] && !found {
 				// fmt.Printf("Found PL at index %v", j)
 				stored.PivotLows = append(stored.PivotLows, j)
-				pivotLabel = "L"
+				pivotLabel = "L" + fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
 				pivotBarsBack = relCandleIndex - j
 				stored.LookForHigh = true
 				foundPL = true
