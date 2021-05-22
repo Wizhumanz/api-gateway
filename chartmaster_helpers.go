@@ -140,9 +140,11 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 	}
 	retCandlesArr = append(retCandlesArr, newCandleD)
 	//candle label
-	if label != "" {
-		index := len(cArr) - labelBB
-		cArr[index].Label = label
+	if label != "" && len(cArr) > 0 {
+		index := len(cArr) - labelBB - 1
+		if index > 0 {
+			cArr[index].Label = label
+		}
 	}
 
 	//profit curve

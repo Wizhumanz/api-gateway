@@ -7,9 +7,8 @@ import (
 )
 
 type PivotsStore struct {
-	PivotHighs  []int
-	PivotLows   []int
-	LookForHigh bool
+	PivotHighs []int
+	PivotLows  []int
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
@@ -23,96 +22,86 @@ func strat1(
 
 	foundPL := false
 	foundPH := false
-
-	// stored bool var is "lookForHigh"
 	stored, ok := storage.(PivotsStore)
 	if !ok {
 		if relCandleIndex == 0 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
-			stored.LookForHigh = false //default to looking for pivot low first
 		} else {
 			fmt.Errorf("storage obj assertion fail")
 			return "", 0, storage
 		}
 	}
-	lookForHigh := stored.LookForHigh
 
 	//find pivot highs + lows
-	pivotLabel := ""
+	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
+	fmt.Println(lookForHigh)
+	pivotLabel := "" //fmt.Sprintf("%v + ", lookForHigh)
 	pivotBarsBack := 0
-	var startIndex int
-	if lookForHigh {
-		//find next candle that crosses low of previous (PH)
-		if len(stored.PivotLows) == 0 {
-			startIndex = 1
-		} else {
-			startIndex = stored.PivotLows[len(stored.PivotLows)-1]
-		}
-		for j := startIndex; j < relCandleIndex-1; j++ {
+	if lookForHigh && relCandleIndex > 1 {
+		//check if new candle took out the low of previous
+		if low[relCandleIndex] < low[relCandleIndex-1] {
+			// fmt.Printf("Found PH at index %v", j)
+			//find highest high since last PL
+			newPHIndex := relCandleIndex
+			if len(stored.PivotLows) > 1 {
+				latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+				latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+				for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
+					if high[f] > high[newPHIndex] {
+						newPHIndex = f
+					}
+				}
+			}
+
 			//do not add same pivot again
 			found := false
 			for _, v := range stored.PivotHighs {
-				if v == j {
+				if v == newPHIndex {
 					found = true
 					break
 				}
 			}
-			if low[j+1] < low[j] && !found {
-				// fmt.Printf("Found PH at index %v", j)
-				//find highest high since last PL
-				newPHIndex := j
-				if len(stored.PivotLows) > 1 {
-					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
-					for f := newPHIndex - 1; f >= latestPLIndex; f-- {
-						if high[f] > high[newPHIndex] {
-							newPHIndex = f
-						}
-					}
-				}
 
+			if !found && newPHIndex > 0 {
 				stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
 				pivotBarsBack = relCandleIndex - newPHIndex
-				pivotLabel = "H" //+ fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
-				stored.LookForHigh = false
+				pivotLabel = pivotLabel + "H" //+ fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
 				foundPH = true
-				break
+				fmt.Printf("Adding PH index %v\n", newPHIndex)
 			}
 		}
-	} else {
-		//find next candle that crosses high of previous (PL)
-		if len(stored.PivotHighs) == 0 {
-			startIndex = 1
-		} else {
-			startIndex = stored.PivotHighs[len(stored.PivotHighs)-1]
-		}
-		for j := startIndex; j < relCandleIndex-1; j++ {
+	} else if relCandleIndex > 1 {
+		//check if new candle took out the high of previous
+		if high[relCandleIndex] > high[relCandleIndex-1] {
+			// fmt.Printf("Found PL at index %v", j)
+			//find lowest low since last PL
+			newPLIndex := relCandleIndex
+			if len(stored.PivotHighs) > 1 && newPLIndex > 0 {
+				latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+				latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+				for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
+					if low[f] < low[newPLIndex] {
+						newPLIndex = f
+					}
+				}
+			}
+
 			//do not add same pivot again
 			found := false
 			for _, v := range stored.PivotHighs {
-				if v == j {
+				if v == newPLIndex {
 					found = true
 					break
 				}
 			}
-			if high[j+1] > high[j] && !found {
-				// fmt.Printf("Found PL at index %v", j)
-				//find lowest low since last PL
-				newPLIndex := j
-				if len(stored.PivotHighs) > 1 {
-					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
-					for f := newPLIndex - 1; f >= latestPHIndex; f-- {
-						if low[f] < low[newPLIndex] {
-							newPLIndex = f
-						}
-					}
-				}
 
+			if !found && newPLIndex > 0 {
 				stored.PivotLows = append(stored.PivotLows, newPLIndex)
-				pivotLabel = "L" //+ fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
 				pivotBarsBack = relCandleIndex - newPLIndex
-				stored.LookForHigh = true
+				pivotLabel = pivotLabel + "L" //+ fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
 				foundPL = true
+				fmt.Printf("Adding PL index %v\n", newPLIndex)
 			}
 		}
 	}
