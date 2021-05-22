@@ -21,6 +21,9 @@ func strat1(
 	storage interface{}) (string, int, interface{}) {
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
+	foundPL := false
+	foundPH := false
+
 	// stored bool var is "lookForHigh"
 	stored, ok := storage.(PivotsStore)
 	if !ok {
@@ -53,6 +56,7 @@ func strat1(
 				pivotLabel = "H"
 				pivotBarsBack = relCandleIndex - j
 				stored.LookForHigh = false
+				foundPH = true
 				break
 			}
 		}
@@ -70,14 +74,37 @@ func strat1(
 				pivotLabel = "L"
 				pivotBarsBack = relCandleIndex - j
 				stored.LookForHigh = true
+				foundPL = true
 			}
 		}
 	}
 
-	// //look for entry
-	// if strategy.PosLongSize == 0 && relCandleIndex > 0 {
-
-	// }
+	//manage positions
+	if strategy.PosLongSize == 0 && relCandleIndex > 0 { //no long pos
+		//enter if current PL higher than previous
+		if foundPL {
+			currentPL := low[relCandleIndex]
+			prevPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
+			if currentPL > prevPL {
+				// fmt.Printf("Buying at %v\n", close[relCandleIndex])
+				entryPrice := close[relCandleIndex]
+				slPrice := prevPL
+				rawRiskPerc := (entryPrice - slPrice) / entryPrice
+				accRiskedCap := (risk / 100) * float64(accSz)
+				posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
+				posSize := posCap / entryPrice
+				// fmt.Printf("Entering with %v\n", posSize)
+				strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
+				// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
+			}
+		}
+	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
+		if foundPH {
+			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
+			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
+			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
+		}
+	}
 
 	// if strategy.PosLongSize == 0 && relCandleIndex > 0 {
 	// 	if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
