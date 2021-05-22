@@ -50,7 +50,7 @@ func strat1(
 			if low[j+1] < low[j] {
 				// fmt.Printf("Found PH at index %v", j)
 				stored.PivotHighs = append(stored.PivotHighs, j)
-				pivotLabel = "PH"
+				pivotLabel = "H"
 				pivotBarsBack = relCandleIndex - j
 				stored.LookForHigh = false
 				break
@@ -67,7 +67,7 @@ func strat1(
 			if high[j+1] > high[j] {
 				// fmt.Printf("Found PL at index %v", j)
 				stored.PivotLows = append(stored.PivotLows, j)
-				pivotLabel = "PL"
+				pivotLabel = "L"
 				pivotBarsBack = relCandleIndex - j
 				stored.LookForHigh = true
 			}
@@ -138,6 +138,7 @@ func runBacktest(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
+	relIndex := 0
 	lastPacketEndIndexCandles := 0
 	lastPacketEndIndexPC := 0
 	lastPacketEndIndexSimT := 0
@@ -176,7 +177,7 @@ func runBacktest(
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			label, labelBB, store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, i, &strategySim, store)
+			label, labelBB, store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, store)
 			fmt.Println(store)
 
 			//build display data using strategySim
@@ -189,6 +190,9 @@ func runBacktest(
 			if simTradeData.DateTime != "" {
 				retSimTrades[0].Data = append(retSimTrades[0].Data, simTradeData)
 			}
+
+			//absolute index from absolute start of computation period
+			relIndex++
 		}
 
 		//stream data back to client in every chunk
