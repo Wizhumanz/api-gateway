@@ -27,7 +27,7 @@ func strat1(
 		if relCandleIndex == 0 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
-			stored.LookForHigh = true //default to looking for pivot high first
+			stored.LookForHigh = false //default to looking for pivot low first
 		} else {
 			fmt.Errorf("storage obj assertion fail")
 			return "", 0, storage
@@ -44,7 +44,7 @@ func strat1(
 		if len(stored.PivotLows) == 0 {
 			startIndex = 1
 		} else {
-			startIndex = stored.PivotLows[len(stored.PivotLows)-1]
+			startIndex = stored.PivotLows[len(stored.PivotLows)-1] + 1
 		}
 		for j := startIndex; j < relCandleIndex-1; j++ {
 			if low[j+1] < low[j] {
@@ -61,7 +61,7 @@ func strat1(
 		if len(stored.PivotHighs) == 0 {
 			startIndex = 1
 		} else {
-			startIndex = stored.PivotHighs[len(stored.PivotHighs)-1]
+			startIndex = stored.PivotHighs[len(stored.PivotHighs)-1] + 1
 		}
 		for j := startIndex; j < relCandleIndex-1; j++ {
 			if high[j+1] > high[j] {
@@ -180,11 +180,9 @@ func runBacktest(
 			fmt.Println(store)
 
 			//build display data using strategySim
-			var newCData CandlestickChartData
 			var pcData ProfitCurveDataPoint
 			var simTradeData SimulatedTradeDataPoint
-			newCData, pcData, simTradeData = saveDisplayData(candle, strategySim, i, label, labelBB, retProfitCurve[0].Data)
-			retCandles = append(retCandles, newCData)
+			retCandles, pcData, simTradeData = saveDisplayData(retCandles, candle, strategySim, i, label, labelBB, retProfitCurve[0].Data)
 			if pcData.Equity > 0 {
 				retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
 			}
