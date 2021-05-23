@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -130,6 +131,8 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("1")
+
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	setupCORS(&w, r)
@@ -180,6 +183,8 @@ func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("2")
+
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	setupCORS(&w, r)
@@ -197,6 +202,9 @@ func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("3")
+	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
 		return
@@ -230,7 +238,7 @@ func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println("returnURL")
 	params := &stripe.BillingPortalSessionParams{
 		Customer:  stripe.String(s.Customer.ID),
-		ReturnURL: stripe.String("http://localhost:3000/success"),
+		ReturnURL: stripe.String("http://localhost:3000/payment"),
 	}
 	ps, _ := portalsession.New(params)
 
@@ -253,7 +261,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := webhook.ConstructEvent(b, r.Header.Get("Stripe-Signature"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	event, err := webhook.ConstructEvent(b, r.Header.Get("Stripe-Signature"), "whsec_cPs6tMcNZSQg11DhoW4G5VKlNaGzlck6")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("webhook.ConstructEvent: %v", err)
@@ -264,16 +272,26 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	case "checkout.session.completed":
 		// Payment is successful and the subscription is created.
 		// You should provision the subscription and save the customer ID to your database.
+		fmt.Println("checkout session completed")
 	case "invoice.paid":
 		// Continue to provision the subscription as payments continue to be made.
 		// Store the status in your database and check when a user accesses your service.
 		// This approach helps you avoid hitting rate limits.
+		fmt.Println("invoive paid")
 	case "invoice.payment_failed":
 		// The payment failed or the customer does not have a valid payment method.
 		// The subscription becomes past_due. Notify your customer and send them to the
 		// customer portal to update their payment information.
+		fmt.Println("invoice payment failed")
+	case "customer.subscription.updated":
+		fmt.Println("customer.subscription.updated")
+
+	case "customer.subscription.deleted":
+		fmt.Println("customer.subscription.deleted")
+
 	default:
 		// unhandled event type
+		fmt.Println("default")
 	}
 }
 

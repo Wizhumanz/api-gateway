@@ -96,6 +96,7 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
 	router.Methods("POST", "OPTIONS").Path("/user").HandlerFunc(createNewUserHandler)
+	router.Methods("GET", "OPTIONS").Path("/getUser").HandlerFunc(getUser)
 	router.Methods("POST", "OPTIONS").Path("/trade").HandlerFunc(createNewTradeHandler)
 	router.Methods("GET", "OPTIONS").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/bots").HandlerFunc(getAllBotsHandler)
@@ -114,6 +115,7 @@ func main() {
 	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(handleCreateCheckoutSession)
 	router.Methods("GET", "OPTIONS").Path("/checkout-session").HandlerFunc(handleCheckoutSession)
 	router.Methods("POST", "OPTIONS").Path("/customer-portal").HandlerFunc(handleCustomerPortal)
+	router.Methods("POST", "OPTIONS").Path("/webhook-payment").HandlerFunc(handleWebhook)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)

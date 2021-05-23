@@ -88,3 +88,34 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 }
+
+func getUser(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+
+	email := r.URL.Query()["email"][0]
+
+	if !(len(email) > 0) {
+		data := jsonResponse{Msg: "IDs array param empty.", Body: "Pass ids property in json as array of strings."}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(data)
+		return
+	}
+	// Get user from database
+	query := datastore.NewQuery("User").
+		Filter("Email =", email)
+	t := client.Run(ctx, query)
+	// for {
+	var user User
+	t.Next(&user)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
+}
