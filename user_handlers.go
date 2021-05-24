@@ -255,57 +255,58 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		Filter("Email =", email)
 	t := client.Run(ctx, query)
 	// for {
-	var user User
-	t.Next(&user)
+	// var user User
+	// t.Next(&user)
+	users := parseUserQueryRes(t)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(users)
 }
 
-// func parseUserQueryRes(t *datastore.Iterator) []User {
-// 	var usersResp []User
-// 	for {
-// 		var x User
-// 		key, err := t.Next(&x)
-// 		if key != nil {
-// 			x.KEY = fmt.Sprint(key.ID)
-// 		}
-// 		if err == iterator.Done {
-// 			break
-// 		}
+func parseUserQueryRes(t *datastore.Iterator) []User {
+	var usersResp []User
+	for {
+		var x User
+		key, err := t.Next(&x)
+		if key != nil {
+			x.KEY = fmt.Sprint(key.ID)
+		}
+		if err == iterator.Done {
+			break
+		}
 
-// 		//event sourcing (pick latest snapshot)
-// 		if len(usersResp) == 0 {
-// 			usersResp = append(usersResp, x)
-// 		} else {
-// 			//find User in existing array
-// 			var exUser User
-// 			for _, b := range usersResp {
-// 				if b.AggregateID == x.AggregateID {
-// 					exUser = b
-// 				}
-// 			}
+		//event sourcing (pick latest snapshot)
+		if len(usersResp) == 0 {
+			usersResp = append(usersResp, x)
+		} else {
+			//find User in existing array
+			var exUser User
+			for _, b := range usersResp {
+				if b.AggregateID == x.AggregateID {
+					exUser = b
+				}
+			}
 
-// 			//if User exists, append row/entry with the latest timestamp
-// 			if exUser.AggregateID != 0 || exUser.Timestamp != "" {
-// 				//compare timestamps
-// 				layout := "2006-01-02_15:04:05_-0700"
-// 				existingUserTime, _ := time.Parse(layout, exUser.Timestamp)
-// 				newUserTime, _ := time.Parse(layout, x.Timestamp)
-// 				//if existing is older, remove it and add newer current listing; otherwise, do nothing
-// 				if existingUserTime.Before(newUserTime) {
-// 					//rm existing listing
-// 					usersResp = deleteElementUser(usersResp, exUser)
-// 					//append current listing
-// 					usersResp = append(usersResp, x)
-// 				}
-// 			} else {
-// 				//otherwise, just append newly decoded (so far unique) User
-// 				usersResp = append(usersResp, x)
-// 			}
-// 		}
-// 	}
+			//if User exists, append row/entry with the latest timestamp
+			if exUser.AggregateID != 0 || exUser.Timestamp != "" {
+				//compare timestamps
+				layout := "2006-01-02_15:04:05_-0700"
+				existingUserTime, _ := time.Parse(layout, exUser.Timestamp)
+				newUserTime, _ := time.Parse(layout, x.Timestamp)
+				//if existing is older, remove it and add newer current listing; otherwise, do nothing
+				if existingUserTime.Before(newUserTime) {
+					//rm existing listing
+					usersResp = deleteElementUser(usersResp, exUser)
+					//append current listing
+					usersResp = append(usersResp, x)
+				}
+			} else {
+				//otherwise, just append newly decoded (so far unique) User
+				usersResp = append(usersResp, x)
+			}
+		}
+	}
 
-// 	return usersResp
-// }
+	return usersResp
+}
