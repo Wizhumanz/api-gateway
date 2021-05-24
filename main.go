@@ -97,6 +97,7 @@ func main() {
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
 	router.Methods("POST", "OPTIONS").Path("/user").HandlerFunc(createNewUserHandler)
 	router.Methods("GET", "OPTIONS").Path("/getUser").HandlerFunc(getUser)
+	router.Methods("PUT", "OPTIONS").Path("/user/{id}").HandlerFunc(updateUser)
 	router.Methods("POST", "OPTIONS").Path("/trade").HandlerFunc(createNewTradeHandler)
 	router.Methods("GET", "OPTIONS").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/bots").HandlerFunc(getAllBotsHandler)
