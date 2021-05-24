@@ -231,7 +231,6 @@ func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, nil, err)
 		return
 	}
-
 	// The URL to which the user is redirected when they are done managing
 	// billing in the portal.
 	// returnURL := os.Getenv("DOMAIN")
@@ -250,6 +249,9 @@ func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
+	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+	fmt.Println("4")
+
 	if r.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
@@ -285,6 +287,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("invoice payment failed")
 	case "customer.subscription.updated":
 		fmt.Println("customer.subscription.updated")
+		fmt.Println(event.Data.Object)
 
 	case "customer.subscription.deleted":
 		fmt.Println("customer.subscription.deleted")
