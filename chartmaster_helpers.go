@@ -140,10 +140,12 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 	}
 	retCandlesArr = append(retCandlesArr, newCandleD)
 	//candle label
-	if label != "" && len(cArr) > 0 {
-		index := len(cArr) - labelBB - 1
-		if index > 0 {
-			cArr[index].Label = label
+	if len(retCandlesArr) > 0 {
+		index := len(retCandlesArr) - labelBB - 1
+		fmt.Printf("retCandlesArr len = %v, labelBB = %v\n", len(retCandlesArr), labelBB)
+		if index >= 0 {
+			retCandlesArr[index].Label = label + "/" + retCandlesArr[index].Label
+			fmt.Printf("label '%v' to index %v\n", label, index)
 		}
 	}
 

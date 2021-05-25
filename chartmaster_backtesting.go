@@ -20,11 +20,17 @@ func strat1(
 	storage interface{}) (string, int, interface{}) {
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
+	if relCandleIndex > 3 && relCandleIndex < 10 {
+		fmt.Printf("INDEX %v\n", relCandleIndex)
+		fmt.Printf("lows = %v\n", low)
+		fmt.Printf("candle low %v\n", low[len(low)-1])
+	}
+
 	foundPL := false
 	foundPH := false
 	stored, ok := storage.(PivotsStore)
 	if !ok {
-		if relCandleIndex == 0 {
+		if relCandleIndex == 1 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
 		} else {
@@ -36,72 +42,83 @@ func strat1(
 	//find pivot highs + lows
 	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
 	fmt.Println(lookForHigh)
-	pivotLabel := "" //fmt.Sprintf("%v + ", lookForHigh)
+	pivotLabel := fmt.Sprintf("%v-%v", relCandleIndex, lookForHigh) //fmt.Sprintf("%v + ", lookForHigh)
 	pivotBarsBack := 0
+	var lastPivotIndex int
+	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
+		lastPivotIndex = 1
+	} else {
+		lastPivotIndex = int(math.Max(float64(stored.PivotHighs[len(stored.PivotHighs)-1]), float64(stored.PivotLows[len(stored.PivotLows)-1])))
+		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
+	}
 	if lookForHigh && relCandleIndex > 1 {
-		//check if new candle took out the low of previous
-		if low[relCandleIndex] < low[relCandleIndex-1] {
-			// fmt.Printf("Found PH at index %v", j)
-			//find highest high since last PL
-			newPHIndex := relCandleIndex
-			if len(stored.PivotLows) > 1 {
-				latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
-				latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
-				for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
-					if high[f] > high[newPHIndex] {
-						newPHIndex = f
+		//check if new candle took out the low of previous candles since last pivot
+		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+			if low[i+1] < low[i] {
+				pivotLabel = pivotLabel + " LOW" + fmt.Sprint(low[i+1]) + " LOW" + fmt.Sprint(low[i]) + " "
+				// fmt.Printf("Found PH at index %v", j)
+
+				//find highest high since last PL
+				newPHIndex := i
+				if len(stored.PivotLows) > 1 {
+					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+					for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
+						//check if pivot already exists
+						found := false
+						for _, ph := range stored.PivotHighs {
+							if ph == f {
+								found = true
+								break
+							}
+						}
+						if high[f] > high[newPHIndex] && !found {
+							newPHIndex = f
+						}
 					}
 				}
-			}
 
-			//do not add same pivot again
-			found := false
-			for _, v := range stored.PivotHighs {
-				if v == newPHIndex {
-					found = true
-					break
+				if newPHIndex > 0 {
+					stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
+					pivotBarsBack = relCandleIndex - newPHIndex - 1
+					pivotLabel = pivotLabel + "H" //+ fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
+					foundPH = true
+					fmt.Printf("Adding PH index %v\n", newPHIndex)
 				}
-			}
-
-			if !found && newPHIndex > 0 {
-				stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
-				pivotBarsBack = relCandleIndex - newPHIndex
-				pivotLabel = pivotLabel + "H" //+ fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
-				foundPH = true
-				fmt.Printf("Adding PH index %v\n", newPHIndex)
 			}
 		}
 	} else if relCandleIndex > 1 {
-		//check if new candle took out the high of previous
-		if high[relCandleIndex] > high[relCandleIndex-1] {
-			// fmt.Printf("Found PL at index %v", j)
-			//find lowest low since last PL
-			newPLIndex := relCandleIndex
-			if len(stored.PivotHighs) > 1 && newPLIndex > 0 {
-				latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
-				latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
-				for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
-					if low[f] < low[newPLIndex] {
-						newPLIndex = f
+		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+			if high[i+1] > high[i] {
+				// fmt.Printf("Found PL at index %v", j)
+
+				//find lowest low since last PL
+				newPLIndex := i
+				if len(stored.PivotHighs) > 1 && newPLIndex > 0 {
+					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
+						//check if pivot already exists
+						found := false
+						for _, ph := range stored.PivotHighs {
+							if ph == f {
+								found = true
+								break
+							}
+						}
+						if low[f] < low[newPLIndex] && !found {
+							newPLIndex = f
+						}
 					}
 				}
-			}
 
-			//do not add same pivot again
-			found := false
-			for _, v := range stored.PivotHighs {
-				if v == newPLIndex {
-					found = true
-					break
+				if newPLIndex > 0 {
+					stored.PivotLows = append(stored.PivotLows, newPLIndex)
+					pivotBarsBack = relCandleIndex - newPLIndex - 1
+					pivotLabel = pivotLabel + "L" //+ fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
+					foundPL = true
+					// fmt.Printf("Adding PL index %v\n", newPLIndex)
 				}
-			}
-
-			if !found && newPLIndex > 0 {
-				stored.PivotLows = append(stored.PivotLows, newPLIndex)
-				pivotBarsBack = relCandleIndex - newPLIndex
-				pivotLabel = pivotLabel + "L" //+ fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
-				foundPL = true
-				fmt.Printf("Adding PL index %v\n", newPLIndex)
 			}
 		}
 	}
@@ -110,53 +127,28 @@ func strat1(
 	if strategy.PosLongSize == 0 && relCandleIndex > 0 { //no long pos
 		//enter if current PL higher than previous
 		if foundPL {
-			currentPL := low[relCandleIndex]
+			currentPL := low[relCandleIndex-1]
 			prevPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
 			if currentPL > prevPL {
-				// fmt.Printf("Buying at %v\n", close[relCandleIndex])
-				entryPrice := close[relCandleIndex]
+				// fmt.Printf("Buying at %v\n", close[relCandleIndex-1])
+				entryPrice := close[relCandleIndex-1]
 				slPrice := prevPL
 				rawRiskPerc := (entryPrice - slPrice) / entryPrice
 				accRiskedCap := (risk / 100) * float64(accSz)
 				posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
 				posSize := posCap / entryPrice
 				// fmt.Printf("Entering with %v\n", posSize)
-				strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
+				strategy.Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
 				// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
 		if foundPH {
-			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
-			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
-			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
+			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex-1])
+			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex)
+			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex-1])
 		}
 	}
-
-	// if strategy.PosLongSize == 0 && relCandleIndex > 0 {
-	// 	if (close[relCandleIndex] > open[relCandleIndex]) && (close[relCandleIndex-1] > open[relCandleIndex-1]) {
-	// 		// fmt.Printf("Buying at %v\n", close[relCandleIndex])
-	// 		entryPrice := close[relCandleIndex]
-	// 		slPrice := low[relCandleIndex-1]
-	// 		rawRiskPerc := (entryPrice - slPrice) / entryPrice
-	// 		accRiskedCap := (risk / 100) * float64(accSz)
-	// 		posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
-	// 		posSize := posCap / entryPrice
-	// 		// fmt.Printf("Entering with %v\n", posSize)
-	// 		strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
-	// 		// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
-	// 		return fmt.Sprintf("▼ %.2f / %.2f", slPrice, posSize), stored
-	// 	}
-	// } else if relCandleIndex > 0 {
-	// 	sl := strategy.CheckPositions(open[relCandleIndex], high[relCandleIndex], low[relCandleIndex], close[relCandleIndex], relCandleIndex)
-
-	// 	if (strategy.PosLongSize > 0) && (close[relCandleIndex] < open[relCandleIndex]) {
-	// 		// fmt.Printf("Closing trade at %v\n", close[relCandleIndex])
-	// 		strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex)
-	// 		// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex])
-	// 		return fmt.Sprintf("▼ %.2f", sl), stored
-	// 	}
-	// }
 
 	return pivotLabel, pivotBarsBack, stored
 }
@@ -192,7 +184,7 @@ func runBacktest(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
-	relIndex := 0
+	relIndex := 1
 	lastPacketEndIndexCandles := 0
 	lastPacketEndIndexPC := 0
 	lastPacketEndIndexSimT := 0
