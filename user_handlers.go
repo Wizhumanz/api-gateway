@@ -232,6 +232,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+var currentUser []User
+
 func getUser(w http.ResponseWriter, r *http.Request) {
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {

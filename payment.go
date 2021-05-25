@@ -10,7 +10,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"cloud.google.com/go/datastore"
 	"github.com/stripe/stripe-go/v71"
 	portalsession "github.com/stripe/stripe-go/v71/billingportal/session"
 	"github.com/stripe/stripe-go/v71/checkout/session"
@@ -287,7 +289,10 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("invoice payment failed")
 	case "customer.subscription.updated":
 		fmt.Println("customer.subscription.updated")
-		fmt.Println(event.Data.Object)
+
+		if event.Data.Object["cancel_at_period_end"] == false {
+			updateUserPermission(event.Data.Object["items"].(map[string]interface{})["data"].([]interface{})[0].(map[string]interface{})["plan"].(map[string]interface{})["amount"].(float64))
+		}
 
 	case "customer.subscription.deleted":
 		fmt.Println("customer.subscription.deleted")
@@ -295,6 +300,19 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	default:
 		// unhandled event type
 		fmt.Println("default")
+	}
+}
+
+func updateUserPermission(tier float64) {
+	currentUser[0].Tier = tier
+
+	currentUser[0].Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
+
+	kind := "User"
+	newUserKey := datastore.IncompleteKey(kind, nil)
+	_, err := client.Put(ctx, newUserKey, &currentUser[0])
+	if err != nil {
+		log.Fatalf("Failed to save User: %v", err)
 	}
 }
 
