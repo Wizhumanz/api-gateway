@@ -260,6 +260,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	// var user User
 	// t.Next(&user)
 	users := parseUserQueryRes(t)
+	currentUser = users
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
