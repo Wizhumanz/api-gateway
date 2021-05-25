@@ -20,11 +20,11 @@ func strat1(
 	storage interface{}) (string, int, interface{}) {
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
-	if relCandleIndex > 3 && relCandleIndex < 10 {
-		fmt.Printf("INDEX %v\n", relCandleIndex)
-		fmt.Printf("lows = %v\n", low)
-		fmt.Printf("candle low %v\n", low[len(low)-1])
-	}
+	// if relCandleIndex > 3 && relCandleIndex < 10 {
+	// 	fmt.Printf("INDEX %v\n", relCandleIndex)
+	// 	fmt.Printf("lows = %v\n", low)
+	// 	fmt.Printf("candle low %v\n", low[len(low)-1])
+	// }
 
 	foundPL := false
 	foundPH := false
@@ -42,7 +42,7 @@ func strat1(
 	//find pivot highs + lows
 	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
 	fmt.Println(lookForHigh)
-	pivotLabel := fmt.Sprintf("%v-%v", relCandleIndex, lookForHigh) //fmt.Sprintf("%v + ", lookForHigh)
+	pivotLabel := fmt.Sprintf("(%v)", relCandleIndex) //fmt.Sprintf("%v + ", lookForHigh)
 	pivotBarsBack := 0
 	var lastPivotIndex int
 	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
@@ -55,7 +55,18 @@ func strat1(
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
 			if low[i+1] < low[i] {
-				pivotLabel = pivotLabel + " LOW" + fmt.Sprint(low[i+1]) + " LOW" + fmt.Sprint(low[i]) + " "
+				//check if pivot already exists
+				found := false
+				for _, ph := range stored.PivotHighs {
+					if ph == i {
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
+				// pivotLabel = pivotLabel + " LOW" + fmt.Sprint(low[i+1]) + " LOW" + fmt.Sprint(low[i]) + " "
 				// fmt.Printf("Found PH at index %v", j)
 
 				//find highest high since last PL
@@ -64,14 +75,6 @@ func strat1(
 					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
 					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
 					for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
-						//check if pivot already exists
-						found := false
-						for _, ph := range stored.PivotHighs {
-							if ph == f {
-								found = true
-								break
-							}
-						}
 						if high[f] > high[newPHIndex] && !found {
 							newPHIndex = f
 						}
@@ -90,22 +93,32 @@ func strat1(
 	} else if relCandleIndex > 1 {
 		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
 			if high[i+1] > high[i] {
+				//check if pivot already exists
+				found := false
+				for _, pl := range stored.PivotLows {
+					if pl == i {
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
 				// fmt.Printf("Found PL at index %v", j)
 
 				//find lowest low since last PL
 				newPLIndex := i
+				if relCandleIndex > 7 && relCandleIndex < 12 {
+					fmt.Printf("new PL init index = %v\n", newPLIndex)
+				}
+
 				if len(stored.PivotHighs) > 1 && newPLIndex > 0 {
 					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
 					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+					if relCandleIndex > 7 && relCandleIndex < 12 {
+						fmt.Printf("SEARCH lowest low latestPHIndex = %v, latyestPLIndex = %v\n", latestPHIndex, latestPLIndex)
+					}
 					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
-						//check if pivot already exists
-						found := false
-						for _, ph := range stored.PivotHighs {
-							if ph == f {
-								found = true
-								break
-							}
-						}
 						if low[f] < low[newPLIndex] && !found {
 							newPLIndex = f
 						}
