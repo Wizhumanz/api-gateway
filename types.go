@@ -161,7 +161,9 @@ type CandlestickChartData struct {
 	Close           float64 `json:"Close"`
 	StratEnterPrice float64 `json:"StratEnterPrice"`
 	StratExitPrice  float64 `json:"StratExitPrice"`
-	Label           string  `json:"Label"`
+	LabelTop        string  `json:"LabelTop"`
+	LabelMiddle     string  `json:"LabelMiddle"`
+	LabelBottom     string  `json:"LabelBottom"`
 }
 
 type Backtest struct {

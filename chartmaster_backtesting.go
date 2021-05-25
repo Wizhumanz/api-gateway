@@ -17,7 +17,7 @@ func strat1(
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage interface{}) (string, int, interface{}) {
+	storage interface{}) (map[string]map[int]string, interface{}) {
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
 	// if relCandleIndex > 3 && relCandleIndex < 10 {
@@ -35,14 +35,17 @@ func strat1(
 			stored.PivotLows = []int{}
 		} else {
 			fmt.Errorf("storage obj assertion fail")
-			return "", 0, storage
+			return nil, storage
 		}
 	}
 
 	//find pivot highs + lows
 	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
 	fmt.Println(lookForHigh)
-	pivotLabel := fmt.Sprintf("(%v)", relCandleIndex) //fmt.Sprintf("%v + ", lookForHigh)
+	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
+	newLabels["middle"] = map[int]string{
+		0: fmt.Sprintf("(%v)", relCandleIndex),
+	}
 	pivotBarsBack := 0
 	var lastPivotIndex int
 	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
@@ -82,11 +85,14 @@ func strat1(
 				}
 
 				if newPHIndex > 0 {
+					fmt.Printf("Adding PH index %v\n", newPHIndex)
 					stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
 					pivotBarsBack = relCandleIndex - newPHIndex - 1
-					pivotLabel = pivotLabel + "H" //+ fmt.Sprintf("BB = %v//Start:%v/LComp:%v-%v/LBase:%v-%v", pivotBarsBack, startIndex, low[j+1], j+1, low[j], j)
+
+					newLabels["top"] = map[int]string{
+						pivotBarsBack: "H",
+					}
 					foundPH = true
-					fmt.Printf("Adding PH index %v\n", newPHIndex)
 				}
 			}
 		}
@@ -128,7 +134,9 @@ func strat1(
 				if newPLIndex > 0 {
 					stored.PivotLows = append(stored.PivotLows, newPLIndex)
 					pivotBarsBack = relCandleIndex - newPLIndex - 1
-					pivotLabel = pivotLabel + "L" //+ fmt.Sprintf("BB = %v//Start:%v/HComp:%v-%v/HBase:%v-%v", pivotBarsBack, startIndex, high[j+1], j+1, high[j], j)
+					newLabels["bottom"] = map[int]string{
+						pivotBarsBack: "L",
+					}
 					foundPL = true
 					// fmt.Printf("Adding PL index %v\n", newPLIndex)
 				}
@@ -163,12 +171,12 @@ func strat1(
 		}
 	}
 
-	return pivotLabel, pivotBarsBack, stored
+	return newLabels, stored
 }
 
 func runBacktest(
 	risk, lev, accSz float64,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, interface{}) (string, int, interface{}),
+	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, interface{}) (map[string]map[int]string, interface{}),
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
@@ -228,21 +236,19 @@ func runBacktest(
 		}
 
 		//run strat for all chunk's candles
-		var label string
-		var labelBB int
+		var labels map[string]map[int]string
 		for i, candle := range periodCandles {
 			allOpens = append(allOpens, candle.Open)
 			allHighs = append(allHighs, candle.High)
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			label, labelBB, store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, store)
-			fmt.Println(store)
+			labels, store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, store)
 
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
 			var simTradeData SimulatedTradeDataPoint
-			retCandles, pcData, simTradeData = saveDisplayData(retCandles, candle, strategySim, i, label, labelBB, retProfitCurve[0].Data)
+			retCandles, pcData, simTradeData = saveDisplayData(retCandles, candle, strategySim, i, labels, retProfitCurve[0].Data)
 			if pcData.Equity > 0 {
 				retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
 			}

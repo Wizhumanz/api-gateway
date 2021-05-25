@@ -122,7 +122,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	return retCandles
 }
 
-func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategySimulator, relIndex int, label string, labelBB int, profitCurveSoFar []ProfitCurveDataPoint) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
+func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategySimulator, relIndex int, labels map[string]map[int]string, profitCurveSoFar []ProfitCurveDataPoint) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	retCandlesArr := cArr
 	newCandleD := CandlestickChartData{
@@ -141,11 +141,52 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 	retCandlesArr = append(retCandlesArr, newCandleD)
 	//candle label
 	if len(retCandlesArr) > 0 {
-		index := len(retCandlesArr) - labelBB - 1
-		fmt.Printf("retCandlesArr len = %v, labelBB = %v\n", len(retCandlesArr), labelBB)
-		if index >= 0 {
-			retCandlesArr[index].Label = label + "/" + retCandlesArr[index].Label
-			fmt.Printf("label '%v' to index %v\n", label, index)
+		if len(labels["top"]) > 0 {
+			labelBB := 0
+			labelText := ""
+			for bb, txt := range labels["top"] {
+				labelBB = bb
+				labelText = txt
+			}
+
+			index := len(retCandlesArr) - labelBB - 1
+			fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
+			if index >= 0 {
+				retCandlesArr[index].LabelTop = labelText
+				fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
+			}
+		}
+
+		if len(labels["middle"]) > 0 {
+			labelBB := 0
+			labelText := ""
+			for bb, txt := range labels["middle"] {
+				labelBB = bb
+				labelText = txt
+			}
+
+			index := len(retCandlesArr) - labelBB - 1
+			fmt.Printf("MID labelBB = %v\n", len(retCandlesArr), labelBB)
+			if index >= 0 {
+				retCandlesArr[index].LabelMiddle = labelText
+				fmt.Printf("MID label '%v' to index %v\n", labelText, index)
+			}
+		}
+
+		if len(labels["bottom"]) > 0 {
+			labelBB := 0
+			labelText := ""
+			for bb, txt := range labels["bottom"] {
+				labelBB = bb
+				labelText = txt
+			}
+
+			index := len(retCandlesArr) - labelBB - 1
+			fmt.Printf("BOTTOM labelBB = %v\n", len(retCandlesArr), labelBB)
+			if index >= 0 {
+				retCandlesArr[index].LabelBottom = labelText
+				fmt.Printf("BOTTOM label '%v' to index %v\n", labelText, index)
+			}
 		}
 	}
 
@@ -238,7 +279,11 @@ func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []Simu
 	saveCandles := []CandlestickChartData{}
 	for i, candle := range c {
 		//only save first or last candles, and candles with entry/exit/label
-		if ((candle.StratEnterPrice != 0) || (candle.StratExitPrice != 0) || (candle.Label != "")) || ((i == 0) || (i == len(c)-1)) {
+		candleHasLabels := false
+		if len(candle.LabelTop) > 0 || len(candle.LabelMiddle) > 0 || len(candle.LabelBottom) > 0 {
+			candleHasLabels = true
+		}
+		if ((candle.StratEnterPrice != 0) || (candle.StratExitPrice != 0) || candleHasLabels) || ((i == 0) || (i == len(c)-1)) {
 			saveCandles = append(saveCandles, candle)
 		}
 	}
