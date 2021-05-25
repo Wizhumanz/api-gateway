@@ -291,11 +291,12 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("customer.subscription.updated")
 
 		if event.Data.Object["cancel_at_period_end"] == false {
-			updateUserPermission(event.Data.Object["items"].(map[string]interface{})["data"].([]interface{})[0].(map[string]interface{})["plan"].(map[string]interface{})["amount"].(float64))
+			updateUserTier(event.Data.Object["items"].(map[string]interface{})["data"].([]interface{})[0].(map[string]interface{})["plan"].(map[string]interface{})["amount"].(float64))
 		}
 
 	case "customer.subscription.deleted":
 		fmt.Println("customer.subscription.deleted")
+		updateUserCancellation(true)
 
 	default:
 		// unhandled event type
@@ -303,8 +304,21 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func updateUserPermission(tier float64) {
+func updateUserTier(tier float64) {
 	currentUser[0].Tier = tier
+
+	currentUser[0].Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
+
+	kind := "User"
+	newUserKey := datastore.IncompleteKey(kind, nil)
+	_, err := client.Put(ctx, newUserKey, &currentUser[0])
+	if err != nil {
+		log.Fatalf("Failed to save User: %v", err)
+	}
+}
+
+func updateUserCancellation(cancel bool) {
+	currentUser[0].Cancellation = cancel
 
 	currentUser[0].Timestamp = time.Now().Format("2006-01-02_15:04:05_-0700")
 
