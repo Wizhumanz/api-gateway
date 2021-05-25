@@ -44,7 +44,7 @@ func strat1(
 	fmt.Println(lookForHigh)
 	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
 	newLabels["middle"] = map[int]string{
-		0: fmt.Sprintf("(%v)", relCandleIndex),
+		0: fmt.Sprintf("%v", relCandleIndex),
 	}
 	pivotBarsBack := 0
 	var lastPivotIndex int
@@ -53,6 +53,7 @@ func strat1(
 	} else {
 		lastPivotIndex = int(math.Max(float64(stored.PivotHighs[len(stored.PivotHighs)-1]), float64(stored.PivotLows[len(stored.PivotLows)-1])))
 		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
+		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
 	if lookForHigh && relCandleIndex > 1 {
 		//check if new candle took out the low of previous candles since last pivot
