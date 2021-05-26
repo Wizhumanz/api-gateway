@@ -45,9 +45,9 @@ func strat1(
 	// 	fmt.Println(colorRed + fmt.Sprintf("%v - %v | len(PH) = %v, len(PL) = %v | latestPH = %v, latestPL = %v", relCandleIndex, lookForLow, len(stored.PivotHighs), len(stored.PivotLows), stored.PivotHighs[len(stored.PivotHighs)-1], stored.PivotLows[len(stored.PivotLows)-1]) + colorReset)
 	// }
 	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
-	newLabels["middle"] = map[int]string{
-		0: fmt.Sprintf("%v", relCandleIndex),
-	}
+	// newLabels["middle"] = map[int]string{
+	// 	0: fmt.Sprintf("%v", relCandleIndex),
+	// }
 	pivotBarsBack := 0
 	var lastPivotIndex int
 	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
@@ -104,8 +104,8 @@ func strat1(
 					pivotBarsBack = relCandleIndex - newPHIndex - 1
 
 					newLabels["top"] = map[int]string{
-						pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
-						// pivotBarsBack: "H",
+						// pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
+						pivotBarsBack: "H",
 					}
 					foundPH = true
 				}
