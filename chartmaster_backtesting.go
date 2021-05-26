@@ -40,8 +40,10 @@ func strat1(
 	}
 
 	//find pivot highs + lows
-	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
-	fmt.Println(lookForHigh)
+	lookForLow := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
+	if relCandleIndex > 40 && relCandleIndex < 70 {
+		fmt.Println(colorRed + fmt.Sprintf("%v - %v | len(PH) = %v, len(PL) = %v | latestPH = %v, latestPL = %v", relCandleIndex, lookForLow, len(stored.PivotHighs), len(stored.PivotLows), stored.PivotHighs[len(stored.PivotHighs)-1], stored.PivotLows[len(stored.PivotLows)-1]) + colorReset)
+	}
 	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
 	newLabels["middle"] = map[int]string{
 		0: fmt.Sprintf("%v", relCandleIndex),
@@ -55,10 +57,10 @@ func strat1(
 		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
-	if lookForHigh && relCandleIndex > 1 {
+	if lookForLow && relCandleIndex > 1 {
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
-			if low[i+1] < low[i] {
+			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
 				//check if pivot already exists
 				found := false
 				for _, ph := range stored.PivotHighs {
@@ -75,7 +77,7 @@ func strat1(
 
 				//find highest high since last PL
 				newPHIndex := i
-				if len(stored.PivotLows) > 1 {
+				if len(stored.PivotLows) > 0 && len(stored.PivotHighs) > 0 && newPHIndex > 0 {
 					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
 					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
 					for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
@@ -91,6 +93,7 @@ func strat1(
 					pivotBarsBack = relCandleIndex - newPHIndex - 1
 
 					newLabels["top"] = map[int]string{
+						// pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
 						pivotBarsBack: "H",
 					}
 					foundPH = true
@@ -99,7 +102,7 @@ func strat1(
 		}
 	} else if relCandleIndex > 1 {
 		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
-			if high[i+1] > high[i] {
+			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
 				//check if pivot already exists
 				found := false
 				for _, pl := range stored.PivotLows {
@@ -115,27 +118,29 @@ func strat1(
 
 				//find lowest low since last PL
 				newPLIndex := i
-				if relCandleIndex > 7 && relCandleIndex < 12 {
-					fmt.Printf("new PL init index = %v\n", newPLIndex)
+				if relCandleIndex > 1 && relCandleIndex < 15 {
+					fmt.Printf(colorRed+"new PL init index = %v\n"+colorReset, newPLIndex)
 				}
 
-				if len(stored.PivotHighs) > 1 && newPLIndex > 0 {
+				if len(stored.PivotHighs) > 0 && len(stored.PivotLows) > 0 && newPLIndex > 0 {
 					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
 					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
-					if relCandleIndex > 7 && relCandleIndex < 12 {
-						fmt.Printf("SEARCH lowest low latestPHIndex = %v, latyestPLIndex = %v\n", latestPHIndex, latestPLIndex)
+					if relCandleIndex > 1 && relCandleIndex < 15 {
+						fmt.Printf("SEARCH lowest low latestPHIndex = %v, latestPLIndex = %v\n", latestPHIndex, latestPLIndex)
 					}
 					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
 						if low[f] < low[newPLIndex] && !found {
 							newPLIndex = f
 						}
 					}
+					fmt.Println("new PL index" + colorGreen + fmt.Sprint(newPLIndex) + colorReset)
 				}
 
 				if newPLIndex > 0 {
 					stored.PivotLows = append(stored.PivotLows, newPLIndex)
 					pivotBarsBack = relCandleIndex - newPLIndex - 1
 					newLabels["bottom"] = map[int]string{
+						// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
 						pivotBarsBack: "L",
 					}
 					foundPL = true
