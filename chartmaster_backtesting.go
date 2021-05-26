@@ -222,7 +222,7 @@ func runBacktest(
 		},
 	}
 	strategySim := StrategySimulator{}
-	strategySim.Init(500) //TODO: take func arg
+	strategySim.Init(accSz) //TODO: take func arg
 
 	//run backtest in chunks for client stream responsiveness
 	allOpens := []float64{}
