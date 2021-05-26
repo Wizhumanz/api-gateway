@@ -40,10 +40,10 @@ func strat1(
 	}
 
 	//find pivot highs + lows
-	lookForLow := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
-	if relCandleIndex > 40 && relCandleIndex < 70 {
-		fmt.Println(colorRed + fmt.Sprintf("%v - %v | len(PH) = %v, len(PL) = %v | latestPH = %v, latestPL = %v", relCandleIndex, lookForLow, len(stored.PivotHighs), len(stored.PivotLows), stored.PivotHighs[len(stored.PivotHighs)-1], stored.PivotLows[len(stored.PivotLows)-1]) + colorReset)
-	}
+	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
+	// if relCandleIndex > 40 && relCandleIndex < 70 {
+	// 	fmt.Println(colorRed + fmt.Sprintf("%v - %v | len(PH) = %v, len(PL) = %v | latestPH = %v, latestPL = %v", relCandleIndex, lookForLow, len(stored.PivotHighs), len(stored.PivotLows), stored.PivotHighs[len(stored.PivotHighs)-1], stored.PivotLows[len(stored.PivotLows)-1]) + colorReset)
+	// }
 	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
 	newLabels["middle"] = map[int]string{
 		0: fmt.Sprintf("%v", relCandleIndex),
@@ -57,7 +57,7 @@ func strat1(
 		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
-	if lookForLow && relCandleIndex > 1 {
+	if lookForHigh && relCandleIndex > 1 {
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
 			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
@@ -77,6 +77,9 @@ func strat1(
 
 				//find highest high since last PL
 				newPHIndex := i
+				if relCandleIndex > 150 && relCandleIndex < 170 {
+					fmt.Printf(colorCyan+"<%v> ph index init search %v\n"+colorReset, relCandleIndex, newPHIndex)
+				}
 				if len(stored.PivotLows) > 0 && len(stored.PivotHighs) > 0 && newPHIndex > 0 {
 					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
 					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
@@ -85,16 +88,24 @@ func strat1(
 							newPHIndex = f
 						}
 					}
+
+					//check if current candle actually clears new selected candle as pivot high
+					if relCandleIndex > 150 && relCandleIndex < 170 {
+						fmt.Printf("Checking new PH index %v L = %v, H = %v + candle index %v L = %v, H = %v", newPHIndex, low[newPHIndex], high[newPHIndex], i+1, low[i+1], high[i+1])
+					}
+					if !((low[i+1] < low[newPHIndex]) && (high[i+1] < high[newPHIndex])) {
+						continue
+					}
 				}
 
 				if newPHIndex > 0 {
-					fmt.Printf("Adding PH index %v\n", newPHIndex)
+					// fmt.Printf("Adding PH index %v\n", newPHIndex)
 					stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
 					pivotBarsBack = relCandleIndex - newPHIndex - 1
 
 					newLabels["top"] = map[int]string{
-						// pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
-						pivotBarsBack: "H",
+						pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
+						// pivotBarsBack: "H",
 					}
 					foundPH = true
 				}
@@ -118,14 +129,14 @@ func strat1(
 
 				//find lowest low since last PL
 				newPLIndex := i
-				if relCandleIndex > 1 && relCandleIndex < 15 {
-					fmt.Printf(colorRed+"new PL init index = %v\n"+colorReset, newPLIndex)
+				if relCandleIndex > 150 && relCandleIndex < 170 {
+					fmt.Printf(colorYellow+"<%v> new PL init index = %v\n"+colorReset, relCandleIndex, newPLIndex)
 				}
 
 				if len(stored.PivotHighs) > 0 && len(stored.PivotLows) > 0 && newPLIndex > 0 {
 					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
 					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
-					if relCandleIndex > 1 && relCandleIndex < 15 {
+					if relCandleIndex > 150 && relCandleIndex < 170 {
 						fmt.Printf("SEARCH lowest low latestPHIndex = %v, latestPLIndex = %v\n", latestPHIndex, latestPLIndex)
 					}
 					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
@@ -133,7 +144,14 @@ func strat1(
 							newPLIndex = f
 						}
 					}
-					fmt.Println("new PL index" + colorGreen + fmt.Sprint(newPLIndex) + colorReset)
+
+					//check if current candle actually clears new selected candle as pivot high
+					if relCandleIndex > 150 && relCandleIndex < 170 {
+						fmt.Printf("Checking new PL index %v L = %v, H = %v + candle index %v L = %v, H = %v", newPLIndex, low[newPLIndex], high[newPLIndex], i+1, low[i+1], high[i+1])
+					}
+					if !((high[i+1] > high[newPLIndex]) && (low[i+1] > low[newPLIndex])) {
+						continue
+					}
 				}
 
 				if newPLIndex > 0 {

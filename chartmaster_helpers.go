@@ -150,10 +150,10 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 			}
 
 			index := len(retCandlesArr) - labelBB - 1
-			fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
+			// fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
 			if index >= 0 {
 				retCandlesArr[index].LabelTop = labelText
-				fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
+				// fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
 			}
 		}
 
@@ -166,10 +166,10 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 			}
 
 			index := len(retCandlesArr) - labelBB - 1
-			fmt.Printf("MID labelBB = %v\n", len(retCandlesArr), labelBB)
+			// fmt.Printf("MID labelBB = %v\n", len(retCandlesArr), labelBB)
 			if index >= 0 {
 				retCandlesArr[index].LabelMiddle = labelText
-				fmt.Printf("MID label '%v' to index %v\n", labelText, index)
+				// fmt.Printf("MID label '%v' to index %v\n", labelText, index)
 			}
 		}
 
@@ -182,10 +182,10 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 			}
 
 			index := len(retCandlesArr) - labelBB - 1
-			fmt.Printf("BOTTOM labelBB = %v\n", len(retCandlesArr), labelBB)
+			// fmt.Printf("BOTTOM labelBB = %v\n", len(retCandlesArr), labelBB)
 			if index >= 0 {
 				retCandlesArr[index].LabelBottom = labelText
-				fmt.Printf("BOTTOM label '%v' to index %v\n", labelText, index)
+				// fmt.Printf("BOTTOM label '%v' to index %v\n", labelText, index)
 			}
 		}
 	}
