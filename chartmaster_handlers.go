@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -74,9 +75,12 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	bucketName := "res-" + userID
 	bucketData := listFiles(bucketName)
 	if len(bucketData) >= 10+len(shareResult) {
-		for _, file := range bucketData {
-			if !contains(shareResult, file) {
-				deleteFile(bucketName, bucketData[0])
+		for i, file := range bucketData {
+			// fmt.Println(file)
+			// fmt.Println(shareResult)
+			// fmt.Println(contains(shareResult, strings.Split(file, ".")[0]))
+			if !contains(shareResult, strings.Split(file, ".")[0]) {
+				deleteFile(bucketName, bucketData[i])
 				break
 			}
 		}
