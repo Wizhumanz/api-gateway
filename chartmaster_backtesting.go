@@ -284,6 +284,8 @@ func runBacktest(
 			relIndex++
 		}
 
+		progressBar(userID, rid, retCandles, startTime, endTime)
+
 		//stream data back to client in every chunk
 		//rm duplicates
 		var uniquePCPoints []ProfitCurveDataPoint

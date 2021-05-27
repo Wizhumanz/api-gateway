@@ -235,6 +235,18 @@ func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 	ws.WriteMessage(1, data)
 }
 
+func progressBar(userID, rid string, candle []CandlestickChartData, start, end time.Time) {
+	progressMap := make(map[string]float64)
+	var progressData []interface{}
+	progressPerc := (float64(len(candle)) - 1) / end.Sub(start).Minutes() * 100
+
+	progressMap["Progress"] = progressPerc
+	ws := wsConnectionsChartmaster[userID]
+
+	progressData = append(progressData, progressMap)
+	streamPacket(ws, progressData, rid)
+}
+
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
