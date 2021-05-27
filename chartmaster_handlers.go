@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/storage"
 	"github.com/gorilla/mux"
+	"google.golang.org/api/iterator"
 )
 
 func backtestHandler(w http.ResponseWriter, r *http.Request) {
@@ -66,11 +67,29 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var simTrades []SimulatedTradeData
 	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
+	// Get all of user's shared history json data
+	var shareResult []string
+	query := datastore.NewQuery("ShareResult").Filter("UserID =", userID)
+	t := client.Run(ctx, query)
+	for {
+		var x ShareResult
+		_, err := t.Next(&x)
+		if err == iterator.Done {
+			break
+		}
+		shareResult = append(shareResult, x.ResultFileName)
+	}
+
 	// Delete an element in a bucket if len greater than 10
 	bucketName := "res-" + userID
 	bucketData := listFiles(bucketName)
-	if len(bucketData) >= 10 {
-		deleteFile(bucketName, bucketData[0])
+	if len(bucketData) >= 10+len(shareResult) {
+		for _, file := range bucketData {
+			if !contains(shareResult, file) {
+				deleteFile(bucketName, bucketData[0])
+				break
+			}
+		}
 	}
 
 	//save result to bucket
