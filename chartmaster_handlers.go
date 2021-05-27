@@ -68,17 +68,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
 	// Get all of user's shared history json data
-	var shareResult []string
-	query := datastore.NewQuery("ShareResult").Filter("UserID =", userID)
-	t := client.Run(ctx, query)
-	for {
-		var x ShareResult
-		_, err := t.Next(&x)
-		if err == iterator.Done {
-			break
-		}
-		shareResult = append(shareResult, x.ResultFileName)
-	}
+	shareResult := getAllShareResult(userID)
 
 	// Delete an element in a bucket if len greater than 10
 	bucketName := "res-" + userID
@@ -99,6 +89,39 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	// json.NewEncoder(w).Encode(finalRet)
+}
+
+func getAllShareResult(userID string) []string {
+	// Get all of user's shared history json data
+	var shareResult []string
+	query := datastore.NewQuery("ShareResult").Filter("UserID =", userID)
+	t := client.Run(ctx, query)
+	for {
+		var x ShareResult
+		_, err := t.Next(&x)
+		if err == iterator.Done {
+			break
+		}
+		shareResult = append(shareResult, x.ResultFileName)
+	}
+	return shareResult
+}
+
+func getAllShareResultHandler(w http.ResponseWriter, r *http.Request) {
+	setupCORS(&w, r)
+	if (*r).Method == "OPTIONS" {
+		return
+	}
+
+	if flag.Lookup("test.v") != nil {
+		initDatastore()
+	}
+	userID := r.URL.Query()["user"][0]
+	shareResult := getAllShareResult(userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(shareResult)
 }
 
 func shareResultHandler(w http.ResponseWriter, r *http.Request) {

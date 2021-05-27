@@ -125,6 +125,8 @@ func main() {
 	router.Methods("POST", "OPTIONS").Path("/backtest").HandlerFunc(backtestHandler)
 	router.Methods("POST", "OPTIONS").Path("/shareresult").HandlerFunc(shareResultHandler)
 	router.Methods("GET", "OPTIONS").Path("/getshareresult").HandlerFunc(getShareResultHandler)
+	router.Methods("GET", "OPTIONS").Path("/getallshareresults").HandlerFunc(getAllShareResultHandler)
+
 	router.Methods("GET", "OPTIONS").Path("/getChartmasterTickers").HandlerFunc(getTickersHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory").HandlerFunc(getBacktestHistoryHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory/{id}").HandlerFunc(getBacktestResHandler)
