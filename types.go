@@ -178,6 +178,14 @@ type Backtest struct {
 	Size             string `json:"size"`
 }
 
+type ShareResult struct {
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	ResultFileName string `json:"resultFileName"`
+	ShareID        string `json:"shareID"`
+	UserID         string `json:"userID"`
+}
+
 type ProfitCurveDataPoint struct {
 	DateTime string  `json:"DateTime"`
 	Equity   float64 `json:"Equity"`
