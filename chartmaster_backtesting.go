@@ -372,7 +372,7 @@ func runBacktest(
 		// fmt.Printf("runnin with start = %v, end = %v\n", fetchCandlesStart.Format(httpTimeFormat), fetchCandlesEnd.Format(httpTimeFormat))
 		// fmt.Printf("BEFORE len = %v, retCandles = %v\n", len(retCandles), retCandles)
 
-		computeChunk(&packetEndIndex, &pcFetchEndIndex, &stFetchEndIndex, &store, &allOpens, &allHighs, &allLows, &allCloses,
+		go computeChunk(&packetEndIndex, &pcFetchEndIndex, &stFetchEndIndex, &store, &allOpens, &allHighs, &allLows, &allCloses,
 			risk, lev, accSz, &relIndex, packetSize, userID, rid, ticker, period,
 			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
 			lastPacketEndIndexCandles, lastPacketEndIndexPC, lastPacketEndIndexSimT,
