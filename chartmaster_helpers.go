@@ -151,7 +151,7 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 
 			index := len(retCandlesArr) - labelBB - 1
 			// fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
-			if index >= 0 {
+			if index >= 0 && index < len(retCandlesArr) {
 				retCandlesArr[index].LabelTop = labelText
 				// fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
 			}

@@ -307,9 +307,7 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 	(*retSimTrades)[0].Data = uniqueStPoints
 
 	//stream data in order, wait for previous chunk to stream first
-	firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
-
-	if firstCandleTime == startTime {
+	streamPacket := func() {
 		packetSender(userID, rid,
 			chunkAddedCandles,
 			[]ProfitCurveData{
@@ -324,6 +322,11 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 					Data:  chunkAddedSTData,
 				},
 			})
+	}
+	firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
+
+	if firstCandleTime == startTime {
+		streamPacket()
 
 		//allows next chunk to stream results
 		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
@@ -334,21 +337,15 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 			msg := <-streamSync
 			// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
 			if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-				fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
-				// packetSender(userID, rid,
-				// 	chunkAddedCandles,
-				// 	[]ProfitCurveData{
-				// 		{
-				// 			Label: "strat1", //TODO: prep for dynamic strategy param values
-				// 			Data:  chunkAddedPCData,
-				// 		},
-				// 	},
-				// 	[]SimulatedTradeData{
-				// 		{
-				// 			Label: "strat1",
-				// 			Data:  chunkAddedSTData,
-				// 		},
-				// 	})
+				// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
+
+				defer func() {
+					if r := recover(); r != nil {
+						streamPacket()
+					}
+				}()
+
+				streamPacket()
 
 				//allows next chunk to stream results
 				chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
