@@ -118,7 +118,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 		}
 	}
 
-	fmt.Println("Cache fetch complete")
+	fmt.Printf("Cache fetch complete %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
 	return retCandles
 }
 
