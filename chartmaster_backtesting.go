@@ -115,7 +115,7 @@ func strat1(
 			}
 		}
 	} else if relCandleIndex > 1 {
-		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
 				//check if pivot already exists
 				found := false
@@ -142,16 +142,13 @@ func strat1(
 					// if relCandleIndex > 150 && relCandleIndex < 170 {
 					// 	fmt.Printf("SEARCH lowest low latestPHIndex = %v, latestPLIndex = %v\n", latestPHIndex, latestPLIndex)
 					// }
-					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
+					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex && f < len(low) && f < len(high); f-- {
 						if low[f] < low[newPLIndex] && !found {
 							newPLIndex = f
 						}
 					}
 
 					//check if current candle actually clears new selected candle as pivot high
-					// if relCandleIndex > 150 && relCandleIndex < 170 {
-					// 	fmt.Printf("Checking new PL index %v L = %v, H = %v + candle index %v L = %v, H = %v", newPLIndex, low[newPLIndex], high[newPLIndex], i+1, low[i+1], high[i+1])
-					// }
 					if !((high[i+1] > high[newPLIndex]) && (low[i+1] > low[newPLIndex])) {
 						continue
 					}
@@ -335,27 +332,31 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 		for {
 			previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
 			msg := <-streamSync
-			fmt.Printf("msg for %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
+			// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
 			if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-				packetSender(userID, rid,
-					chunkAddedCandles,
-					[]ProfitCurveData{
-						{
-							Label: "strat1", //TODO: prep for dynamic strategy param values
-							Data:  chunkAddedPCData,
-						},
-					},
-					[]SimulatedTradeData{
-						{
-							Label: "strat1",
-							Data:  chunkAddedSTData,
-						},
-					})
+				fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
+				// packetSender(userID, rid,
+				// 	chunkAddedCandles,
+				// 	[]ProfitCurveData{
+				// 		{
+				// 			Label: "strat1", //TODO: prep for dynamic strategy param values
+				// 			Data:  chunkAddedPCData,
+				// 		},
+				// 	},
+				// 	[]SimulatedTradeData{
+				// 		{
+				// 			Label: "strat1",
+				// 			Data:  chunkAddedSTData,
+				// 		},
+				// 	})
 
 				//allows next chunk to stream results
 				chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
 				streamSync <- chunkLastCandleTime.Format(httpTimeFormat)
 				break
+			} else {
+				//pass on message if not intended receiver
+				streamSync <- msg
 			}
 		}
 	}
