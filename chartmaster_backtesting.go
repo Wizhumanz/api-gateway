@@ -202,7 +202,7 @@ func strat1(
 	return newLabels
 }
 
-func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *interface{}, allOpens, allHighs, allLows, allCloses []float64,
+func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *interface{}, allOpens, allHighs, allLows, allCloses *[]float64,
 	risk, lev, accSz float64, relIndex *int, packetSize int,
 	userID, rid, ticker, period string,
 	strategySim *StrategySimulator,
@@ -229,12 +229,12 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 	//run strat for all chunk's candles
 	var labels map[string]map[int]string
 	for i, candle := range periodCandles {
-		allOpens = append(allOpens, candle.Open)
-		allHighs = append(allHighs, candle.High)
-		allLows = append(allLows, candle.Low)
-		allCloses = append(allCloses, candle.Close)
+		*allOpens = append(*allOpens, candle.Open)
+		*allHighs = append(*allHighs, candle.High)
+		*allLows = append(*allLows, candle.Low)
+		*allCloses = append(*allCloses, candle.Close)
 		//TODO: build results and run for different param sets
-		labels = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, *relIndex, strategySim, store)
+		labels = userStrat(risk, lev, accSz, *allOpens, *allHighs, *allLows, *allCloses, *relIndex, strategySim, store)
 		fmt.Println(strategySim.GetEquity())
 
 		//build display data using strategySim
@@ -372,7 +372,7 @@ func runBacktest(
 		// fmt.Printf("runnin with start = %v, end = %v\n", fetchCandlesStart.Format(httpTimeFormat), fetchCandlesEnd.Format(httpTimeFormat))
 		// fmt.Printf("BEFORE len = %v, retCandles = %v\n", len(retCandles), retCandles)
 
-		computeChunk(&packetEndIndex, &pcFetchEndIndex, &stFetchEndIndex, &store, allOpens, allHighs, allLows, allCloses,
+		computeChunk(&packetEndIndex, &pcFetchEndIndex, &stFetchEndIndex, &store, &allOpens, &allHighs, &allLows, &allCloses,
 			risk, lev, accSz, &relIndex, packetSize, userID, rid, ticker, period,
 			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
 			lastPacketEndIndexCandles, lastPacketEndIndexPC, lastPacketEndIndexSimT,
