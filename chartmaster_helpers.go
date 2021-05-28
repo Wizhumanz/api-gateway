@@ -248,7 +248,7 @@ func progressBar(userID, rid string, candle []CandlestickChartData, start, end t
 }
 
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
-	fmt.Printf("user = %v, rid = %v, len(c) = %v, len(pc) = %v, len(st) = %v\n", userID, rid, len(c), len(pc[0].Data), len(st[0].Data))
+	fmt.Printf(colorRed+"streaming start = %v to %v\n"+colorReset, c[0].DateTime, c[len(c)-1].DateTime)
 
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {

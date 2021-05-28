@@ -18,9 +18,9 @@ func strat1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) map[string]map[int]string {
-	if len(close) > 0 {
-		fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
-	}
+	// if len(close) > 0 {
+	// 	fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
+	// }
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
 	// if relCandleIndex > 3 && relCandleIndex < 10 {
@@ -208,7 +208,6 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 	strategySim *StrategySimulator,
 	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
-	lastPacketEndIndexCandles, lastPacketEndIndexPC, lastPacketEndIndexSimT int,
 	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData)) {
 	//get all candles of chunk
@@ -226,7 +225,12 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 		periodCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
 
+	fmt.Printf(colorCyan+"BEFORE len(retCandles) = %v\n"+colorReset, len(*retCandles))
+
 	//run strat for all chunk's candles
+	var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
+	var chunkAddedPCData []ProfitCurveDataPoint
+	var chunkAddedSTData []SimulatedTradeDataPoint
 	var labels map[string]map[int]string
 	for i, candle := range periodCandles {
 		*allOpens = append(*allOpens, candle.Open)
@@ -235,22 +239,28 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 		*allCloses = append(*allCloses, candle.Close)
 		//TODO: build results and run for different param sets
 		labels = userStrat(risk, lev, accSz, *allOpens, *allHighs, *allLows, *allCloses, *relIndex, strategySim, store)
-		fmt.Println(strategySim.GetEquity())
 
 		//build display data using strategySim
 		var pcData ProfitCurveDataPoint
 		var simTradeData SimulatedTradeDataPoint
-		*retCandles, pcData, simTradeData = saveDisplayData(*retCandles, candle, *strategySim, i, labels, (*retProfitCurve)[0].Data)
+		chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, candle, *strategySim, i, labels, chunkAddedPCData)
 		if pcData.Equity > 0 {
-			(*retProfitCurve)[0].Data = append((*retProfitCurve)[0].Data, pcData)
+			chunkAddedPCData = append(chunkAddedPCData, pcData)
 		}
 		if simTradeData.DateTime != "" {
-			(*retSimTrades)[0].Data = append((*retSimTrades)[0].Data, simTradeData)
+			chunkAddedSTData = append(chunkAddedSTData, simTradeData)
 		}
 
 		//absolute index from absolute start of computation period
 		*relIndex++
 	}
+
+	//update more global vars
+	*retCandles = append(*retCandles, chunkAddedCandles...)
+	(*retProfitCurve)[0].Data = append((*retProfitCurve)[0].Data, chunkAddedPCData...)
+	(*retSimTrades)[0].Data = append((*retSimTrades)[0].Data, chunkAddedSTData...)
+
+	fmt.Printf(colorCyan+"AFTER len(retCandles) = %v\n"+colorReset, len(*retCandles))
 
 	progressBar(userID, rid, *retCandles, startTime, endTime)
 
@@ -298,27 +308,18 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 	}
 	(*retSimTrades)[0].Data = uniqueStPoints
 
-	*packetEndIndex = lastPacketEndIndexCandles + packetSize
-	if *packetEndIndex > len(*retCandles) {
-		*packetEndIndex = len(*retCandles)
-	}
-	// fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndexCandles, packetEndIndex)
-	*pcFetchEndIndex = len((*retProfitCurve)[0].Data)
-	packetPC := (*retProfitCurve)[0].Data[lastPacketEndIndexPC:*pcFetchEndIndex]
-	*stFetchEndIndex = len((*retSimTrades)[0].Data)
-	packetSt := (*retSimTrades)[0].Data[lastPacketEndIndexSimT:*stFetchEndIndex]
 	packetSender(userID, rid,
-		(*retCandles)[lastPacketEndIndexCandles:*packetEndIndex],
+		chunkAddedCandles,
 		[]ProfitCurveData{
 			{
 				Label: "strat1", //TODO: prep for dynamic strategy param values
-				Data:  packetPC,
+				Data:  chunkAddedPCData,
 			},
 		},
 		[]SimulatedTradeData{
 			{
 				Label: "strat1",
-				Data:  packetSt,
+				Data:  chunkAddedSTData,
 			},
 		})
 }
@@ -354,9 +355,6 @@ func runBacktest(
 	allLows := []float64{}
 	allCloses := []float64{}
 	relIndex := 1
-	lastPacketEndIndexCandles := 0
-	lastPacketEndIndexPC := 0
-	lastPacketEndIndexSimT := 0
 	fetchCandlesStart := startTime
 	var packetEndIndex, pcFetchEndIndex, stFetchEndIndex int
 	for {
@@ -375,15 +373,10 @@ func runBacktest(
 		go computeChunk(&packetEndIndex, &pcFetchEndIndex, &stFetchEndIndex, &store, &allOpens, &allHighs, &allLows, &allCloses,
 			risk, lev, accSz, &relIndex, packetSize, userID, rid, ticker, period,
 			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
-			lastPacketEndIndexCandles, lastPacketEndIndexPC, lastPacketEndIndexSimT,
 			userStrat, packetSender)
 
 		// fmt.Printf("AFTER len = %v, retCandles = %v\n", len(retCandles), retCandles)
 
-		//save last index for streaming next chunk
-		lastPacketEndIndexCandles = packetEndIndex
-		lastPacketEndIndexPC = int(math.Max(float64(pcFetchEndIndex-1), float64(0)))
-		lastPacketEndIndexSimT = int(math.Max(float64(stFetchEndIndex-1), float64(0)))
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
