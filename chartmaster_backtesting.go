@@ -17,7 +17,10 @@ func strat1(
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage interface{}) (map[string]map[int]string, interface{}) {
+	storage *interface{}) map[string]map[int]string {
+	if len(close) > 0 {
+		fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
+	}
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
 	// if relCandleIndex > 3 && relCandleIndex < 10 {
@@ -28,14 +31,14 @@ func strat1(
 
 	foundPL := false
 	foundPH := false
-	stored, ok := storage.(PivotsStore)
+	stored, ok := (*storage).(PivotsStore)
 	if !ok {
 		if relCandleIndex == 1 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
 		} else {
 			fmt.Errorf("storage obj assertion fail")
-			return nil, storage
+			return nil
 		}
 	}
 
@@ -169,7 +172,7 @@ func strat1(
 	}
 
 	//manage positions
-	if strategy.PosLongSize == 0 && relCandleIndex > 0 { //no long pos
+	if (*strategy).PosLongSize == 0 && relCandleIndex > 0 { //no long pos
 		//enter if current PL higher than previous
 		if foundPL {
 			currentPL := low[relCandleIndex-1]
@@ -183,29 +186,30 @@ func strat1(
 				posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
 				posSize := posCap / entryPrice
 				// fmt.Printf("Entering with %v\n", posSize)
-				strategy.Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
-				// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
+				(*strategy).Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
+				// fmt.Printf(colorGreen+"BUY IN %v\n"+colorReset, close[relCandleIndex-1])
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
 		if foundPH {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex-1])
-			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex)
-			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex-1])
+			(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex)
+			// fmt.Printf(colorRed+"SELL EXIT %v\n"+colorReset, close[relCandleIndex-1])
 		}
 	}
 
-	return newLabels, stored
+	*storage = stored
+	return newLabels
 }
 
 func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *interface{}, allOpens, allHighs, allLows, allCloses []float64,
-	risk, lev, accSz float64, relIndex, packetSize int,
+	risk, lev, accSz float64, relIndex *int, packetSize int,
 	userID, rid, ticker, period string,
 	strategySim *StrategySimulator,
 	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
 	lastPacketEndIndexCandles, lastPacketEndIndexPC, lastPacketEndIndexSimT int,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, interface{}) (map[string]map[int]string, interface{}),
+	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData)) {
 	//get all candles of chunk
 	var periodCandles []Candlestick
@@ -222,8 +226,6 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 		periodCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
 
-	fmt.Printf("BEFORE len = %v, retCandles = %v\n", len(*retCandles), *retCandles)
-
 	//run strat for all chunk's candles
 	var labels map[string]map[int]string
 	for i, candle := range periodCandles {
@@ -232,7 +234,8 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 		allLows = append(allLows, candle.Low)
 		allCloses = append(allCloses, candle.Close)
 		//TODO: build results and run for different param sets
-		labels, *store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, strategySim, store)
+		labels = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, *relIndex, strategySim, store)
+		fmt.Println(strategySim.GetEquity())
 
 		//build display data using strategySim
 		var pcData ProfitCurveDataPoint
@@ -246,10 +249,8 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 		}
 
 		//absolute index from absolute start of computation period
-		relIndex++
+		*relIndex++
 	}
-
-	fmt.Printf("AFTER len = %v, retCandles = %v\n", len(*retCandles), *retCandles)
 
 	progressBar(userID, rid, *retCandles, startTime, endTime)
 
@@ -324,7 +325,7 @@ func computeChunk(packetEndIndex, pcFetchEndIndex, stFetchEndIndex *int, store *
 
 func runBacktest(
 	risk, lev, accSz float64,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, interface{}) (map[string]map[int]string, interface{}),
+	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
@@ -372,7 +373,7 @@ func runBacktest(
 		// fmt.Printf("BEFORE len = %v, retCandles = %v\n", len(retCandles), retCandles)
 
 		computeChunk(&packetEndIndex, &pcFetchEndIndex, &stFetchEndIndex, &store, allOpens, allHighs, allLows, allCloses,
-			risk, lev, accSz, relIndex, packetSize, userID, rid, ticker, period,
+			risk, lev, accSz, &relIndex, packetSize, userID, rid, ticker, period,
 			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
 			lastPacketEndIndexCandles, lastPacketEndIndexPC, lastPacketEndIndexSimT,
 			userStrat, packetSender)
