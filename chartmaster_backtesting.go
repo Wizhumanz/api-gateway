@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"sort"
 	"time"
 )
 
@@ -167,6 +168,56 @@ func strat1(
 			}
 		}
 	}
+	// fmt.Println(relCandleIndex)
+
+	// fmt.Println(open)
+	// fmt.Println(high)
+	// fmt.Println(low)
+	// fmt.Println(close)
+	if relCandleIndex == 181 {
+		fmt.Println(stored.PivotHighs)
+		fmt.Println(stored.PivotLows)
+		startTrend := false
+		var endTrend bool
+		var startCandleIndex int
+		var endCandleIndex int
+		// var trend upwardTrend
+		var pivotHighsIndexInterval []int
+		var allPivotHighsStart []float64
+		var allPivotHighsExtent []float64
+		for i, _ := range stored.PivotLows {
+			if i > 0 && !startTrend && low[stored.PivotLows[i-1]] < low[stored.PivotLows[i]] {
+				startTrend = true
+				startCandleIndex = stored.PivotLows[i-1]
+				allPivotHighsStart = append(allPivotHighsStart, close[startCandleIndex])
+				fmt.Println("startCandleIndex")
+				fmt.Println(startCandleIndex)
+			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
+				endTrend = true
+				endCandleIndex = stored.PivotLows[i-1]
+				fmt.Println("endCandleIndex")
+				fmt.Println(endCandleIndex)
+			}
+			if startTrend && endTrend {
+				startTrend = false
+				endTrend = false
+				var pivotHighsInterval []float64
+
+				//endTime
+				for _, t := range stored.PivotHighs {
+					if t > startCandleIndex && t < endCandleIndex {
+						pivotHighsIndexInterval = append(pivotHighsIndexInterval, t)
+						pivotHighsInterval = append(pivotHighsInterval, high[t])
+					}
+				}
+				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
+			}
+		}
+		fmt.Println(pivotHighsIndexInterval)
+		fmt.Println(allPivotHighsStart)
+		fmt.Println(allPivotHighsExtent)
+	}
+	// if stored.PivotLows
 
 	//manage positions
 	if strategy.PosLongSize == 0 && relCandleIndex > 0 { //no long pos
@@ -192,6 +243,140 @@ func strat1(
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex-1])
 			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex)
 			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex-1])
+		}
+	}
+
+	return newLabels, stored
+}
+
+func MaxFloatSlice(v []float64) float64 {
+	sort.Float64s(v)
+	return v[len(v)-1]
+}
+
+func scan1(
+	risk, lev, accSz float64,
+	open, high, low, close []float64,
+	relCandleIndex int,
+	strategy *StrategySimulator,
+	storage interface{}) (map[string]map[int]string, interface{}) {
+
+	// foundPL := false
+	// foundPH := false
+	stored, ok := storage.(PivotsStore)
+	if !ok {
+		if relCandleIndex == 1 {
+			stored.PivotHighs = []int{}
+			stored.PivotLows = []int{}
+		} else {
+			fmt.Errorf("storage obj assertion fail")
+			return nil, storage
+		}
+	}
+
+	//find pivot highs + lows
+	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
+
+	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
+
+	pivotBarsBack := 0
+	var lastPivotIndex int
+	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
+		lastPivotIndex = 1
+	} else {
+		lastPivotIndex = int(math.Max(float64(stored.PivotHighs[len(stored.PivotHighs)-1]), float64(stored.PivotLows[len(stored.PivotLows)-1])))
+		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
+		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
+	}
+	if lookForHigh && relCandleIndex > 1 {
+		//check if new candle took out the low of previous candles since last pivot
+		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
+				//check if pivot already exists
+				found := false
+				for _, ph := range stored.PivotHighs {
+					if ph == i {
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
+
+				//find highest high since last PL
+				newPHIndex := i
+
+				if len(stored.PivotLows) > 0 && len(stored.PivotHighs) > 0 && newPHIndex > 0 {
+					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+					for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
+						if high[f] > high[newPHIndex] && !found {
+							newPHIndex = f
+						}
+					}
+
+					//check if current candle actually clears new selected candle as pivot high
+
+					if !((low[i+1] < low[newPHIndex]) && (high[i+1] < high[newPHIndex])) {
+						continue
+					}
+				}
+
+				if newPHIndex > 0 {
+					stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
+					pivotBarsBack = relCandleIndex - newPHIndex - 1
+
+					newLabels["top"] = map[int]string{
+						pivotBarsBack: "H",
+					}
+					// foundPH = true
+				}
+			}
+		}
+	} else if relCandleIndex > 1 {
+		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
+				//check if pivot already exists
+				found := false
+				for _, pl := range stored.PivotLows {
+					if pl == i {
+						found = true
+						break
+					}
+				}
+				if found {
+					continue
+				}
+
+				//find lowest low since last PL
+				newPLIndex := i
+
+				if len(stored.PivotHighs) > 0 && len(stored.PivotLows) > 0 && newPLIndex > 0 {
+					latestPHIndex := stored.PivotHighs[len(stored.PivotHighs)-1]
+					latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+
+					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
+						if low[f] < low[newPLIndex] && !found {
+							newPLIndex = f
+						}
+					}
+
+					//check if current candle actually clears new selected candle as pivot high
+					if !((high[i+1] > high[newPLIndex]) && (low[i+1] > low[newPLIndex])) {
+						continue
+					}
+				}
+
+				if newPLIndex > 0 {
+					stored.PivotLows = append(stored.PivotLows, newPLIndex)
+					pivotBarsBack = relCandleIndex - newPLIndex - 1
+					newLabels["bottom"] = map[int]string{
+						pivotBarsBack: "L",
+					}
+					// foundPL = true
+				}
+			}
 		}
 	}
 

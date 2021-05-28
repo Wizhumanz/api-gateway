@@ -141,6 +141,13 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
+type upwardTrend struct {
+	EntryTime  string  `json:"EntryTime"`
+	ExtentTime string  `json:"ExtentTime"`
+	Duration   float64 `json:"Duration"`
+	Growth     float64 `json:"Growth"`
+}
+
 type CoinAPITicker struct {
 	ID         string `json:"symbol_id"`
 	ExchangeID string `json:"symbol_id_exchange"`
