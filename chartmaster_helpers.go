@@ -247,13 +247,22 @@ func progressBar(userID, rid string, candle []CandlestickChartData, start, end t
 	streamPacket(ws, progressData, rid)
 }
 
-func contains(s []string, str string) bool {
+func containsString(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {
 			return true
 		}
 	}
 
+	return false
+}
+
+func containsInt(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
 	return false
 }
 

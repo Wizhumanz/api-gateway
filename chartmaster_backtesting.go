@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"time"
 )
@@ -372,9 +373,7 @@ func scan1(
 	}
 
 	/// WORK
-	// if (comparePivotLows != stored.PivotLows) {
 
-	// }
 	// comparePivotHighs = stored.PivotHighs
 	// comparePivotLows = stored.PivotLows
 	// fmt.Println(relCandleIndex)
@@ -383,7 +382,16 @@ func scan1(
 	// fmt.Println(high)
 	// fmt.Println(low)
 	// fmt.Println(close)
-	if relCandleIndex == 181 {
+	if !reflect.DeepEqual(comparePivotLows, stored.PivotLows) {
+		var tempPivotLows []int
+
+		for _, e := range stored.PivotLows {
+			if !containsInt(comparePivotLows, e) {
+				tempPivotLows = append(tempPivotLows, e)
+			}
+		}
+		comparePivotLows = stored.PivotLows
+
 		fmt.Println(stored.PivotHighs)
 		fmt.Println(stored.PivotLows)
 		startTrend := false

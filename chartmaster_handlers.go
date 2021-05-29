@@ -79,7 +79,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 			// fmt.Println(file)
 			// fmt.Println(shareResult)
 			// fmt.Println(contains(shareResult, strings.Split(file, ".")[0]))
-			if !contains(shareResult, strings.Split(file, ".")[0]) {
+			if !containsString(shareResult, strings.Split(file, ".")[0]) {
 				deleteFile(bucketName, bucketData[i])
 				break
 			}
