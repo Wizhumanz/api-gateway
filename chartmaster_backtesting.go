@@ -13,8 +13,6 @@ type PivotsStore struct {
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
-// var comparePivotHighs []int
-// var comparePivotLows []int
 
 func strat1(
 	candles []Candlestick, risk, lev, accSz float64,
@@ -171,74 +169,6 @@ func strat1(
 			}
 		}
 	}
-	// fmt.Println(relCandleIndex)
-
-	// fmt.Println(open)
-	// fmt.Println(high)
-	// fmt.Println(low)
-	// fmt.Println(close)
-	if relCandleIndex == 181 {
-		fmt.Println(stored.PivotHighs)
-		fmt.Println(stored.PivotLows)
-		startTrend := false
-		var endTrend bool
-		var startCandleIndex int
-		var endCandleIndex int
-		var trend upwardTrend
-		var trendArray []upwardTrend
-		var pivotHighsIndexInterval []int
-		var allPivotHighsStart []float64
-		var pivotHighsStart float64
-		// var pivotHighsExtent float64
-		var allPivotHighsExtent []float64
-		// var growth []float64
-		for i, _ := range stored.PivotLows {
-			if i > 0 && !startTrend && low[stored.PivotLows[i-1]] < low[stored.PivotLows[i]] {
-				startTrend = true
-				startCandleIndex = stored.PivotLows[i-1]
-				allPivotHighsStart = append(allPivotHighsStart, close[startCandleIndex])
-				pivotHighsStart = close[startCandleIndex]
-				fmt.Println("startCandleIndex")
-				fmt.Println(startCandleIndex)
-			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
-				endTrend = true
-				endCandleIndex = stored.PivotLows[i-1]
-				fmt.Println("endCandleIndex")
-				fmt.Println(endCandleIndex)
-			}
-			if startTrend && endTrend {
-				startTrend = false
-				endTrend = false
-				var pivotHighsInterval []float64
-
-				//endTime
-				for _, t := range stored.PivotHighs {
-					if t > startCandleIndex && t < endCandleIndex {
-						pivotHighsIndexInterval = append(pivotHighsIndexInterval, t)
-						pivotHighsInterval = append(pivotHighsInterval, high[t])
-					}
-				}
-				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
-				// fmt.Println("pivotHighsStart")
-				// fmt.Println(pivotHighsStart)
-				trend.Growth = MaxFloatSlice(pivotHighsInterval) - pivotHighsStart
-				trend.Duration = endCandleIndex - startCandleIndex
-				trendArray = append(trendArray, trend)
-			}
-		}
-
-		// var arrayData []interface{}
-
-		// ws := wsConnectionsChartmaster[userID]
-
-		// arrayData = append(arrayData, trend)
-		// streamPacket(ws, arrayData, rid)
-
-		// fmt.Println(pivotHighsIndexInterval)
-		fmt.Println(allPivotHighsStart)
-		fmt.Println(allPivotHighsExtent)
-		fmt.Println(trendArray)
-	}
 	// if stored.PivotLows
 
 	//manage positions
@@ -311,6 +241,9 @@ func MaxFloatSlice(v []float64) float64 {
 	sort.Float64s(v)
 	return v[len(v)-1]
 }
+
+var comparePivotHighs []int
+var comparePivotLows []int
 
 func scan1(
 	candles []Candlestick, risk, lev, accSz float64,
@@ -436,6 +369,76 @@ func scan1(
 				}
 			}
 		}
+	}
+
+	/// WORK
+	// fmt.Println(relCandleIndex)
+
+	// fmt.Println(open)
+	// fmt.Println(high)
+	// fmt.Println(low)
+	// fmt.Println(close)
+	if relCandleIndex == 181 {
+		fmt.Println(stored.PivotHighs)
+		fmt.Println(stored.PivotLows)
+		startTrend := false
+		var endTrend bool
+		var startCandleIndex int
+		var endCandleIndex int
+		var trend upwardTrend
+		var trendArray []upwardTrend
+		var pivotHighsIndexInterval []int
+		var allPivotHighsStart []float64
+		var pivotHighsStart float64
+		// var pivotHighsExtent float64
+		var allPivotHighsExtent []float64
+		// var growth []float64
+		for i, _ := range stored.PivotLows {
+			if i > 0 && !startTrend && low[stored.PivotLows[i-1]] < low[stored.PivotLows[i]] {
+				startTrend = true
+				startCandleIndex = stored.PivotLows[i-1]
+				allPivotHighsStart = append(allPivotHighsStart, close[startCandleIndex])
+				pivotHighsStart = close[startCandleIndex]
+				fmt.Println("startCandleIndex")
+				fmt.Println(startCandleIndex)
+			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
+				endTrend = true
+				endCandleIndex = stored.PivotLows[i-1]
+				fmt.Println("endCandleIndex")
+				fmt.Println(endCandleIndex)
+			}
+			if startTrend && endTrend {
+				startTrend = false
+				endTrend = false
+				var pivotHighsInterval []float64
+
+				//endTime
+				for _, t := range stored.PivotHighs {
+					if t > startCandleIndex && t < endCandleIndex {
+						pivotHighsIndexInterval = append(pivotHighsIndexInterval, t)
+						pivotHighsInterval = append(pivotHighsInterval, high[t])
+					}
+				}
+				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
+				// fmt.Println("pivotHighsStart")
+				// fmt.Println(pivotHighsStart)
+				trend.Growth = MaxFloatSlice(pivotHighsInterval) - pivotHighsStart
+				trend.Duration = endCandleIndex - startCandleIndex
+				trendArray = append(trendArray, trend)
+			}
+		}
+
+		// var arrayData []interface{}
+
+		// ws := wsConnectionsChartmaster[userID]
+
+		// arrayData = append(arrayData, trend)
+		// streamPacket(ws, arrayData, rid)
+
+		// fmt.Println(pivotHighsIndexInterval)
+		fmt.Println(allPivotHighsStart)
+		fmt.Println(allPivotHighsExtent)
+		fmt.Println(trendArray)
 	}
 
 	return nil
