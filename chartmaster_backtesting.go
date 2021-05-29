@@ -291,7 +291,7 @@ func MaxFloatSlice(v []float64) float64 {
 }
 
 func scan1(
-	risk, lev, accSz float64,
+	candle Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
