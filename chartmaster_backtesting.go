@@ -14,7 +14,7 @@ type PivotsStore struct {
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
 func strat1(
-	candle Candlestick, risk, lev, accSz float64,
+	candles []Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
@@ -254,7 +254,7 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, 
 	strategySim *StrategySimulator,
 	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func([]Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 	buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
@@ -291,7 +291,7 @@ func MaxFloatSlice(v []float64) float64 {
 }
 
 func scan1(
-	candle Candlestick, risk, lev, accSz float64,
+	candles []Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
@@ -421,7 +421,7 @@ func scan1(
 
 func runBacktest(
 	risk, lev, accSz float64,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func([]Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
@@ -506,17 +506,19 @@ func runBacktest(
 		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
 
 		//run strat for all chunk's candles
+		var candles []Candlestick
 		var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
 		var chunkAddedPCData []ProfitCurveDataPoint
 		var chunkAddedSTData []SimulatedTradeDataPoint
 		var labels map[string]map[int]string
 		for i, candle := range periodCandles {
+			candles = append(candles, candle)
 			allOpens = append(allOpens, candle.Open)
 			allHighs = append(allHighs, candle.High)
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			labels = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+			labels = userStrat(candles, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
 
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
