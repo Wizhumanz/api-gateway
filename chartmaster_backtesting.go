@@ -205,7 +205,7 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, 
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
 	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
-	appendSync chan string) {
+	buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
 	//check if candles exist in cache
 	redisKeyPrefix := ticker + ":" + period + ":"
@@ -224,32 +224,61 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, 
 	appendCandles := func() {
 		*allCandles = append(*allCandles, chunkCandles...)
 	}
-	firstCandleTime, _ := time.Parse(httpTimeFormat, chunkCandles[0].DateTime)
+	firstCandleTime, err := time.Parse(httpTimeFormat, chunkCandles[0].DateTime)
+	if err != nil {
+		fmt.Printf("parsing firstCandleTime err = %v", err)
+	}
+	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
+	if err2 != nil {
+		fmt.Printf("parsing lastCandleTime err = %v", err2)
+	}
 	if firstCandleTime == startTime {
 		appendCandles()
 
 		//allows next chunk to stream results
-		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
-		appendSync <- chunkLastCandleTime.Format(httpTimeFormat)
-		fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime)
+		msg := chunkLastCandleTime.Format(httpTimeFormat)
+		select {
+		case buildCandleDataSync <- msg:
+			fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
+		default:
+			fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
+		}
 	} else {
 		for {
 			previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
-			fmt.Printf(colorYellow+"awaiting in chunk %v for %v"+colorReset, firstCandleTime, previousChunkLastCandleTime)
-			msg := <-appendSync
-			fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
+			// fmt.Printf(colorYellow+"awaiting in chunk %v for %v\n"+colorReset, firstCandleTime, previousChunkLastCandleTime.Format(httpTimeFormat))
+			var msg string
+			select {
+			case newMsg := <-buildCandleDataSync:
+				fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, newMsg, previousChunkLastCandleTime.Format(httpTimeFormat))
+				msg = newMsg
+			default:
+
+			}
+
 			if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-				// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
 				appendCandles()
 
-				//allows next chunk to stream results
-				chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
-				appendSync <- chunkLastCandleTime.Format(httpTimeFormat)
-				fmt.Println(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime)
+				//allows next chunk to append candle data
+				msg := chunkLastCandleTime.Format(httpTimeFormat)
+				select {
+				case buildCandleDataSync <- msg:
+					fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
+				default:
+					fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
+				}
+
 				break
 			} else {
 				//pass on message if not intended receiver
-				appendSync <- msg
+				if msg != "" {
+					select {
+					case buildCandleDataSync <- msg:
+						fmt.Printf("passed on msg %v from chunk %v", msg, chunkLastCandleTime.Format(httpTimeFormat))
+					default:
+						// fmt.Println("passed on nothing")
+					}
+				}
 			}
 		}
 	}
@@ -263,6 +292,7 @@ func runBacktest(
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//init
+	buildCandleDataSync := make(chan string)
 	var store interface{} //save state between strategy executions on each candle
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
@@ -286,7 +316,6 @@ func runBacktest(
 	allCloses := []float64{}
 	relIndex := 1
 	fetchCandlesStart := startTime
-	buildCandleDataSync := make(chan string, 100)
 
 	//fetch all candle data concurrently
 	for {
@@ -316,10 +345,15 @@ func runBacktest(
 	for {
 		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
 		msg := <-buildCandleDataSync
-		fmt.Println(msg)
-		msgTime, err := time.Parse(httpTimeFormat, msg)
-		if err != nil {
-			fmt.Println(err)
+		var msgTime time.Time
+		if msg != "" {
+			t, err := time.Parse(httpTimeFormat, msg)
+			msgTime = t
+			if err != nil {
+				fmt.Printf("wait all append complete time parse err = %v", err)
+				continue
+			}
+		} else {
 			continue
 		}
 
