@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"reflect"
 	"sort"
 	"time"
 )
@@ -203,13 +202,8 @@ func strat1(
 	return newLabels
 }
 
-func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, ticker, period string,
-	strategySim *StrategySimulator,
-	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
-	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
-	userStrat func([]Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
-	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
-	buildCandleDataSync chan string) {
+func getChunkCandleData(allCandles *[]Candlestick, packetSize int, ticker, period string,
+	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time, buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
 	//check if candles exist in cache
 	redisKeyPrefix := ticker + ":" + period + ":"
@@ -221,10 +215,12 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, 
 	} else {
 		//otherwise, get data in cache
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		// fmt.Printf("Each Chunk: %v", chunkCandles)
 	}
-
 	//append chunk's candles to global slice
 	*allCandles = append(*allCandles, chunkCandles...)
+	// fmt.Printf("Get Chunks: %v", *allCandles)
+
 	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
 	if err2 != nil {
 		fmt.Printf("parsing lastCandleTime err = %v", err2)
@@ -376,13 +372,15 @@ func scan1(
 
 	// comparePivotHighs = stored.PivotHighs
 	// comparePivotLows = stored.PivotLows
-	// fmt.Println(relCandleIndex)
+	fmt.Println("relCandleIndex")
+	fmt.Println(relCandleIndex)
 
 	// fmt.Println(open)
 	// fmt.Println(high)
 	// fmt.Println(low)
 	// fmt.Println(close)
-	if !reflect.DeepEqual(comparePivotLows, stored.PivotLows) {
+	// !reflect.DeepEqual(comparePivotLows, stored.PivotLows)
+	if relCandleIndex == 181 {
 		var tempPivotLows []int
 
 		for _, e := range stored.PivotLows {
@@ -501,22 +499,23 @@ func runBacktest(
 			fetchCandlesEnd = endTime
 		}
 
-		go getChunkCandleData(&allCandleData, packetSize, userID, rid, ticker, period,
-			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
-			userStrat, packetSender, buildCandleDataSync)
+		go getChunkCandleData(&allCandleData, packetSize, ticker, period,
+			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
 
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
-
+	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
 		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
 		msg := <-buildCandleDataSync
-		var msgTime time.Time
+		// fmt.Println("LOOOOOOOK HEERERERE: " + msg)
+
+		// var msgTime time.Time
 		if msg != "" {
-			t, err := time.Parse(httpTimeFormat, msg)
-			msgTime = t
+			_, err := time.Parse(httpTimeFormat, msg)
+			// msgTime = t
 			if err != nil {
 				fmt.Printf("wait all append complete time parse err = %v", err)
 				continue
@@ -524,12 +523,13 @@ func runBacktest(
 		} else {
 			continue
 		}
-
-		if msgTime.After(endTime) || msgTime == endTime {
+		// (msgTime.After(endTime) || msgTime == endTime) &&
+		if len(allCandleData) >= int(endTime.Sub(startTime).Minutes()) {
+			// fmt.Println("Ending")
 			break
 		}
 	}
-
+	// fmt.Printf("LOOOOOOOK HEERERERE: %v", len(allCandleData))
 	//run strat on all candles in chunk, stream each chunk to client
 	stratComputeStartIndex := 0
 	for {
@@ -541,6 +541,7 @@ func runBacktest(
 		if stratComputeEndIndex > len(allCandleData) {
 			stratComputeEndIndex = len(allCandleData)
 		}
+		fmt.Printf("computing index %v to %v", stratComputeStartIndex, stratComputeEndIndex)
 		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
 
 		//run strat for all chunk's candles
@@ -578,107 +579,75 @@ func runBacktest(
 		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
 		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
 
-		fmt.Printf(colorCyan+"AFTER len(retCandles) = %v\n"+colorReset, len(retCandles))
-
 		progressBar(userID, rid, retCandles, startTime, endTime)
 
 		//stream data back to client in every chunk
-		//rm duplicates
-		var uniquePCPoints []ProfitCurveDataPoint
-		for i, p := range (retProfitCurve)[0].Data {
-			if len(uniquePCPoints) == 0 {
-				if i != 0 {
-					uniquePCPoints = append(uniquePCPoints, p)
-				}
-			} else {
-				var found ProfitCurveDataPoint
-				for _, search := range uniquePCPoints {
-					if search.Equity == p.Equity {
-						found = search
-					}
-				}
-
-				if found.Equity == 0 && found.DateTime == "" {
-					uniquePCPoints = append(uniquePCPoints, p)
-				}
-			}
-		}
-		(retProfitCurve)[0].Data = uniquePCPoints
-
-		var uniqueStPoints []SimulatedTradeDataPoint
-		for i, p := range (retSimTrades)[0].Data {
-			if len(uniqueStPoints) == 0 {
-				if i != 0 {
-					uniqueStPoints = append(uniqueStPoints, p)
-				}
-			} else {
-				var found SimulatedTradeDataPoint
-				for _, search := range uniqueStPoints {
-					if search.DateTime == p.DateTime {
-						found = search
-					}
-				}
-
-				if found.EntryPrice == 0 && found.DateTime == "" {
-					uniqueStPoints = append(uniqueStPoints, p)
-				}
-			}
-		}
-		(retSimTrades)[0].Data = uniqueStPoints
 
 		//stream data in order, wait for previous chunk to stream first
-		streamPacket := func() {
-			packetSender(userID, rid,
-				chunkAddedCandles,
-				[]ProfitCurveData{
-					{
-						Label: "strat1", //TODO: prep for dynamic strategy param values
-						Data:  chunkAddedPCData,
-					},
-				},
-				[]SimulatedTradeData{
-					{
-						Label: "strat1",
-						Data:  chunkAddedSTData,
-					},
-				})
-		}
-		firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
+		// streamPacket := func() {
+		// 	packetSender(userID, rid,
+		// 		chunkAddedCandles,
+		// 		[]ProfitCurveData{
+		// 			{
+		// 				Label: "strat1", //TODO: prep for dynamic strategy param values
+		// 				Data:  chunkAddedPCData,
+		// 			},
+		// 		},
+		// 		[]SimulatedTradeData{
+		// 			{
+		// 				Label: "strat1",
+		// 				Data:  chunkAddedSTData,
+		// 			},
+		// 		})
+		// }
+		// fmt.Printf("\nLLOOOOOOOOK: %v", chunkAddedCandles)
+		// go func() {
+		// time.Sleep(2 * time.Second)
+		// }()
+		if chunkAddedCandles != nil {
+			firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
 
-		if firstCandleTime == startTime {
-			streamPacket()
+			if firstCandleTime == startTime {
+				fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
 
-			//allows next chunk to stream results
-			chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-			buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
-		} else {
-			for {
-				previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
-				msg := <-buildCandleDataSync
-				// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
-				if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-					// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
+				// streamPacket()
 
-					defer func() {
-						if r := recover(); r != nil {
-							streamPacket()
-						}
-					}()
+				// //allows next chunk to stream results
+				// chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+				// buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+			} else {
+				fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
 
-					streamPacket()
+				// for {
+				// 	previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
+				// 	msg := <-buildCandleDataSync
+				// 	// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
+				// 	if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
+				// 		// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
 
-					//allows next chunk to stream results
-					chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-					buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
-					break
-				} else {
-					//pass on message if not intended receiver
-					buildCandleDataSync <- msg
-				}
+				// 		defer func() {
+				// 			if r := recover(); r != nil {
+				// 				streamPacket()
+				// 			}
+				// 		}()
+
+				// 		streamPacket()
+
+				// 		//allows next chunk to stream results
+				// 		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+				// 		buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+				// 		break
+				// 	} else {
+				// 		//pass on message if not intended receiver
+				// 		buildCandleDataSync <- msg
+				// 	}
+				// }
 			}
-		}
 
-		stratComputeStartIndex = stratComputeEndIndex
+			stratComputeStartIndex = stratComputeEndIndex
+		} else {
+			break
+		}
 	}
 
 	fmt.Println(colorGreen + "Backtest complete!" + colorReset)
