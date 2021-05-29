@@ -372,6 +372,11 @@ func scan1(
 	}
 
 	/// WORK
+	// if (comparePivotLows != stored.PivotLows) {
+
+	// }
+	// comparePivotHighs = stored.PivotHighs
+	// comparePivotLows = stored.PivotLows
 	// fmt.Println(relCandleIndex)
 
 	// fmt.Println(open)
