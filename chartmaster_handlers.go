@@ -66,7 +66,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var candles []CandlestickChartData
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
-	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, scan1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
 	// Get all of user's shared history json data
 	shareResult := getAllShareResult(userID)

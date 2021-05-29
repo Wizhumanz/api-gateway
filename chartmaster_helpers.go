@@ -118,7 +118,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 		}
 	}
 
-	fmt.Println("Cache fetch complete")
+	fmt.Printf("Cache fetch complete %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
 	return retCandles
 }
 
@@ -151,7 +151,7 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 
 			index := len(retCandlesArr) - labelBB - 1
 			// fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
-			if index >= 0 {
+			if index >= 0 && index < len(retCandlesArr) {
 				retCandlesArr[index].LabelTop = labelText
 				// fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
 			}
@@ -258,6 +258,8 @@ func contains(s []string, str string) bool {
 }
 
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
+	fmt.Printf(colorRed+"streaming start = %v to %v\n"+colorReset, c[0].DateTime, c[len(c)-1].DateTime)
+
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
 		//profit curve
