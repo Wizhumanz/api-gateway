@@ -295,18 +295,18 @@ func scan1(
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage interface{}) (map[string]map[int]string, interface{}) {
+	storage *interface{}) map[string]map[int]string {
 
 	// foundPL := false
 	// foundPH := false
-	stored, ok := storage.(PivotsStore)
+	stored, ok := (*storage).(PivotsStore)
 	if !ok {
 		if relCandleIndex == 1 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
 		} else {
 			fmt.Errorf("storage obj assertion fail")
-			return nil, storage
+			return nil
 		}
 	}
 
@@ -416,7 +416,7 @@ func scan1(
 		}
 	}
 
-	return newLabels, stored
+	return nil
 }
 
 func runBacktest(
