@@ -14,11 +14,14 @@ type PivotsStore struct {
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
 func strat1(
-	risk, lev, accSz float64,
+	candle Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage interface{}) (map[string]map[int]string, interface{}) {
+	storage *interface{}) map[string]map[int]string {
+	// if len(close) > 0 {
+	// 	fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
+	// }
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
 	// if relCandleIndex > 3 && relCandleIndex < 10 {
@@ -29,14 +32,14 @@ func strat1(
 
 	foundPL := false
 	foundPH := false
-	stored, ok := storage.(PivotsStore)
+	stored, ok := (*storage).(PivotsStore)
 	if !ok {
 		if relCandleIndex == 1 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
 		} else {
 			fmt.Errorf("storage obj assertion fail")
-			return nil, storage
+			return nil
 		}
 	}
 
@@ -60,7 +63,7 @@ func strat1(
 	}
 	if lookForHigh && relCandleIndex > 1 {
 		//check if new candle took out the low of previous candles since last pivot
-		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+		for i := lastPivotIndex; (i+1) < len(low) && (i+1) < len(high); i++ { //TODO: should be relCandleIndex-1 but causes index outta range err
 			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
 				//check if pivot already exists
 				found := false
@@ -113,7 +116,7 @@ func strat1(
 			}
 		}
 	} else if relCandleIndex > 1 {
-		for i := lastPivotIndex; i < relCandleIndex-1; i++ {
+		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
 				//check if pivot already exists
 				found := false
@@ -140,16 +143,13 @@ func strat1(
 					// if relCandleIndex > 150 && relCandleIndex < 170 {
 					// 	fmt.Printf("SEARCH lowest low latestPHIndex = %v, latestPLIndex = %v\n", latestPHIndex, latestPLIndex)
 					// }
-					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex; f-- {
+					for f := newPLIndex - 1; f >= latestPHIndex && f > latestPLIndex && f < len(low) && f < len(high); f-- {
 						if low[f] < low[newPLIndex] && !found {
 							newPLIndex = f
 						}
 					}
 
 					//check if current candle actually clears new selected candle as pivot high
-					// if relCandleIndex > 150 && relCandleIndex < 170 {
-					// 	fmt.Printf("Checking new PL index %v L = %v, H = %v + candle index %v L = %v, H = %v", newPLIndex, low[newPLIndex], high[newPLIndex], i+1, low[i+1], high[i+1])
-					// }
 					if !((high[i+1] > high[newPLIndex]) && (low[i+1] > low[newPLIndex])) {
 						continue
 					}
@@ -220,7 +220,7 @@ func strat1(
 	// if stored.PivotLows
 
 	//manage positions
-	if strategy.PosLongSize == 0 && relCandleIndex > 0 { //no long pos
+	if (*strategy).PosLongSize == 0 && relCandleIndex > 0 { //no long pos
 		//enter if current PL higher than previous
 		if foundPL {
 			currentPL := low[relCandleIndex-1]
@@ -234,19 +234,55 @@ func strat1(
 				posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
 				posSize := posCap / entryPrice
 				// fmt.Printf("Entering with %v\n", posSize)
-				strategy.Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
-				// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
+				(*strategy).Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
+				// fmt.Printf(colorGreen+"BUY IN %v\n"+colorReset, close[relCandleIndex-1])
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
 		if foundPH {
 			// fmt.Printf("Closing trade at %v\n", close[relCandleIndex-1])
-			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex)
-			// fmt.Printf("SELL EXIT %v\n", close[relCandleIndex-1])
+			(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex)
+			// fmt.Printf(colorRed+"SELL EXIT %v\n"+colorReset, close[relCandleIndex-1])
 		}
 	}
 
-	return newLabels, stored
+	*storage = stored
+	return newLabels
+}
+
+func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, ticker, period string,
+	strategySim *StrategySimulator,
+	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
+	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
+	buildCandleDataSync chan string) {
+	var chunkCandles []Candlestick
+	//check if candles exist in cache
+	redisKeyPrefix := ticker + ":" + period + ":"
+	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
+	testRes, _ := rdbChartmaster.HGetAll(ctx, testKey).Result()
+	if (testRes["open"] == "") && (testRes["close"] == "") {
+		//if no data in cache, do fresh GET and save to cache
+		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+	} else {
+		//otherwise, get data in cache
+		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+	}
+
+	//append chunk's candles to global slice
+	*allCandles = append(*allCandles, chunkCandles...)
+	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
+	if err2 != nil {
+		fmt.Printf("parsing lastCandleTime err = %v", err2)
+	}
+	msg := chunkLastCandleTime.Format(httpTimeFormat)
+	select {
+	case buildCandleDataSync <- msg:
+		fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
+	default:
+		fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
+	}
 }
 
 func MaxFloatSlice(v []float64) float64 {
@@ -385,13 +421,13 @@ func scan1(
 
 func runBacktest(
 	risk, lev, accSz float64,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, interface{}) (map[string]map[int]string, interface{}),
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
-
 	//init
+	buildCandleDataSync := make(chan string)
 	var store interface{} //save state between strategy executions on each candle
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
@@ -407,44 +443,72 @@ func runBacktest(
 		},
 	}
 	strategySim := StrategySimulator{}
-	strategySim.Init(accSz) //TODO: take func arg
-
-	//run backtest in chunks for client stream responsiveness
+	strategySim.Init(accSz)
+	var allCandleData []Candlestick
 	allOpens := []float64{}
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
 	relIndex := 1
-	lastPacketEndIndexCandles := 0
-	lastPacketEndIndexPC := 0
-	lastPacketEndIndexSimT := 0
 	fetchCandlesStart := startTime
+
+	//fetch all candle data concurrently
 	for {
 		if fetchCandlesStart.After(endTime) {
 			break
 		}
-
-		//get all candles of chunk
-		var periodCandles []Candlestick
 
 		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * time.Duration(packetSize))
 		if fetchCandlesEnd.After(endTime) {
 			fetchCandlesEnd = endTime
 		}
 
-		//check if candles exist in cache
-		redisKeyPrefix := ticker + ":" + period + ":"
-		testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
-		testRes, _ := rdbChartmaster.HGetAll(ctx, testKey).Result()
-		if (testRes["open"] == "") && (testRes["close"] == "") {
-			//if no data in cache, do fresh GET and save to cache
-			periodCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		go getChunkCandleData(&allCandleData, packetSize, userID, rid, ticker, period,
+			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
+			userStrat, packetSender, buildCandleDataSync)
+
+		//increment
+		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
+	}
+
+	//wait for all candle data fetch complete before running strategy
+	for {
+		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
+		msg := <-buildCandleDataSync
+		var msgTime time.Time
+		if msg != "" {
+			t, err := time.Parse(httpTimeFormat, msg)
+			msgTime = t
+			if err != nil {
+				fmt.Printf("wait all append complete time parse err = %v", err)
+				continue
+			}
 		} else {
-			//otherwise, get data in cache
-			periodCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+			continue
 		}
 
+		if msgTime.After(endTime) || msgTime == endTime {
+			break
+		}
+	}
+
+	//run strat on all candles in chunk, stream each chunk to client
+	stratComputeStartIndex := 0
+	for {
+		if stratComputeStartIndex > len(allCandleData) {
+			break
+		}
+
+		stratComputeEndIndex := stratComputeStartIndex + packetSize
+		if stratComputeEndIndex > len(allCandleData) {
+			stratComputeEndIndex = len(allCandleData)
+		}
+		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
+
 		//run strat for all chunk's candles
+		var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
+		var chunkAddedPCData []ProfitCurveDataPoint
+		var chunkAddedSTData []SimulatedTradeDataPoint
 		var labels map[string]map[int]string
 		for i, candle := range periodCandles {
 			allOpens = append(allOpens, candle.Open)
@@ -452,29 +516,36 @@ func runBacktest(
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			labels, store = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, store)
+			labels = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
 
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
 			var simTradeData SimulatedTradeDataPoint
-			retCandles, pcData, simTradeData = saveDisplayData(retCandles, candle, strategySim, i, labels, retProfitCurve[0].Data)
+			chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, candle, strategySim, i, labels, chunkAddedPCData)
 			if pcData.Equity > 0 {
-				retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
+				chunkAddedPCData = append(chunkAddedPCData, pcData)
 			}
 			if simTradeData.DateTime != "" {
-				retSimTrades[0].Data = append(retSimTrades[0].Data, simTradeData)
+				chunkAddedSTData = append(chunkAddedSTData, simTradeData)
 			}
 
 			//absolute index from absolute start of computation period
 			relIndex++
 		}
 
+		//update more global vars
+		retCandles = append(retCandles, chunkAddedCandles...)
+		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
+		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
+
+		fmt.Printf(colorCyan+"AFTER len(retCandles) = %v\n"+colorReset, len(retCandles))
+
 		progressBar(userID, rid, retCandles, startTime, endTime)
 
 		//stream data back to client in every chunk
 		//rm duplicates
 		var uniquePCPoints []ProfitCurveDataPoint
-		for i, p := range retProfitCurve[0].Data {
+		for i, p := range (retProfitCurve)[0].Data {
 			if len(uniquePCPoints) == 0 {
 				if i != 0 {
 					uniquePCPoints = append(uniquePCPoints, p)
@@ -492,10 +563,10 @@ func runBacktest(
 				}
 			}
 		}
-		retProfitCurve[0].Data = uniquePCPoints
+		(retProfitCurve)[0].Data = uniquePCPoints
 
 		var uniqueStPoints []SimulatedTradeDataPoint
-		for i, p := range retSimTrades[0].Data {
+		for i, p := range (retSimTrades)[0].Data {
 			if len(uniqueStPoints) == 0 {
 				if i != 0 {
 					uniqueStPoints = append(uniqueStPoints, p)
@@ -513,38 +584,61 @@ func runBacktest(
 				}
 			}
 		}
-		retSimTrades[0].Data = uniqueStPoints
+		(retSimTrades)[0].Data = uniqueStPoints
 
-		packetEndIndex := lastPacketEndIndexCandles + packetSize
-		if packetEndIndex > len(retCandles) {
-			packetEndIndex = len(retCandles)
+		//stream data in order, wait for previous chunk to stream first
+		streamPacket := func() {
+			packetSender(userID, rid,
+				chunkAddedCandles,
+				[]ProfitCurveData{
+					{
+						Label: "strat1", //TODO: prep for dynamic strategy param values
+						Data:  chunkAddedPCData,
+					},
+				},
+				[]SimulatedTradeData{
+					{
+						Label: "strat1",
+						Data:  chunkAddedSTData,
+					},
+				})
 		}
-		// fmt.Printf("Sending candles %v to %v\n", lastPacketEndIndexCandles, packetEndIndex)
-		pcFetchEndIndex := len(retProfitCurve[0].Data)
-		packetPC := retProfitCurve[0].Data[lastPacketEndIndexPC:pcFetchEndIndex]
-		stFetchEndIndex := len(retSimTrades[0].Data)
-		packetSt := retSimTrades[0].Data[lastPacketEndIndexSimT:stFetchEndIndex]
-		packetSender(userID, rid,
-			retCandles[lastPacketEndIndexCandles:packetEndIndex],
-			[]ProfitCurveData{
-				{
-					Label: "strat1", //TODO: prep for dynamic strategy param values
-					Data:  packetPC,
-				},
-			},
-			[]SimulatedTradeData{
-				{
-					Label: "strat1",
-					Data:  packetSt,
-				},
-			})
+		firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
 
-		//save last index for streaming next chunk
-		lastPacketEndIndexCandles = packetEndIndex
-		lastPacketEndIndexPC = int(math.Max(float64(pcFetchEndIndex-1), float64(0)))
-		lastPacketEndIndexSimT = int(math.Max(float64(stFetchEndIndex-1), float64(0)))
-		//increment
-		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
+		if firstCandleTime == startTime {
+			streamPacket()
+
+			//allows next chunk to stream results
+			chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+			buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+		} else {
+			for {
+				previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
+				msg := <-buildCandleDataSync
+				// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
+				if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
+					// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
+
+					defer func() {
+						if r := recover(); r != nil {
+							streamPacket()
+						}
+					}()
+
+					streamPacket()
+
+					//allows next chunk to stream results
+					chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+					buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+					break
+				} else {
+					//pass on message if not intended receiver
+					buildCandleDataSync <- msg
+				}
+			}
+		}
+
+		stratComputeStartIndex = stratComputeEndIndex
 	}
 
 	fmt.Println(colorGreen + "Backtest complete!" + colorReset)
