@@ -13,7 +13,7 @@ type PivotsStore struct {
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
 func strat1(
-	risk, lev, accSz float64,
+	candle Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
@@ -203,7 +203,7 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, 
 	strategySim *StrategySimulator,
 	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 	buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
@@ -220,73 +220,23 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, 
 	}
 
 	//append chunk's candles to global slice
-	//add data in order, wait for previous chunk to add first
-	appendCandles := func() {
-		*allCandles = append(*allCandles, chunkCandles...)
-	}
-	firstCandleTime, err := time.Parse(httpTimeFormat, chunkCandles[0].DateTime)
-	if err != nil {
-		fmt.Printf("parsing firstCandleTime err = %v", err)
-	}
+	*allCandles = append(*allCandles, chunkCandles...)
 	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
 	if err2 != nil {
 		fmt.Printf("parsing lastCandleTime err = %v", err2)
 	}
-	if firstCandleTime == startTime {
-		appendCandles()
-
-		//allows next chunk to stream results
-		msg := chunkLastCandleTime.Format(httpTimeFormat)
-		select {
-		case buildCandleDataSync <- msg:
-			fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
-		default:
-			fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
-		}
-	} else {
-		for {
-			previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
-			// fmt.Printf(colorYellow+"awaiting in chunk %v for %v\n"+colorReset, firstCandleTime, previousChunkLastCandleTime.Format(httpTimeFormat))
-			var msg string
-			select {
-			case newMsg := <-buildCandleDataSync:
-				fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, newMsg, previousChunkLastCandleTime.Format(httpTimeFormat))
-				msg = newMsg
-			default:
-
-			}
-
-			if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-				appendCandles()
-
-				//allows next chunk to append candle data
-				msg := chunkLastCandleTime.Format(httpTimeFormat)
-				select {
-				case buildCandleDataSync <- msg:
-					fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
-				default:
-					fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
-				}
-
-				break
-			} else {
-				//pass on message if not intended receiver
-				if msg != "" {
-					select {
-					case buildCandleDataSync <- msg:
-						fmt.Printf("passed on msg %v from chunk %v", msg, chunkLastCandleTime.Format(httpTimeFormat))
-					default:
-						// fmt.Println("passed on nothing")
-					}
-				}
-			}
-		}
+	msg := chunkLastCandleTime.Format(httpTimeFormat)
+	select {
+	case buildCandleDataSync <- msg:
+		fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
+	default:
+		fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
 	}
 }
 
 func runBacktest(
 	risk, lev, accSz float64,
-	userStrat func(float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
@@ -328,14 +278,9 @@ func runBacktest(
 			fetchCandlesEnd = endTime
 		}
 
-		// fmt.Printf("runnin with start = %v, end = %v\n", fetchCandlesStart.Format(httpTimeFormat), fetchCandlesEnd.Format(httpTimeFormat))
-		// fmt.Printf("BEFORE len = %v, retCandles = %v\n", len(retCandles), retCandles)
-
 		go getChunkCandleData(&allCandleData, packetSize, userID, rid, ticker, period,
 			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
 			userStrat, packetSender, buildCandleDataSync)
-
-		// fmt.Printf("AFTER len = %v, retCandles = %v\n", len(retCandles), retCandles)
 
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
@@ -386,7 +331,7 @@ func runBacktest(
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
 			//TODO: build results and run for different param sets
-			labels = userStrat(risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+			labels = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
 
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
