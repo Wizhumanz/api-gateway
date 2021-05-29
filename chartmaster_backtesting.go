@@ -199,13 +199,8 @@ func strat1(
 	return newLabels
 }
 
-func getChunkCandleData(allCandles *[]Candlestick, packetSize int, userID, rid, ticker, period string,
-	strategySim *StrategySimulator,
-	retCandles *[]CandlestickChartData, retProfitCurve *[]ProfitCurveData, retSimTrades *[]SimulatedTradeData,
-	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
-	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
-	buildCandleDataSync chan string) {
+func getChunkCandleData(allCandles *[]Candlestick, packetSize int, ticker, period string,
+	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time, buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
 	//check if candles exist in cache
 	redisKeyPrefix := ticker + ":" + period + ":"
@@ -278,9 +273,8 @@ func runBacktest(
 			fetchCandlesEnd = endTime
 		}
 
-		go getChunkCandleData(&allCandleData, packetSize, userID, rid, ticker, period,
-			&strategySim, &retCandles, &retProfitCurve, &retSimTrades, startTime, endTime, fetchCandlesStart, fetchCandlesEnd,
-			userStrat, packetSender, buildCandleDataSync)
+		go getChunkCandleData(&allCandleData, packetSize, ticker, period,
+			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
 
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
