@@ -318,6 +318,7 @@ func runBacktest(
 		if stratComputeEndIndex > len(allCandleData) {
 			stratComputeEndIndex = len(allCandleData)
 		}
+		fmt.Printf("computing index %v to %v", stratComputeStartIndex, stratComputeEndIndex)
 		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
 
 		//run strat for all chunk's candles
@@ -353,104 +354,64 @@ func runBacktest(
 		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
 		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
 
-		fmt.Printf(colorCyan+"AFTER len(retCandles) = %v\n"+colorReset, len(retCandles))
-
 		progressBar(userID, rid, retCandles, startTime, endTime)
 
 		//stream data back to client in every chunk
-		//rm duplicates
-		var uniquePCPoints []ProfitCurveDataPoint
-		for i, p := range (retProfitCurve)[0].Data {
-			if len(uniquePCPoints) == 0 {
-				if i != 0 {
-					uniquePCPoints = append(uniquePCPoints, p)
-				}
-			} else {
-				var found ProfitCurveDataPoint
-				for _, search := range uniquePCPoints {
-					if search.Equity == p.Equity {
-						found = search
-					}
-				}
-
-				if found.Equity == 0 && found.DateTime == "" {
-					uniquePCPoints = append(uniquePCPoints, p)
-				}
-			}
-		}
-		(retProfitCurve)[0].Data = uniquePCPoints
-
-		var uniqueStPoints []SimulatedTradeDataPoint
-		for i, p := range (retSimTrades)[0].Data {
-			if len(uniqueStPoints) == 0 {
-				if i != 0 {
-					uniqueStPoints = append(uniqueStPoints, p)
-				}
-			} else {
-				var found SimulatedTradeDataPoint
-				for _, search := range uniqueStPoints {
-					if search.DateTime == p.DateTime {
-						found = search
-					}
-				}
-
-				if found.EntryPrice == 0 && found.DateTime == "" {
-					uniqueStPoints = append(uniqueStPoints, p)
-				}
-			}
-		}
-		(retSimTrades)[0].Data = uniqueStPoints
 
 		//stream data in order, wait for previous chunk to stream first
-		streamPacket := func() {
-			packetSender(userID, rid,
-				chunkAddedCandles,
-				[]ProfitCurveData{
-					{
-						Label: "strat1", //TODO: prep for dynamic strategy param values
-						Data:  chunkAddedPCData,
-					},
-				},
-				[]SimulatedTradeData{
-					{
-						Label: "strat1",
-						Data:  chunkAddedSTData,
-					},
-				})
-		}
+		// streamPacket := func() {
+		// 	packetSender(userID, rid,
+		// 		chunkAddedCandles,
+		// 		[]ProfitCurveData{
+		// 			{
+		// 				Label: "strat1", //TODO: prep for dynamic strategy param values
+		// 				Data:  chunkAddedPCData,
+		// 			},
+		// 		},
+		// 		[]SimulatedTradeData{
+		// 			{
+		// 				Label: "strat1",
+		// 				Data:  chunkAddedSTData,
+		// 			},
+		// 		})
+		// }
 		firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
 
 		if firstCandleTime == startTime {
-			streamPacket()
+			fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
 
-			//allows next chunk to stream results
-			chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-			buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+			// streamPacket()
+
+			// //allows next chunk to stream results
+			// chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+			// buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
 		} else {
-			for {
-				previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
-				msg := <-buildCandleDataSync
-				// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
-				if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-					// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
+			fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
 
-					defer func() {
-						if r := recover(); r != nil {
-							streamPacket()
-						}
-					}()
+			// for {
+			// 	previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
+			// 	msg := <-buildCandleDataSync
+			// 	// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
+			// 	if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
+			// 		// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
 
-					streamPacket()
+			// 		defer func() {
+			// 			if r := recover(); r != nil {
+			// 				streamPacket()
+			// 			}
+			// 		}()
 
-					//allows next chunk to stream results
-					chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-					buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
-					break
-				} else {
-					//pass on message if not intended receiver
-					buildCandleDataSync <- msg
-				}
-			}
+			// 		streamPacket()
+
+			// 		//allows next chunk to stream results
+			// 		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+			// 		buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+			// 		break
+			// 	} else {
+			// 		//pass on message if not intended receiver
+			// 		buildCandleDataSync <- msg
+			// 	}
+			// }
 		}
 
 		stratComputeStartIndex = stratComputeEndIndex
