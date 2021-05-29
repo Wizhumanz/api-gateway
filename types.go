@@ -142,10 +142,10 @@ type ScatterData struct {
 }
 
 type upwardTrend struct {
-	EntryTime  string  `json:"EntryTime"`
-	ExtentTime string  `json:"ExtentTime"`
-	Duration   float64 `json:"Duration"`
-	Growth     float64 `json:"Growth"`
+	// EntryTime  string  `json:"EntryTime"`
+	// ExtentTime string  `json:"ExtentTime"`
+	Duration int     `json:"Duration"`
+	Growth   float64 `json:"Growth"`
 }
 
 type CoinAPITicker struct {

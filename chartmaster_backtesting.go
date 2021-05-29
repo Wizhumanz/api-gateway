@@ -13,6 +13,9 @@ type PivotsStore struct {
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
+// var comparePivotHighs []int
+// var comparePivotLows []int
+
 func strat1(
 	risk, lev, accSz float64,
 	open, high, low, close []float64,
@@ -181,15 +184,20 @@ func strat1(
 		var endTrend bool
 		var startCandleIndex int
 		var endCandleIndex int
-		// var trend upwardTrend
+		var trend upwardTrend
+		var trendArray []upwardTrend
 		var pivotHighsIndexInterval []int
 		var allPivotHighsStart []float64
+		var pivotHighsStart float64
+		// var pivotHighsExtent float64
 		var allPivotHighsExtent []float64
+		// var growth []float64
 		for i, _ := range stored.PivotLows {
 			if i > 0 && !startTrend && low[stored.PivotLows[i-1]] < low[stored.PivotLows[i]] {
 				startTrend = true
 				startCandleIndex = stored.PivotLows[i-1]
 				allPivotHighsStart = append(allPivotHighsStart, close[startCandleIndex])
+				pivotHighsStart = close[startCandleIndex]
 				fmt.Println("startCandleIndex")
 				fmt.Println(startCandleIndex)
 			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
@@ -211,11 +219,25 @@ func strat1(
 					}
 				}
 				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
+				// fmt.Println("pivotHighsStart")
+				// fmt.Println(pivotHighsStart)
+				trend.Growth = MaxFloatSlice(pivotHighsInterval) - pivotHighsStart
+				trend.Duration = endCandleIndex - startCandleIndex
+				trendArray = append(trendArray, trend)
 			}
 		}
-		fmt.Println(pivotHighsIndexInterval)
+
+		// var arrayData []interface{}
+
+		// ws := wsConnectionsChartmaster[userID]
+
+		// arrayData = append(arrayData, trend)
+		// streamPacket(ws, arrayData, rid)
+
+		// fmt.Println(pivotHighsIndexInterval)
 		fmt.Println(allPivotHighsStart)
 		fmt.Println(allPivotHighsExtent)
+		fmt.Println(trendArray)
 	}
 	// if stored.PivotLows
 
