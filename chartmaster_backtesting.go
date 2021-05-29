@@ -207,15 +207,21 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, ticker, perio
 	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
 	testRes, _ := rdbChartmaster.HGetAll(ctx, testKey).Result()
 	if (testRes["open"] == "") && (testRes["close"] == "") {
+		fmt.Println("HELLO")
 		//if no data in cache, do fresh GET and save to cache
 		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	} else {
+		fmt.Println("BYE")
+
 		//otherwise, get data in cache
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		// fmt.Printf("Each Chunk: %v", chunkCandles)
 	}
-
+	fmt.Println("DONE")
 	//append chunk's candles to global slice
 	*allCandles = append(*allCandles, chunkCandles...)
+	// fmt.Printf("Get Chunks: %v", *allCandles)
+
 	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
 	if err2 != nil {
 		fmt.Printf("parsing lastCandleTime err = %v", err2)
@@ -279,15 +285,17 @@ func runBacktest(
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
-
+	fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
 		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
 		msg := <-buildCandleDataSync
-		var msgTime time.Time
+		fmt.Println("LOOOOOOOK HEERERERE: " + msg)
+
+		// var msgTime time.Time
 		if msg != "" {
-			t, err := time.Parse(httpTimeFormat, msg)
-			msgTime = t
+			_, err := time.Parse(httpTimeFormat, msg)
+			// msgTime = t
 			if err != nil {
 				fmt.Printf("wait all append complete time parse err = %v", err)
 				continue
@@ -295,12 +303,13 @@ func runBacktest(
 		} else {
 			continue
 		}
-
-		if msgTime.After(endTime) || msgTime == endTime {
+		// (msgTime.After(endTime) || msgTime == endTime) &&
+		if len(allCandleData) >= int(endTime.Sub(startTime).Minutes()) {
+			fmt.Println("Ending")
 			break
 		}
 	}
-
+	fmt.Printf("LOOOOOOOK HEERERERE: %v", len(allCandleData))
 	//run strat on all candles in chunk, stream each chunk to client
 	stratComputeStartIndex := 0
 	for {
@@ -369,46 +378,54 @@ func runBacktest(
 		// 			},
 		// 		})
 		// }
-		firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
+		// fmt.Printf("\nLLOOOOOOOOK: %v", chunkAddedCandles)
+		// go func() {
+		// time.Sleep(2 * time.Second)
+		// }()
+		if chunkAddedCandles != nil {
+			firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
 
-		if firstCandleTime == startTime {
-			fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
+			if firstCandleTime == startTime {
+				fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
 
-			// streamPacket()
+				// streamPacket()
 
-			// //allows next chunk to stream results
-			// chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-			// buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+				// //allows next chunk to stream results
+				// chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+				// buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+			} else {
+				fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
+
+				// for {
+				// 	previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
+				// 	msg := <-buildCandleDataSync
+				// 	// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
+				// 	if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
+				// 		// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
+
+				// 		defer func() {
+				// 			if r := recover(); r != nil {
+				// 				streamPacket()
+				// 			}
+				// 		}()
+
+				// 		streamPacket()
+
+				// 		//allows next chunk to stream results
+				// 		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
+				// 		buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
+				// 		break
+				// 	} else {
+				// 		//pass on message if not intended receiver
+				// 		buildCandleDataSync <- msg
+				// 	}
+				// }
+			}
+
+			stratComputeStartIndex = stratComputeEndIndex
 		} else {
-			fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
-
-			// for {
-			// 	previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
-			// 	msg := <-buildCandleDataSync
-			// 	// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
-			// 	if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-			// 		// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
-
-			// 		defer func() {
-			// 			if r := recover(); r != nil {
-			// 				streamPacket()
-			// 			}
-			// 		}()
-
-			// 		streamPacket()
-
-			// 		//allows next chunk to stream results
-			// 		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-			// 		buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
-			// 		break
-			// 	} else {
-			// 		//pass on message if not intended receiver
-			// 		buildCandleDataSync <- msg
-			// 	}
-			// }
+			break
 		}
-
-		stratComputeStartIndex = stratComputeEndIndex
 	}
 
 	fmt.Println(colorGreen + "Backtest complete!" + colorReset)
