@@ -215,21 +215,14 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 		//if no data in cache, do fresh GET and save to cache
 		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	} else {
-		fmt.Println("BYE")
-
 		//otherwise, get data in cache
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
-		// fmt.Printf("Each Chunk: %v", chunkCandles)
 	}
-	fmt.Println("DONE")
-	//append chunk's candles to global slice
 
-	fmt.Printf("Get Chunks: %v", startTime.Add(time.Minute*80))
-	// tempArr := *allCandles
-	// if len(tempArr) != 0 {
-	// 	fmt.Printf("Get Chunks: %v", len(tempArr)-1)
-	// 	fmt.Printf("Get Chunks: %v", tempArr[len(tempArr)-1].DateTime)
-	// }
+	if len(chunkCandles) == 0 {
+		fmt.Printf("chunkCandles fetch err %v", startTime.Format(httpTimeFormat))
+		return
+	}
 
 	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
 	if err2 != nil {
@@ -344,9 +337,7 @@ func runBacktest(
 	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
-		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
 		msg := <-buildCandleDataSync
-		fmt.Println("LOOOOOOOK HEERERERE: " + msg)
 		allChunksFilled := true
 		for _, e := range chunksArr {
 			if len(*e) <= 0 {
@@ -432,67 +423,21 @@ func runBacktest(
 		progressBar(userID, rid, retCandles, startTime, endTime)
 
 		//stream data back to client in every chunk
-
-		//stream data in order, wait for previous chunk to stream first
-		// streamPacket := func() {
-		// 	packetSender(userID, rid,
-		// 		chunkAddedCandles,
-		// 		[]ProfitCurveData{
-		// 			{
-		// 				Label: "strat1", //TODO: prep for dynamic strategy param values
-		// 				Data:  chunkAddedPCData,
-		// 			},
-		// 		},
-		// 		[]SimulatedTradeData{
-		// 			{
-		// 				Label: "strat1",
-		// 				Data:  chunkAddedSTData,
-		// 			},
-		// 		})
-		// }
-		// fmt.Printf("\nLLOOOOOOOOK: %v", chunkAddedCandles)
-		// go func() {
-		// time.Sleep(2 * time.Second)
-		// }()
 		if chunkAddedCandles != nil {
-			firstCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[0].DateTime)
-
-			if firstCandleTime == startTime {
-				fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
-
-				// streamPacket()
-
-				// //allows next chunk to stream results
-				// chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-				// buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
-			} else {
-				fmt.Printf(colorRed+"streaming index %v to %v"+colorReset, stratComputeStartIndex, stratComputeEndIndex)
-
-				// for {
-				// 	previousChunkLastCandleTime := firstCandleTime.Add(-1 * periodDurationMap[period])
-				// 	msg := <-buildCandleDataSync
-				// 	// fmt.Printf("msg read by %v chunk = %v, awaiting %v\n", firstCandleTime, msg, previousChunkLastCandleTime)
-				// 	if msg == previousChunkLastCandleTime.Format(httpTimeFormat) {
-				// 		// fmt.Printf(colorCyan+"chunk %v sending WS packet\n"+colorReset, firstCandleTime)
-
-				// 		defer func() {
-				// 			if r := recover(); r != nil {
-				// 				streamPacket()
-				// 			}
-				// 		}()
-
-				// 		streamPacket()
-
-				// 		//allows next chunk to stream results
-				// 		chunkLastCandleTime, _ := time.Parse(httpTimeFormat, chunkAddedCandles[len(chunkAddedCandles)-1].DateTime)
-				// 		buildCandleDataSync <- chunkLastCandleTime.Format(httpTimeFormat)
-				// 		break
-				// 	} else {
-				// 		//pass on message if not intended receiver
-				// 		buildCandleDataSync <- msg
-				// 	}
-				// }
-			}
+			packetSender(userID, rid,
+				chunkAddedCandles,
+				[]ProfitCurveData{
+					{
+						Label: "strat1", //TODO: prep for dynamic strategy param values
+						Data:  chunkAddedPCData,
+					},
+				},
+				[]SimulatedTradeData{
+					{
+						Label: "strat1",
+						Data:  chunkAddedSTData,
+					},
+				})
 
 			stratComputeStartIndex = stratComputeEndIndex
 		} else {
