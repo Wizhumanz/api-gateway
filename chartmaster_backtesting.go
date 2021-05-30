@@ -43,11 +43,11 @@ func strat1(
 	// 	0: fmt.Sprintf("%v", relCandleIndex),
 	// }
 
-	if relCandleIndex > 3 && relCandleIndex < 10 {
-		fmt.Printf("INDEX %v\n", relCandleIndex)
-		fmt.Printf("current low %v\n", low[len(low)-1])
-		fmt.Printf("lookForHigh = %v\n", lookForHigh)
-	}
+	// if relCandleIndex > 3 && relCandleIndex < 10 {
+	// 	fmt.Printf("INDEX %v\n", relCandleIndex)
+	// 	fmt.Printf("current low %v\n", low[len(low)-1])
+	// 	fmt.Printf("lookForHigh = %v\n", lookForHigh)
+	// }
 
 	pivotBarsBack := 0
 	var lastPivotIndex int
@@ -59,7 +59,7 @@ func strat1(
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
 	if lookForHigh && relCandleIndex > 1 {
-		fmt.Println(colorRed + "looking for HIGH" + colorReset)
+		// fmt.Println(colorRed + "looking for HIGH" + colorReset)
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; (i+1) < len(low) && (i+1) < len(high); i++ { //TODO: should be relCandleIndex-1 but causes index outta range err
 			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
@@ -114,7 +114,7 @@ func strat1(
 			}
 		}
 	} else if relCandleIndex > 1 {
-		fmt.Println(colorYellow + "looking for LOW" + colorReset)
+		// fmt.Println(colorYellow + "looking for LOW" + colorReset)
 		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
 				//check if pivot already exists
