@@ -344,13 +344,19 @@ func runBacktest(
 	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
-
 		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
 		msg := <-buildCandleDataSync
 		fmt.Println("LOOOOOOOK HEERERERE: " + msg)
+		allChunksFilled := true
 		for _, e := range chunksArr {
 			fmt.Printf("\nHERE: %v\n", *e == nil)
-
+			if len(*e) <= 0 {
+				allChunksFilled = false
+				break
+			}
+		}
+		if allChunksFilled {
+			break
 		}
 
 		// var msgTime time.Time
