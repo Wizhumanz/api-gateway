@@ -199,7 +199,7 @@ func strat1(
 	return newLabels
 }
 
-func getChunkCandleData(allCandles *[]Candlestick, packetSize int, ticker, period string,
+func getChunkCandleData(allCandles *[]Candlestick, chunkSlice *[]Candlestick, packetSize int, ticker, period string,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time, buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
 	//check if candles exist in cache
@@ -219,14 +219,60 @@ func getChunkCandleData(allCandles *[]Candlestick, packetSize int, ticker, perio
 	}
 	fmt.Println("DONE")
 	//append chunk's candles to global slice
-	*allCandles = append(*allCandles, chunkCandles...)
-	// fmt.Printf("Get Chunks: %v", *allCandles)
+
+	fmt.Printf("Get Chunks: %v", startTime.Add(time.Minute*80))
+	// tempArr := *allCandles
+	// if len(tempArr) != 0 {
+	// 	fmt.Printf("Get Chunks: %v", len(tempArr)-1)
+	// 	fmt.Printf("Get Chunks: %v", tempArr[len(tempArr)-1].DateTime)
+	// }
 
 	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
 	if err2 != nil {
 		fmt.Printf("parsing lastCandleTime err = %v", err2)
 	}
 	msg := chunkLastCandleTime.Format(httpTimeFormat)
+
+	buildCandleDataSync <- msg
+
+	// for {
+	// 	var tempArr []Candlestick
+	// 	tempArr = *allCandles
+	// 	var t time.Time
+	// 	// fmt.Println(" ")
+	// 	// fmt.Printf("LOLO: %v", msg)
+	// 	if len(tempArr) != 0 {
+	// 		t, _ = time.Parse("2006-01-02T15:04:05.000Z", tempArr[len(chunkCandles)-1].DateTime+".000Z")
+	// 		fmt.Println("TIME:")
+	// 		fmt.Println(t.Add(time.Minute * 81).Format("2006-01-02T15:04:05"))
+	// 		break
+	// 	}
+
+	// 	if chunkLastCandleTime == startTime.Add(time.Minute*80) {
+	*allCandles = append(*allCandles, chunkCandles...)
+	*chunkSlice = chunkCandles
+	// 		fmt.Printf("Help: %v", msg)
+
+	// 		tempArr = *allCandles
+	// 		fmt.Printf("\nTest: %v", t.Add(time.Minute*81).Format("2006-01-02T15:04:05"))
+	// 		// tempArr[len(chunkCandles)-1].DateTime.Add(time.Minute*81) == msg
+	// 		break
+	// 	} else if len(tempArr) != 0 && msg == "2021-05-01T02:41:00" {
+	// 		*allCandles = append(*allCandles, chunkCandles...)
+	// 		t, _ := time.Parse("2006-01-02T15:04:05.000Z", tempArr[len(chunkCandles)-1].DateTime+".000Z")
+	// 		fmt.Printf("Hi: %v", t.Add(time.Minute*80).Format("2006-01-02T15:04:05"))
+	// 		break
+	// 	} else if len(tempArr) != 0 && msg == "2021-05-01T04:00:00" {
+	// 		*allCandles = append(*allCandles, chunkCandles...)
+	// 		fmt.Printf("Hi: %v", msg)
+	// 		break
+	// 	}
+	// 	// if len(tempArr) != 0 {
+	// 	// 	fmt.Printf("\nTest: %v", len(tempArr) != 0 && tempArr[len(chunkCandles)-1].DateTime == msg)
+	// 	// 	break
+	// 	// }
+	// }
+
 	select {
 	case buildCandleDataSync <- msg:
 		fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
@@ -248,6 +294,7 @@ func runBacktest(
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
 	var retSimTrades []SimulatedTradeData
+	var chunksArr []*[]Candlestick
 	retProfitCurve = []ProfitCurveData{
 		{
 			Label: "strat1", //TODO: prep for dynamic strategy param values
@@ -261,6 +308,7 @@ func runBacktest(
 	strategySim := StrategySimulator{}
 	strategySim.Init(accSz)
 	var allCandleData []Candlestick
+
 	allOpens := []float64{}
 	allHighs := []float64{}
 	allLows := []float64{}
@@ -278,19 +326,28 @@ func runBacktest(
 		if fetchCandlesEnd.After(endTime) {
 			fetchCandlesEnd = endTime
 		}
+		var chunkSlice []Candlestick
 
-		go getChunkCandleData(&allCandleData, packetSize, ticker, period,
+		chunksArr = append(chunksArr, &chunkSlice)
+		fmt.Printf("\nCount: %v\n", chunksArr)
+		go getChunkCandleData(&allCandleData, &chunkSlice, packetSize, ticker, period,
 			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
 
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
-	fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
+
+	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
+
 		fmt.Printf("len(allCandles) = %v, waiting for chan msg\n", len(allCandleData))
 		msg := <-buildCandleDataSync
 		fmt.Println("LOOOOOOOK HEERERERE: " + msg)
+		for _, e := range chunksArr {
+			fmt.Printf("\nHERE: %v\n", *e == nil)
+
+		}
 
 		// var msgTime time.Time
 		if msg != "" {
