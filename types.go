@@ -293,9 +293,11 @@ func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLon
 	}
 }
 
-func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int) {
+func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int, action string) {
 	//close entire long
+	closeSz := 0.0
 	if orderSize == 0 {
+		closeSz = strat.PosLongSize
 		strat.totalEquity = strat.availableEquity + (strat.PosLongSize * price)
 		strat.PosLongSize = 0
 	} else {
@@ -305,8 +307,9 @@ func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int) 
 	strat.availableEquity = strat.totalEquity
 
 	strat.Actions[cIndex] = StrategySimulatorAction{
-		Action: "SL",
-		Price:  price,
+		Action:  action,
+		Price:   price,
+		PosSize: closeSz,
 	}
 }
 
@@ -322,7 +325,7 @@ func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, c
 		}
 		//check SL
 		if low <= sl || close <= sl || open <= sl || high <= sl {
-			strat.CloseLong(close, 0, cIndex)
+			strat.CloseLong(close, 0, cIndex, "SL")
 			// fmt.Printf("SL EXIT %v\n", close)
 		}
 
