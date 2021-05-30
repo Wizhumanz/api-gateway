@@ -220,9 +220,8 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	if (testRes["open"] == "") || (testRes["close"] == "") {
 		fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
 		//if no data in cache, do fresh GET and save to cache
-		// chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	} else {
-		fmt.Println("BYE")
 		//otherwise, get data in cache
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
@@ -231,58 +230,12 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 		return
 	}
 
-	chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
-	if err2 != nil {
-		fmt.Printf("parsing lastCandleTime err = %v", err2)
-	}
-	msg := chunkLastCandleTime.Format(httpTimeFormat)
-
-	buildCandleDataSync <- msg
-
-	// for {
-	// 	var tempArr []Candlestick
-	// 	tempArr = *allCandles
-	// 	var t time.Time
-	// 	// fmt.Println(" ")
-	// 	// fmt.Printf("LOLO: %v", msg)
-	// 	if len(tempArr) != 0 {
-	// 		t, _ = time.Parse("2006-01-02T15:04:05.000Z", tempArr[len(chunkCandles)-1].DateTime+".000Z")
-	// 		fmt.Println("TIME:")
-	// 		fmt.Println(t.Add(time.Minute * 81).Format("2006-01-02T15:04:05"))
-	// 		break
-	// 	}
-
-	// 	if chunkLastCandleTime == startTime.Add(time.Minute*80) {
-	// *allCandles = append(*allCandles, chunkCandles...)
-	*chunkSlice = chunkCandles
-	// 		fmt.Printf("Help: %v", msg)
-
-	// 		tempArr = *allCandles
-	// 		fmt.Printf("\nTest: %v", t.Add(time.Minute*81).Format("2006-01-02T15:04:05"))
-	// 		// tempArr[len(chunkCandles)-1].DateTime.Add(time.Minute*81) == msg
-	// 		break
-	// 	} else if len(tempArr) != 0 && msg == "2021-05-01T02:41:00" {
-	// 		*allCandles = append(*allCandles, chunkCandles...)
-	// 		t, _ := time.Parse("2006-01-02T15:04:05.000Z", tempArr[len(chunkCandles)-1].DateTime+".000Z")
-	// 		fmt.Printf("Hi: %v", t.Add(time.Minute*80).Format("2006-01-02T15:04:05"))
-	// 		break
-	// 	} else if len(tempArr) != 0 && msg == "2021-05-01T04:00:00" {
-	// 		*allCandles = append(*allCandles, chunkCandles...)
-	// 		fmt.Printf("Hi: %v", msg)
-	// 		break
-	// 	}
-	// 	// if len(tempArr) != 0 {
-	// 	// 	fmt.Printf("\nTest: %v", len(tempArr) != 0 && tempArr[len(chunkCandles)-1].DateTime == msg)
-	// 	// 	break
-	// 	// }
+	// chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
+	// if err2 != nil {
+	// 	fmt.Printf("parsing lastCandleTime err = %v", err2)
 	// }
 
-	select {
-	case buildCandleDataSync <- msg:
-		fmt.Printf(colorGreen+"appended for chunk %v\n"+colorReset, chunkLastCandleTime.Format(httpTimeFormat))
-	default:
-		fmt.Printf("no message sent for chunk %v", chunkLastCandleTime.Format(httpTimeFormat))
-	}
+	*chunkSlice = chunkCandles
 }
 
 func runBacktest(
@@ -343,7 +296,6 @@ func runBacktest(
 	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
-		msg := <-buildCandleDataSync
 		allChunksFilled := true
 		for _, e := range chunksArr {
 			if len(*e) <= 0 {
@@ -357,25 +309,6 @@ func runBacktest(
 			// }
 			break
 		}
-
-		// var msgTime time.Time
-
-		if msg != "" {
-			_, err := time.Parse(httpTimeFormat, msg)
-			// msgTime = t
-			if err != nil {
-				fmt.Printf("wait all append complete time parse err = %v", err)
-				continue
-			}
-		} else {
-			continue
-		}
-
-		// (msgTime.After(endTime) || msgTime == endTime) &&
-		// if len(allCandleData) >= int(endTime.Sub(startTime).Minutes()) {
-		// 	fmt.Println("Ending")
-		// 	break
-		// }
 	}
 	for _, e := range chunksArr {
 		allCandleData = append(allCandleData, *e...)
