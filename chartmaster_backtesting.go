@@ -216,8 +216,9 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	if (testRes["open"] == "") && (testRes["close"] == "") {
 		fmt.Println("HELLO")
 		//if no data in cache, do fresh GET and save to cache
-		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+		// chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	} else {
+		fmt.Println("BYE")
 		//otherwise, get data in cache
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
@@ -329,7 +330,6 @@ func runBacktest(
 		var chunkSlice []Candlestick
 
 		chunksArr = append(chunksArr, &chunkSlice)
-		fmt.Printf("\nCount: %v\n", chunksArr)
 		go getChunkCandleData(&chunkSlice, packetSize, ticker, period,
 			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
 
@@ -356,6 +356,7 @@ func runBacktest(
 		}
 
 		// var msgTime time.Time
+
 		if msg != "" {
 			_, err := time.Parse(httpTimeFormat, msg)
 			// msgTime = t
@@ -366,6 +367,7 @@ func runBacktest(
 		} else {
 			continue
 		}
+
 		// (msgTime.After(endTime) || msgTime == endTime) &&
 		// if len(allCandleData) >= int(endTime.Sub(startTime).Minutes()) {
 		// 	fmt.Println("Ending")
