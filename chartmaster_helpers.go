@@ -122,7 +122,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	return retCandles
 }
 
-func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategySimulator, relIndex int, labels map[string]map[int]string, profitCurveSoFar []ProfitCurveDataPoint) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
+func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveDataPoint, c Candlestick, strat StrategySimulator, relIndex int, labels map[string]map[int]string) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	retCandlesArr := cArr
 	newCandleD := CandlestickChartData{
@@ -199,12 +199,15 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 	//profit curve
 	var pd ProfitCurveDataPoint
 	//only add data point if changed from last point OR 1st or 2nd datapoint
-	if len(profitCurveSoFar) > 0 {
-		if (relIndex == 0) || (strat.GetEquity() != profitCurveSoFar[len(profitCurveSoFar)-1].Equity) {
-			pd = ProfitCurveDataPoint{
-				DateTime: c.DateTime,
-				Equity:   strat.GetEquity(),
-			}
+	if (strat.GetEquity() != 0) && (len(*profitCurve) == 0) && (relIndex != 0) {
+		pd = ProfitCurveDataPoint{
+			DateTime: c.DateTime,
+			Equity:   strat.GetEquity(),
+		}
+	} else if (relIndex == 0) || (strat.GetEquity() != (*profitCurve)[len(*profitCurve)-1].Equity) {
+		pd = ProfitCurveDataPoint{
+			DateTime: c.DateTime,
+			Equity:   strat.GetEquity(),
 		}
 	}
 

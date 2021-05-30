@@ -322,7 +322,6 @@ func runBacktest(
 	for _, e := range chunksArr {
 		allCandleData = append(allCandleData, *e...)
 	}
-	fmt.Printf("LOOOOOOOK HEERERERE: %v\n", len(allCandleData))
 	//run strat on all candles in chunk, stream each chunk to client
 	stratComputeStartIndex := 0
 	for {
@@ -353,9 +352,10 @@ func runBacktest(
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
 			var simTradeData SimulatedTradeDataPoint
-			chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, candle, strategySim, relIndex, labels, chunkAddedPCData)
+			chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, &chunkAddedPCData, candle, strategySim, relIndex, labels)
 			if pcData.Equity > 0 {
 				chunkAddedPCData = append(chunkAddedPCData, pcData)
+				fmt.Printf(colorCyan+"appending PC datapoint = %v\n", pcData)
 			}
 			if simTradeData.DateTime != "" {
 				chunkAddedSTData = append(chunkAddedSTData, simTradeData)
@@ -395,7 +395,7 @@ func runBacktest(
 		}
 	}
 
-	fmt.Println(colorGreen + "Backtest complete!" + colorReset)
+	fmt.Println(colorGreen + "\n!!! Backtest complete!" + colorReset)
 	return retCandles, retProfitCurve, retSimTrades
 }
 
@@ -473,7 +473,7 @@ func runBacktestSequential(
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
 			var simTradeData SimulatedTradeDataPoint
-			retCandles, pcData, simTradeData = saveDisplayData(retCandles, candle, strategySim, relIndex, labels, retProfitCurve[0].Data)
+			retCandles, pcData, simTradeData = saveDisplayData(retCandles, &(retProfitCurve[0].Data), candle, strategySim, relIndex, labels)
 			if pcData.Equity > 0 {
 				retProfitCurve[0].Data = append(retProfitCurve[0].Data, pcData)
 			}
