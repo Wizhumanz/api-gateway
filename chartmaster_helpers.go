@@ -118,7 +118,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 		}
 	}
 
-	fmt.Printf("Cache fetch complete %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
+	fmt.Println("Cache fetch complete")
 	return retCandles
 }
 
@@ -135,7 +135,13 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 	//strategy enter/exit
 	if strat.Actions[relIndex].Action == "ENTER" {
 		newCandleD.StratEnterPrice = strat.Actions[relIndex].Price
-	} else if strat.Actions[relIndex].Action == "SL" {
+	}
+	if relIndex == 87 {
+		for k, v := range strat.Actions {
+			fmt.Printf(colorYellow+"%v = %v\n"+colorYellow, k, v)
+		}
+	}
+	if strat.Actions[relIndex].Action == "SL" || strat.Actions[relIndex].Action == "TP" {
 		newCandleD.StratExitPrice = strat.Actions[relIndex].Price
 	}
 	retCandlesArr = append(retCandlesArr, newCandleD)
@@ -151,7 +157,7 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 
 			index := len(retCandlesArr) - labelBB - 1
 			// fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
-			if index >= 0 && index < len(retCandlesArr) {
+			if index >= 0 {
 				retCandlesArr[index].LabelTop = labelText
 				// fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
 			}
@@ -193,10 +199,12 @@ func saveDisplayData(cArr []CandlestickChartData, c Candlestick, strat StrategyS
 	//profit curve
 	var pd ProfitCurveDataPoint
 	//only add data point if changed from last point OR 1st or 2nd datapoint
-	if (relIndex == 0) || (strat.GetEquity() != profitCurveSoFar[len(profitCurveSoFar)-1].Equity) {
-		pd = ProfitCurveDataPoint{
-			DateTime: c.DateTime,
-			Equity:   strat.GetEquity(),
+	if len(profitCurveSoFar) > 0 {
+		if (relIndex == 0) || (strat.GetEquity() != profitCurveSoFar[len(profitCurveSoFar)-1].Equity) {
+			pd = ProfitCurveDataPoint{
+				DateTime: c.DateTime,
+				Equity:   strat.GetEquity(),
+			}
 		}
 	}
 
@@ -248,8 +256,6 @@ func progressBar(userID, rid string, candle []CandlestickChartData, start, end t
 }
 
 func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []ProfitCurveData, st []SimulatedTradeData) {
-	fmt.Printf(colorRed+"streaming start = %v to %v\n"+colorReset, c[0].DateTime, c[len(c)-1].DateTime)
-
 	ws := wsConnectionsChartmaster[userID]
 	if ws != nil {
 		//profit curve
