@@ -23,12 +23,6 @@ func strat1(
 	// }
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
-	// if relCandleIndex > 3 && relCandleIndex < 10 {
-	// 	fmt.Printf("INDEX %v\n", relCandleIndex)
-	// 	fmt.Printf("lows = %v\n", low)
-	// 	fmt.Printf("candle low %v\n", low[len(low)-1])
-	// }
-
 	foundPL := false
 	foundPH := false
 	stored, ok := (*storage).(PivotsStore)
@@ -43,14 +37,18 @@ func strat1(
 	}
 
 	//find pivot highs + lows
-	lookForHigh := !(len(stored.PivotHighs) == len(stored.PivotLows)) //default to looking for low first
-	// if relCandleIndex > 40 && relCandleIndex < 70 {
-	// 	fmt.Println(colorRed + fmt.Sprintf("%v - %v | len(PH) = %v, len(PL) = %v | latestPH = %v, latestPL = %v", relCandleIndex, lookForLow, len(stored.PivotHighs), len(stored.PivotLows), stored.PivotHighs[len(stored.PivotHighs)-1], stored.PivotLows[len(stored.PivotLows)-1]) + colorReset)
-	// }
-	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
+	lookForHigh := (len(stored.PivotHighs) != len(stored.PivotLows)) && (math.Abs(float64(len(stored.PivotHighs)-len(stored.PivotLows))) == 1) //default to looking for low first
+	newLabels := make(map[string]map[int]string)                                                                                               //map of labelPos:map of labelBarsBack:labelText
 	// newLabels["middle"] = map[int]string{
 	// 	0: fmt.Sprintf("%v", relCandleIndex),
 	// }
+
+	if relCandleIndex > 3 && relCandleIndex < 10 {
+		fmt.Printf("INDEX %v\n", relCandleIndex)
+		fmt.Printf("current low %v\n", low[len(low)-1])
+		fmt.Printf("lookForHigh = %v\n", lookForHigh)
+	}
+
 	pivotBarsBack := 0
 	var lastPivotIndex int
 	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
@@ -61,6 +59,7 @@ func strat1(
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
 	if lookForHigh && relCandleIndex > 1 {
+		fmt.Println(colorRed + "looking for HIGH" + colorReset)
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; (i+1) < len(low) && (i+1) < len(high); i++ { //TODO: should be relCandleIndex-1 but causes index outta range err
 			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
@@ -115,6 +114,7 @@ func strat1(
 			}
 		}
 	} else if relCandleIndex > 1 {
+		fmt.Println(colorYellow + "looking for LOW" + colorReset)
 		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
 				//check if pivot already exists
@@ -325,7 +325,7 @@ func runBacktest(
 		if stratComputeEndIndex > len(allCandleData) {
 			stratComputeEndIndex = len(allCandleData)
 		}
-		fmt.Printf("computing index %v to %v", stratComputeStartIndex, stratComputeEndIndex)
+		// fmt.Printf("computing index %v to %v", stratComputeStartIndex, stratComputeEndIndex)
 		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
 
 		//run strat for all chunk's candles
