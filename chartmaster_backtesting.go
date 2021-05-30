@@ -175,6 +175,7 @@ func strat1(
 			if len(stored.PivotLows)-2 >= 0 {
 				currentPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
 				prevPL := low[stored.PivotLows[len(stored.PivotLows)-2]]
+				fmt.Printf(colorCyan+"currentPL = %v (%v), prevPL = %v (%v)\n"+colorReset, currentPL, stored.PivotLows[len(stored.PivotLows)-1], prevPL, stored.PivotLows[len(stored.PivotLows)-2])
 				if currentPL > prevPL {
 					// fmt.Printf("Buying at %v\n", close[relCandleIndex-1])
 					entryPrice := close[relCandleIndex-1]
@@ -192,10 +193,12 @@ func strat1(
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
 		if foundPH {
 			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "TP")
-			// newLabels["middle"] = map[int]string{
-			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
-			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
-			// }
+			newLabels["middle"] = map[int]string{
+				// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
+				0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
+			}
+		} else {
+			strategy.CheckPositions(candle.Open, candle.High, candle.Low, candle.Close, relCandleIndex)
 		}
 	}
 
