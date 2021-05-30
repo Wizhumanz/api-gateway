@@ -320,7 +320,7 @@ func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, c
 		for _, act := range strat.Actions {
 			if act.Action == "ENTER" {
 				sl = act.SL
-				fmt.Printf("index %v sl = %v\n", cIndex, sl)
+				// fmt.Printf("index %v sl = %v\n", cIndex, sl)
 				break
 			}
 		}
