@@ -83,7 +83,7 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 }
 
 func getCachedCandleData(ticker, period string, start, end time.Time) []Candlestick {
-	fmt.Printf("CACHE getting from %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
+	// fmt.Printf("CACHE getting from %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
 
 	var retCandles []Candlestick
 	checkEnd := end.Add(periodDurationMap[period])
@@ -118,7 +118,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 		}
 	}
 
-	fmt.Println("Cache fetch complete")
+	// fmt.Printf("CACHE fetch DONE %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
 	return retCandles
 }
 

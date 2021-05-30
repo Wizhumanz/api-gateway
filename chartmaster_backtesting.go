@@ -355,7 +355,6 @@ func runBacktest(
 			chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, &chunkAddedPCData, candle, strategySim, relIndex, labels)
 			if pcData.Equity > 0 {
 				chunkAddedPCData = append(chunkAddedPCData, pcData)
-				fmt.Printf(colorCyan+"appending PC datapoint = %v\n", pcData)
 			}
 			if simTradeData.DateTime != "" {
 				chunkAddedSTData = append(chunkAddedSTData, simTradeData)
