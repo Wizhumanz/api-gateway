@@ -203,7 +203,7 @@ func strat1(
 	return newLabels
 }
 
-func getChunkCandleData(allCandles *[]Candlestick, chunkSlice *[]Candlestick, packetSize int, ticker, period string,
+func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, period string,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time, buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
 	//check if candles exist in cache
@@ -253,7 +253,7 @@ func getChunkCandleData(allCandles *[]Candlestick, chunkSlice *[]Candlestick, pa
 	// 	}
 
 	// 	if chunkLastCandleTime == startTime.Add(time.Minute*80) {
-	*allCandles = append(*allCandles, chunkCandles...)
+	// *allCandles = append(*allCandles, chunkCandles...)
 	*chunkSlice = chunkCandles
 	// 		fmt.Printf("Help: %v", msg)
 
@@ -334,7 +334,7 @@ func runBacktest(
 
 		chunksArr = append(chunksArr, &chunkSlice)
 		fmt.Printf("\nCount: %v\n", chunksArr)
-		go getChunkCandleData(&allCandleData, &chunkSlice, packetSize, ticker, period,
+		go getChunkCandleData(&chunkSlice, packetSize, ticker, period,
 			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
 
 		//increment
@@ -349,13 +349,15 @@ func runBacktest(
 		fmt.Println("LOOOOOOOK HEERERERE: " + msg)
 		allChunksFilled := true
 		for _, e := range chunksArr {
-			fmt.Printf("\nHERE: %v\n", *e == nil)
 			if len(*e) <= 0 {
 				allChunksFilled = false
 				break
 			}
 		}
 		if allChunksFilled {
+			// for _, e := range chunksArr {
+			// 	fmt.Printf("\nHERE: %v\n", len(*e) == 0)
+			// }
 			break
 		}
 
@@ -371,12 +373,15 @@ func runBacktest(
 			continue
 		}
 		// (msgTime.After(endTime) || msgTime == endTime) &&
-		if len(allCandleData) >= int(endTime.Sub(startTime).Minutes()) {
-			fmt.Println("Ending")
-			break
-		}
+		// if len(allCandleData) >= int(endTime.Sub(startTime).Minutes()) {
+		// 	fmt.Println("Ending")
+		// 	break
+		// }
 	}
-	fmt.Printf("LOOOOOOOK HEERERERE: %v", len(allCandleData))
+	for _, e := range chunksArr {
+		allCandleData = append(allCandleData, *e...)
+	}
+	fmt.Printf("LOOOOOOOK HEERERERE: %v\n", len(allCandleData))
 	//run strat on all candles in chunk, stream each chunk to client
 	stratComputeStartIndex := 0
 	for {
