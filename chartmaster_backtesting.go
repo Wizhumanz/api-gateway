@@ -37,8 +37,17 @@ func strat1(
 	}
 
 	//find pivot highs + lows
-	lookForHigh := (len(stored.PivotHighs) != len(stored.PivotLows)) && (math.Abs(float64(len(stored.PivotHighs)-len(stored.PivotLows))) == 1) //default to looking for low first
-	newLabels := make(map[string]map[int]string)                                                                                               //map of labelPos:map of labelBarsBack:labelText
+	var lookForHigh bool
+	if len(stored.PivotHighs) == 1 && len(stored.PivotLows) == 0 {
+		lookForHigh = false
+	} else if len(stored.PivotHighs) == 0 && len(stored.PivotLows) == 0 {
+		lookForHigh = true
+	} else if stored.PivotHighs[len(stored.PivotHighs)-1] < stored.PivotLows[len(stored.PivotLows)-1] {
+		lookForHigh = true
+	} else {
+		lookForHigh = false
+	}
+	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
 	// newLabels["middle"] = map[int]string{
 	// 	0: fmt.Sprintf("%v", relCandleIndex),
 	// }
@@ -175,7 +184,7 @@ func strat1(
 			if len(stored.PivotLows)-2 >= 0 {
 				currentPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
 				prevPL := low[stored.PivotLows[len(stored.PivotLows)-2]]
-				fmt.Printf(colorCyan+"currentPL = %v (%v), prevPL = %v (%v)\n"+colorReset, currentPL, stored.PivotLows[len(stored.PivotLows)-1], prevPL, stored.PivotLows[len(stored.PivotLows)-2])
+				// fmt.Printf(colorCyan+"currentPL = %v (%v), prevPL = %v (%v)\n"+colorReset, currentPL, stored.PivotLows[len(stored.PivotLows)-1], prevPL, stored.PivotLows[len(stored.PivotLows)-2])
 				if currentPL > prevPL {
 					// fmt.Printf("Buying at %v\n", close[relCandleIndex-1])
 					entryPrice := close[relCandleIndex-1]
@@ -193,10 +202,10 @@ func strat1(
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
 		if foundPH {
 			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "TP")
-			newLabels["middle"] = map[int]string{
-				// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
-				0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
-			}
+			// newLabels["middle"] = map[int]string{
+			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
+			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
+			// }
 		} else {
 			strategy.CheckPositions(candle.Open, candle.High, candle.Low, candle.Close, relCandleIndex)
 		}
