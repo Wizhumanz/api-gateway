@@ -212,9 +212,13 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	//check if candles exist in cache
 	redisKeyPrefix := ticker + ":" + period + ":"
 	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
-	testRes, _ := rdbChartmaster.HGetAll(ctx, testKey).Result()
-	if (testRes["open"] == "") && (testRes["close"] == "") {
-		fmt.Println("HELLO")
+	testRes, err := rdbChartmaster.HGetAll(ctx, testKey).Result()
+	if err != nil {
+		fmt.Printf("redis test fetch err %v\n")
+		return
+	}
+	if (testRes["open"] == "") || (testRes["close"] == "") {
+		fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
 		//if no data in cache, do fresh GET and save to cache
 		// chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	} else {
@@ -222,7 +226,6 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 		//otherwise, get data in cache
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
-
 	if len(chunkCandles) == 0 {
 		fmt.Printf("chunkCandles fetch err %v", startTime.Format(httpTimeFormat))
 		return
