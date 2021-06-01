@@ -252,7 +252,7 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
 	if len(chunkCandles) == 0 {
-		fmt.Printf("chunkCandles fetch err %v", startTime.Format(httpTimeFormat))
+		fmt.Printf("chunkCandles fetch err %v\n", startTime.Format(httpTimeFormat))
 		return
 	}
 	// fmt.Println(" ")

@@ -59,7 +59,6 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 		period,
 		start.Format(httpTimeFormat),
 		fetchEndTime.Format(httpTimeFormat))
-	fmt.Println(full)
 
 	req, _ := http.NewRequest("GET", full, nil)
 	req.Header.Add("X-CoinAPI-Key", "A2642A7A-A8C8-48C1-83CE-8D258BD7BBF5")
