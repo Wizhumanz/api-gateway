@@ -223,14 +223,14 @@ func strat1(
 					posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
 					posSize := posCap / entryPrice
 					// fmt.Printf("Entering with %v\n", posSize)
-					strategy.Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
+					strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 					// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
 				}
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
 		if foundPH {
-			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "TP")
+			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex, "TP")
 			// newLabels["middle"] = map[int]string{
 			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
 			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
