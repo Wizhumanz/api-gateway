@@ -221,6 +221,9 @@ func strat1(
 					rawRiskPerc := (entryPrice - slPrice) / entryPrice
 					accRiskedCap := (risk / 100) * float64(accSz)
 					posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
+					if posCap > strategy.availableEquity {
+						posCap = strategy.availableEquity
+					}
 					posSize := posCap / entryPrice
 					// fmt.Printf("Entering with %v\n", posSize)
 					strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
