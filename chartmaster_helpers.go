@@ -49,7 +49,8 @@ func cacheCandleData(candles []Candlestick, ticker, period string) {
 }
 
 func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick {
-	fmt.Printf("FETCHING from %v to %v\n", start.Format(httpTimeFormat), end.Format(httpTimeFormat))
+	fetchEndTime := end.Add(1 * periodDurationMap[period])
+	fmt.Printf("FETCHING from %v to %v\n", start.Format(httpTimeFormat), fetchEndTime.Format(httpTimeFormat))
 
 	//send request
 	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
@@ -57,7 +58,8 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 		base,
 		period,
 		start.Format(httpTimeFormat),
-		end.Format(httpTimeFormat))
+		fetchEndTime.Format(httpTimeFormat))
+	fmt.Println(full)
 
 	req, _ := http.NewRequest("GET", full, nil)
 	req.Header.Add("X-CoinAPI-Key", "A2642A7A-A8C8-48C1-83CE-8D258BD7BBF5")
@@ -71,11 +73,20 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 
 	//parse data
 	body, _ := ioutil.ReadAll(response.Body)
+	// fmt.Println(string(body))
 	var jStruct []Candlestick
-	json.Unmarshal(body, &jStruct)
+	errJson := json.Unmarshal(body, &jStruct)
+	if errJson != nil {
+		fmt.Printf("JSON unmarshall candle data err %v\n", errJson)
+	}
+
 	//save data to cache so don't have to fetch again
 	if len(jStruct) > 0 {
 		go cacheCandleData(jStruct, ticker, period)
+
+		fileName := fmt.Sprintf("%v,%v,%v,%v|%v.json", ticker, period, start, end, time.Now().Unix())
+		file, _ := json.MarshalIndent(jStruct, "", " ")
+		_ = ioutil.WriteFile(fileName, file, 0644)
 	}
 
 	fmt.Println("Fresh fetch complete")
