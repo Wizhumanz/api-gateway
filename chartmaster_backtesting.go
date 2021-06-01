@@ -93,7 +93,7 @@ func scanPivotTrends(
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage *interface{}) map[string]map[int]string {
+	storage *interface{}) (map[string]map[int]string, PivotTrendScanDataPoint) {
 
 }
 
