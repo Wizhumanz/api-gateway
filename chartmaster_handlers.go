@@ -23,32 +23,32 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var backtest Backtest
-	err := json.NewDecoder(r.Body).Decode(&backtest)
+	var req ComputeRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	//get backtest res
-	userID := backtest.User
-	ticker := backtest.Ticker
-	period := backtest.Period
-	risk := backtest.Risk
-	leverage := backtest.Leverage
-	size := backtest.Size
+	userID := req.User
+	ticker := req.Ticker
+	period := req.Period
+	risk := req.Risk
+	leverage := req.Leverage
+	size := req.Size
 
-	candlePacketSize, err := strconv.Atoi(backtest.CandlePacketSize)
+	candlePacketSize, err := strconv.Atoi(req.CandlePacketSize)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	start, err := time.Parse(httpTimeFormat, backtest.TimeStart)
+	start, err := time.Parse(httpTimeFormat, req.TimeStart)
 	if err != nil {
 		fmt.Println(err)
 	}
-	end, err2 := time.Parse(httpTimeFormat, backtest.TimeEnd)
+	end, err2 := time.Parse(httpTimeFormat, req.TimeEnd)
 	if err2 != nil {
 		fmt.Println(err)
 	}
@@ -71,7 +71,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//save result to bucket
-	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, backtest.TimeStart, backtest.TimeEnd)
+	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, req.TimeStart, req.TimeEnd)
 
 	// return
 	w.Header().Set("Content-Type", "application/json")

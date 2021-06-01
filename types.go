@@ -166,7 +166,7 @@ type CandlestickChartData struct {
 	LabelBottom     string  `json:"LabelBottom"`
 }
 
-type Backtest struct {
+type ComputeRequest struct {
 	Ticker           string `json:"ticker"`
 	Period           string `json:"period"`
 	TimeStart        string `json:"time_start"`
