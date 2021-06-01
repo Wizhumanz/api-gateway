@@ -10,6 +10,8 @@ type PivotsStore struct {
 	PivotHighs     []int
 	PivotLows      []int
 	LongEntryPrice float64
+	LongSLPrice    float64
+	LongPosSize    float64
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
@@ -19,7 +21,7 @@ func strat1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) map[string]map[int]string {
-	tpPerc := 0.2
+	tpPerc := 0.5
 
 	foundPL := false
 	stored, ok := (*storage).(PivotsStore)
@@ -49,19 +51,6 @@ func strat1(
 	// 	0: fmt.Sprintf("%v", relCandleIndex),
 	// }
 
-	if relCandleIndex >= 0 && relCandleIndex < 20 {
-		fmt.Printf("INDEX %v\n", relCandleIndex)
-		newLabels["middle"] = map[int]string{
-			0: fmt.Sprintf("%v", relCandleIndex),
-		}
-	}
-
-	// if relCandleIndex > 3 && relCandleIndex < 10 {
-	// 	fmt.Printf("INDEX %v\n", relCandleIndex)
-	// 	fmt.Printf("current low %v\n", low[len(low)-1])
-	// 	fmt.Printf("lookForHigh = %v\n", lookForHigh)
-	// }
-
 	pivotBarsBack := 0
 	var lastPivotIndex int
 	if len(stored.PivotHighs) == 0 && len(stored.PivotLows) == 0 {
@@ -76,9 +65,6 @@ func strat1(
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
 	if lookForHigh && relCandleIndex > 0 {
-		if relCandleIndex >= 0 && relCandleIndex < 20 {
-			fmt.Println(colorRed + "HIGH LOOK" + colorReset)
-		}
 		// fmt.Println(colorRed + "looking for HIGH" + colorReset)
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; (i+1) < len(low) && (i+1) < len(high); i++ { //TODO: should be relCandleIndex-1 but causes index outta range err
@@ -121,11 +107,6 @@ func strat1(
 				}
 
 				if newPHIndex > 0 {
-					// fmt.Printf("Adding PH index %v\n", newPHIndex)
-					if relCandleIndex >= 0 && relCandleIndex < 20 {
-						fmt.Printf(colorRed+"adding PH %v\n"+colorReset, newPHIndex)
-					}
-
 					stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
 					pivotBarsBack = relCandleIndex - newPHIndex
 
@@ -140,19 +121,8 @@ func strat1(
 		}
 	} else if relCandleIndex > 0 {
 		// fmt.Println(colorYellow + "looking for LOW" + colorReset)
-		if relCandleIndex >= 0 && relCandleIndex < 20 {
-			fmt.Printf("lastPIndex = %v, len(high) = %v, len(low) = %v\n", lastPivotIndex, len(high), len(low))
-		}
 		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
-			if relCandleIndex >= 0 && relCandleIndex < 20 {
-				fmt.Printf("<%v> lookHigh = %v | checking %v and %v\n", relCandleIndex, lookForHigh, i, i+1)
-			}
-
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
-				if relCandleIndex >= 0 && relCandleIndex < 20 {
-					fmt.Printf("found PL @ %v + %v\n", i, i+1)
-				}
-
 				//check if pivot already exists
 				found := false
 				for _, pl := range stored.PivotLows {
@@ -219,6 +189,7 @@ func strat1(
 					entryPrice := close[relCandleIndex-1]
 					stored.LongEntryPrice = entryPrice
 					slPrice := prevPL
+					stored.LongSLPrice = slPrice
 					rawRiskPerc := (entryPrice - slPrice) / entryPrice
 					accRiskedCap := (risk / 100) * float64(accSz)
 					posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
@@ -226,22 +197,34 @@ func strat1(
 						posCap = strategy.availableEquity
 					}
 					posSize := posCap / entryPrice
-					// fmt.Printf("Entering with %v\n", posSize)
+
 					strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
-					// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
+					// newLabels["middle"] = map[int]string{
+					// 	0: fmt.Sprintf("%v|SL %v, TP %v", relCandleIndex, slPrice, ((1 + (tpPerc / 100)) * stored.LongEntryPrice)),
+					// }
 				}
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
-		if high[relCandleIndex] >= ((1 + (tpPerc / 100)) * stored.LongEntryPrice) {
-			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex, "TP")
+		if relCandleIndex > 80 && relCandleIndex < 120 {
+			fmt.Printf("<%v> high = %v\n", relCandleIndex, high[relCandleIndex])
+		}
+
+		tpPrice := ((1 + (tpPerc / 100)) * stored.LongEntryPrice)
+		if high[relCandleIndex] >= tpPrice {
+			strategy.CloseLong(tpPrice, 0, relCandleIndex, "TP")
 			stored.LongEntryPrice = 0
+			stored.LongSLPrice = 0
 			// newLabels["middle"] = map[int]string{
 			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
 			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
 			// }
 		} else {
-			strategy.CheckPositions(candle.Open, candle.High, candle.Low, candle.Close, relCandleIndex)
+			if low[relCandleIndex] <= stored.LongSLPrice {
+				strategy.CloseLong(stored.LongSLPrice, 0, relCandleIndex, "SL")
+				stored.LongEntryPrice = 0
+				stored.LongSLPrice = 0
+			}
 		}
 	}
 
