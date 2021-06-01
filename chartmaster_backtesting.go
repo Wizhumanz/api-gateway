@@ -18,16 +18,13 @@ func strat1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) map[string]map[int]string {
-	// if len(close) > 0 {
-	// 	fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
-	// }
-	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
+	minEntry := 
 
 	foundPL := false
 	foundPH := false
 	stored, ok := (*storage).(PivotsStore)
 	if !ok {
-		if relCandleIndex == 1 {
+		if relCandleIndex == 0 {
 			stored.PivotHighs = []int{}
 			stored.PivotLows = []int{}
 		} else {
@@ -52,7 +49,7 @@ func strat1(
 	// 	0: fmt.Sprintf("%v", relCandleIndex),
 	// }
 
-	if relCandleIndex > 125 && relCandleIndex < 135 {
+	if relCandleIndex >= 0 && relCandleIndex < 20 {
 		fmt.Printf("INDEX %v\n", relCandleIndex)
 		newLabels["middle"] = map[int]string{
 			0: fmt.Sprintf("%v", relCandleIndex),
@@ -67,15 +64,19 @@ func strat1(
 
 	pivotBarsBack := 0
 	var lastPivotIndex int
-	if len(stored.PivotHighs) == 0 || len(stored.PivotLows) == 0 {
-		lastPivotIndex = 1
+	if len(stored.PivotHighs) == 0 && len(stored.PivotLows) == 0 {
+		lastPivotIndex = 0
+	} else if len(stored.PivotHighs) == 0 {
+		lastPivotIndex = stored.PivotLows[len(stored.PivotLows)-1]
+	} else if len(stored.PivotLows) == 0 {
+		lastPivotIndex = stored.PivotHighs[len(stored.PivotHighs)-1]
 	} else {
 		lastPivotIndex = int(math.Max(float64(stored.PivotHighs[len(stored.PivotHighs)-1]), float64(stored.PivotLows[len(stored.PivotLows)-1])))
 		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
-	if lookForHigh && relCandleIndex > 1 {
-		if relCandleIndex > 129 && relCandleIndex < 135 {
+	if lookForHigh && relCandleIndex > 0 {
+		if relCandleIndex >= 0 && relCandleIndex < 20 {
 			fmt.Println(colorRed + "HIGH LOOK" + colorReset)
 		}
 		// fmt.Println(colorRed + "looking for HIGH" + colorReset)
@@ -121,8 +122,12 @@ func strat1(
 
 				if newPHIndex > 0 {
 					// fmt.Printf("Adding PH index %v\n", newPHIndex)
+					if relCandleIndex >= 0 && relCandleIndex < 20 {
+						fmt.Printf(colorRed+"adding PH %v\n"+colorReset, newPHIndex)
+					}
+
 					stored.PivotHighs = append(stored.PivotHighs, newPHIndex)
-					pivotBarsBack = relCandleIndex - newPHIndex - 1
+					pivotBarsBack = relCandleIndex - newPHIndex
 
 					newLabels["top"] = map[int]string{
 						// pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
@@ -134,18 +139,18 @@ func strat1(
 				break
 			}
 		}
-	} else if relCandleIndex > 1 {
+	} else if relCandleIndex > 0 {
 		// fmt.Println(colorYellow + "looking for LOW" + colorReset)
-		if relCandleIndex > 129 && relCandleIndex < 135 {
+		if relCandleIndex >= 0 && relCandleIndex < 20 {
 			fmt.Printf("lastPIndex = %v, len(high) = %v, len(low) = %v\n", lastPivotIndex, len(high), len(low))
 		}
 		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
-			if relCandleIndex > 129 && relCandleIndex < 135 {
+			if relCandleIndex >= 0 && relCandleIndex < 20 {
 				fmt.Printf("<%v> lookHigh = %v | checking %v and %v\n", relCandleIndex, lookForHigh, i, i+1)
 			}
 
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
-				if relCandleIndex > 129 && relCandleIndex < 135 {
+				if relCandleIndex >= 0 && relCandleIndex < 20 {
 					fmt.Printf("found PL @ %v + %v\n", i, i+1)
 				}
 
@@ -188,7 +193,7 @@ func strat1(
 
 				if newPLIndex > 0 {
 					stored.PivotLows = append(stored.PivotLows, newPLIndex)
-					pivotBarsBack = relCandleIndex - newPLIndex - 1
+					pivotBarsBack = relCandleIndex - newPLIndex
 					newLabels["bottom"] = map[int]string{
 						// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
 						pivotBarsBack: "L",
@@ -200,8 +205,6 @@ func strat1(
 				break
 			}
 		}
-	} else {
-		fmt.Println(colorRed + "ERR BITCH" + colorReset)
 	}
 
 	//manage positions
@@ -306,7 +309,7 @@ func runBacktest(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
-	relIndex := 1
+	relIndex := 0
 	fetchCandlesStart := startTime
 
 	//fetch all candle data concurrently
@@ -456,7 +459,7 @@ func runBacktestSequential(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
-	relIndex := 1
+	relIndex := 0
 	lastPacketEndIndexCandles := 0
 	lastPacketEndIndexPC := 0
 	lastPacketEndIndexSimT := 0
