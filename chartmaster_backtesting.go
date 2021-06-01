@@ -18,7 +18,6 @@ func strat1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) map[string]map[int]string {
-	minEntry := 
 
 	foundPL := false
 	foundPH := false
