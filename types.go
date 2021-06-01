@@ -188,6 +188,18 @@ type ProfitCurveData struct {
 	Data  []ProfitCurveDataPoint `json:"Data"`
 }
 
+type upwardTrend struct {
+	// EntryTime  string  `json:"EntryTime"`
+	// ExtentTime string  `json:"ExtentTime"`
+	Duration int     `json:"Duration"`
+	Growth   float64 `json:"Growth"`
+}
+
+type PivotsStore struct {
+	PivotHighs []int
+	PivotLows  []int
+}
+
 type SimulatedTradeDataPoint struct {
 	DateTime      string  `json:"DateTime"`
 	Direction     string  `json:"Direction"`
