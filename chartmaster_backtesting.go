@@ -65,14 +65,10 @@ func strat1(
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
 	if lookForHigh {
-		fmt.Printf("looking for high %v\n", relCandleIndex)
-
 		// fmt.Println(colorRed + "looking for HIGH" + colorReset)
 		//check if new candle took out the low of previous candles since last pivot
 		for i := lastPivotIndex; (i+1) < len(low) && (i+1) < len(high); i++ { //TODO: should be relCandleIndex-1 but causes index outta range err
 			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
-				fmt.Printf("found PH %v and %v, H1 = %v, H2 = %v\n", i, i+1, high[i], high[i+1])
-
 				//check if pivot already exists
 				found := false
 				for _, ph := range stored.PivotHighs {
@@ -116,8 +112,6 @@ func strat1(
 			}
 		}
 	} else {
-		fmt.Printf("looking for low %v\n", relCandleIndex)
-
 		// fmt.Println(colorYellow + "looking for LOW" + colorReset)
 		for i := lastPivotIndex; (i+1) < len(high) && (i+1) < len(low); i++ {
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
@@ -204,10 +198,6 @@ func strat1(
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
-		if relCandleIndex > 80 && relCandleIndex < 120 {
-			fmt.Printf("<%v> high = %v\n", relCandleIndex, high[relCandleIndex])
-		}
-
 		tpPrice := ((1 + (tpPerc / 100)) * stored.LongEntryPrice)
 		if high[relCandleIndex] >= tpPrice {
 			strategy.CloseLong(tpPrice, 0, relCandleIndex, "TP")
@@ -391,7 +381,6 @@ func runBacktest(
 		retCandles = append(retCandles, chunkAddedCandles...)
 		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
 		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
-		// fmt.Printf("\nBOOMM: %v\n", len(retCandles))
 
 		progressBar(userID, rid, len(retCandles), startTime, endTime)
 

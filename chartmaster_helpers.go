@@ -223,11 +223,12 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 		//find entry conditions
 		var entryPrice float64
 		var size float64
-		for i := 1; i < len(strat.Actions)-1; i++ {
-			current := strat.Actions[relIndex-i]
-			if current.Action == "ENTER" {
-				entryPrice = current.Price
-				size = current.PosSize
+		for i := 1; i < relIndex; i++ {
+			checkAction := strat.Actions[relIndex-i]
+			if checkAction.Action == "ENTER" {
+				entryPrice = checkAction.Price
+				size = checkAction.PosSize
+				break
 			}
 		}
 
@@ -248,7 +249,10 @@ func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 		ResultID: resID,
 		Data:     chartData,
 	}
-	data, _ := json.Marshal(packet)
+	data, err := json.Marshal(packet)
+	if err != nil {
+		fmt.Printf(colorRed+"streamPacket err %v\n"+colorReset, err)
+	}
 	ws.WriteMessage(1, data)
 }
 
