@@ -88,6 +88,15 @@ func strat1(
 	return newLabels
 }
 
+func scanPivotTrends(
+	candle Candlestick, risk, lev, accSz float64,
+	open, high, low, close []float64,
+	relCandleIndex int,
+	strategy *StrategySimulator,
+	storage *interface{}) map[string]map[int]string {
+
+}
+
 func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, period string,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time, buildCandleDataSync chan string) {
 	var chunkCandles []Candlestick
