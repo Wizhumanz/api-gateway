@@ -7,8 +7,9 @@ import (
 )
 
 type PivotsStore struct {
-	PivotHighs []int
-	PivotLows  []int
+	PivotHighs     []int
+	PivotLows      []int
+	LongEntryPrice float64
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
@@ -18,9 +19,9 @@ func strat1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) map[string]map[int]string {
+	tpPerc := 0.2
 
 	foundPL := false
-	foundPH := false
 	stored, ok := (*storage).(PivotsStore)
 	if !ok {
 		if relCandleIndex == 0 {
@@ -132,7 +133,6 @@ func strat1(
 						// pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
 						pivotBarsBack: "H",
 					}
-					foundPH = true
 				}
 
 				break
@@ -217,6 +217,7 @@ func strat1(
 				if currentPL > prevPL {
 					// fmt.Printf("Buying at %v\n", close[relCandleIndex-1])
 					entryPrice := close[relCandleIndex-1]
+					stored.LongEntryPrice = entryPrice
 					slPrice := prevPL
 					rawRiskPerc := (entryPrice - slPrice) / entryPrice
 					accRiskedCap := (risk / 100) * float64(accSz)
@@ -232,8 +233,9 @@ func strat1(
 			}
 		}
 	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
-		if foundPH {
+		if high[relCandleIndex] >= ((1 + (tpPerc / 100)) * stored.LongEntryPrice) {
 			strategy.CloseLong(close[relCandleIndex], 0, relCandleIndex, "TP")
+			stored.LongEntryPrice = 0
 			// newLabels["middle"] = map[int]string{
 			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
 			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
