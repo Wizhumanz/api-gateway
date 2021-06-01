@@ -195,6 +195,7 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 			}
 		}
 	}
+	// fmt.Printf("A: %v", strat.GetEquity())
 
 	//profit curve
 	var pd ProfitCurveDataPoint
