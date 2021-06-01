@@ -297,6 +297,44 @@ func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []Pr
 	}
 }
 
+func streamScanData(userID, rid string, c []CandlestickChartData, ut []upwardTrend, st []SimulatedTradeData) {
+	ws := wsConnectionsChartmaster[userID]
+	if ws != nil {
+		//profit curve
+		if len(ut) > 0 {
+			var utStreamData []interface{}
+			for _, u := range ut {
+				utStreamData = append(utStreamData, u)
+			}
+			streamPacket(ws, utStreamData, rid)
+		}
+
+		//sim trades
+		if len(st) > 0 {
+			var stStreamData []interface{}
+			for _, trade := range st {
+				stStreamData = append(stStreamData, trade)
+			}
+			streamPacket(ws, stStreamData, rid)
+		}
+
+		//candlesticks
+		var pushCandles []CandlestickChartData
+		for _, candle := range c {
+			if candle.DateTime == "" {
+
+			} else {
+				pushCandles = append(pushCandles, candle)
+			}
+		}
+		var cStreamData []interface{}
+		for _, can := range pushCandles {
+			cStreamData = append(cStreamData, can)
+		}
+		streamPacket(ws, cStreamData, rid)
+	}
+}
+
 // makeBacktestResFile creates backtest result file with passed args and returns the name of the new file.
 func makeBacktestResFile(c []CandlestickChartData, p []ProfitCurveData, s []SimulatedTradeData, ticker, period, start, end string) string {
 	//only save candlesticks which are modified

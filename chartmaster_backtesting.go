@@ -30,7 +30,7 @@ func scan1(
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
-	storage *interface{}) map[string]map[int]string {
+	storage *interface{}) (map[string]map[int]string, []upwardTrend) {
 	// if len(close) > 0 {
 	// 	fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
 	// }
@@ -45,7 +45,7 @@ func scan1(
 			stored.PivotLows = []int{}
 		} else {
 			fmt.Errorf("storage obj assertion fail")
-			return nil
+			return nil, nil
 		}
 	}
 
@@ -61,9 +61,9 @@ func scan1(
 		lookForHigh = false
 	}
 	newLabels := make(map[string]map[int]string) //map of labelPos:map of labelBarsBack:labelText
-	// newLabels["middle"] = map[int]string{
-	// 	0: fmt.Sprintf("%v", relCandleIndex),
-	// }
+	newLabels["middle"] = map[int]string{
+		0: fmt.Sprintf("%v", relCandleIndex),
+	}
 
 	// if relCandleIndex > 3 && relCandleIndex < 10 {
 	// 	fmt.Printf("INDEX %v\n", relCandleIndex)
@@ -131,7 +131,7 @@ func scan1(
 						// pivotBarsBack: fmt.Sprintf("H from %v", relCandleIndex),
 						pivotBarsBack: "H",
 					}
-					foundPH = true
+					// foundPH = true
 				}
 			}
 		}
@@ -183,7 +183,7 @@ func scan1(
 						// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
 						pivotBarsBack: "L",
 					}
-					foundPL = true
+					// foundPL = true
 					// fmt.Printf("Adding PL index %v\n", newPLIndex)
 				}
 			}
@@ -191,17 +191,8 @@ func scan1(
 	}
 
 	/// WORK
+	var trendArray []upwardTrend
 
-	// comparePivotHighs = stored.PivotHighs
-	// comparePivotLows = stored.PivotLows
-	fmt.Println("relCandleIndex")
-	fmt.Println(relCandleIndex)
-
-	// fmt.Println(open)
-	// fmt.Println(high)
-	// fmt.Println(low)
-	// fmt.Println(close)
-	// !reflect.DeepEqual(comparePivotLows, stored.PivotLows)
 	if !reflect.DeepEqual(comparePivotLows, stored.PivotLows) {
 		var tempPivotLows []int
 
@@ -212,16 +203,15 @@ func scan1(
 		}
 		comparePivotLows = stored.PivotLows
 
-		fmt.Println(stored.PivotHighs)
-		fmt.Println(stored.PivotLows)
+		// fmt.Printf("\nPH: %v\n", stored.PivotHighs)
+		// fmt.Printf("\nPL: %v\n", stored.PivotLows)
 		startTrend := false
 		var endTrend bool
 		var startCandleIndex int
 		var endCandleIndex int
 		var trend upwardTrend
-		var trendArray []upwardTrend
 		var pivotHighsIndexInterval []int
-		var allPivotHighsStart []float64
+		var allPivotLowsStart []float64
 		var pivotHighsStart float64
 		// var pivotHighsExtent float64
 		var allPivotHighsExtent []float64
@@ -230,15 +220,16 @@ func scan1(
 			if i > 0 && !startTrend && low[stored.PivotLows[i-1]] < low[stored.PivotLows[i]] {
 				startTrend = true
 				startCandleIndex = stored.PivotLows[i-1]
-				allPivotHighsStart = append(allPivotHighsStart, close[startCandleIndex])
+				allPivotLowsStart = append(allPivotLowsStart, close[startCandleIndex])
 				pivotHighsStart = close[startCandleIndex]
-				fmt.Println("startCandleIndex")
-				fmt.Println(startCandleIndex)
+				fmt.Printf("\nindex: %v\n", startCandleIndex)
+				fmt.Printf("\ncandle: %v\n", candle.PeriodStart)
+
+				// fmt.Printf("\nstartCandleIndex: %v\n", startCandleIndex)
 			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
 				endTrend = true
 				endCandleIndex = stored.PivotLows[i-1]
-				fmt.Println("endCandleIndex")
-				fmt.Println(endCandleIndex)
+				// fmt.Printf("\nendCandleIndex: %v\n", endCandleIndex)
 			}
 			if startTrend && endTrend {
 				startTrend = false
@@ -253,28 +244,55 @@ func scan1(
 					}
 				}
 				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
-				// fmt.Println("pivotHighsStart")
-				// fmt.Println(pivotHighsStart)
-				trend.Growth = MaxFloatSlice(pivotHighsInterval) - pivotHighsStart
+				trend.Growth = (MaxFloatSlice(pivotHighsInterval) - pivotHighsStart) / pivotHighsStart * 100
 				trend.Duration = endCandleIndex - startCandleIndex
 				trendArray = append(trendArray, trend)
 			}
 		}
 
-		// var arrayData []interface{}
+		// fmt.Printf("\nallPivotLowsStart: %v\n", allPivotLowsStart)
+		// fmt.Printf("\nallPivotHighsExtent: %v\n", allPivotHighsExtent)
+		fmt.Printf("\ntrendArray: %v\n", trendArray)
 
-		// ws := wsConnectionsChartmaster[userID]
-
-		// arrayData = append(arrayData, trend)
-		// streamPacket(ws, arrayData, rid)
-
-		// fmt.Println(pivotHighsIndexInterval)
-		fmt.Println(allPivotHighsStart)
-		fmt.Println(allPivotHighsExtent)
-		fmt.Println(trendArray)
 	}
 
-	return nil
+	//manage positions
+	if (*strategy).PosLongSize == 0 && relCandleIndex > 0 { //no long pos
+		//enter if current PL higher than previous
+		if foundPL {
+			if len(stored.PivotLows)-2 >= 0 {
+				currentPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
+				prevPL := low[stored.PivotLows[len(stored.PivotLows)-2]]
+				// fmt.Printf(colorCyan+"currentPL = %v (%v), prevPL = %v (%v)\n"+colorReset, currentPL, stored.PivotLows[len(stored.PivotLows)-1], prevPL, stored.PivotLows[len(stored.PivotLows)-2])
+				if currentPL > prevPL {
+					// fmt.Printf("Buying at %v\n", close[relCandleIndex-1])
+					entryPrice := close[relCandleIndex-1]
+					slPrice := prevPL
+					rawRiskPerc := (entryPrice - slPrice) / entryPrice
+					accRiskedCap := (risk / 100) * float64(accSz)
+					posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
+					posSize := posCap / entryPrice
+					// fmt.Printf("Entering with %v\n", posSize)
+					strategy.Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
+					// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
+				}
+			}
+		}
+	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
+		if foundPH {
+			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "TP")
+			// newLabels["middle"] = map[int]string{
+			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
+			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
+			// }
+		} else {
+			strategy.CheckPositions(candle.Open, candle.High, candle.Low, candle.Close, relCandleIndex)
+		}
+	}
+	// fmt.Printf("\nJESUS: %v\n", trendArray)
+
+	*storage = stored
+	return newLabels, trendArray
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
@@ -656,6 +674,159 @@ func runBacktest(
 						Data:  chunkAddedPCData,
 					},
 				},
+				[]SimulatedTradeData{
+					{
+						Label: "strat1",
+						Data:  chunkAddedSTData,
+					},
+				})
+
+			stratComputeStartIndex = stratComputeEndIndex
+		} else {
+			break
+		}
+	}
+
+	fmt.Println(colorGreen + "\n!!! Backtest complete!" + colorReset)
+	return retCandles, retProfitCurve, retSimTrades
+}
+
+func runScan(
+	risk, lev, accSz float64,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) (map[string]map[int]string, []upwardTrend),
+	userID, rid, ticker, period string,
+	startTime, endTime time.Time,
+	packetSize int, packetSender func(string, string, []CandlestickChartData, []upwardTrend, []SimulatedTradeData),
+) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+	//init
+	buildCandleDataSync := make(chan string)
+	var store interface{} //save state between strategy executions on each candle
+	var retCandles []CandlestickChartData
+	var retProfitCurve []ProfitCurveData
+	var retSimTrades []SimulatedTradeData
+	var chunksArr []*[]Candlestick
+	retProfitCurve = []ProfitCurveData{
+		{
+			Label: "strat1", //TODO: prep for dynamic strategy param values
+		},
+	}
+	retSimTrades = []SimulatedTradeData{
+		{
+			Label: "strat1",
+		},
+	}
+	strategySim := StrategySimulator{}
+	strategySim.Init(accSz)
+	var allCandleData []Candlestick
+
+	allOpens := []float64{}
+	allHighs := []float64{}
+	allLows := []float64{}
+	allCloses := []float64{}
+	relIndex := 1
+	fetchCandlesStart := startTime
+
+	//fetch all candle data concurrently
+	for {
+		if fetchCandlesStart.After(endTime) {
+			break
+		}
+
+		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * time.Duration(packetSize))
+		if fetchCandlesEnd.After(endTime) {
+			fetchCandlesEnd = endTime
+		}
+		var chunkSlice []Candlestick
+
+		chunksArr = append(chunksArr, &chunkSlice)
+		go getChunkCandleData(&chunkSlice, packetSize, ticker, period,
+			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
+
+		//increment
+		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
+	}
+
+	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
+	//wait for all candle data fetch complete before running strategy
+	for {
+		allChunksFilled := true
+		for _, e := range chunksArr {
+			if len(*e) <= 0 {
+				allChunksFilled = false
+				break
+			}
+		}
+		if allChunksFilled {
+			// for _, e := range chunksArr {
+			// 	fmt.Printf("\nHERE: %v\n", len(*e) == 0)
+			// }
+			break
+		}
+	}
+	for _, e := range chunksArr {
+		allCandleData = append(allCandleData, *e...)
+		// progressBar(userID, rid, len(allCandleData), startTime, endTime)
+
+		// fmt.Printf("\nBAM: %v\n", len(allCandleData))
+
+	}
+	//run strat on all candles in chunk, stream each chunk to client
+	stratComputeStartIndex := 0
+	for {
+		if stratComputeStartIndex > len(allCandleData) {
+			break
+		}
+
+		stratComputeEndIndex := stratComputeStartIndex + packetSize
+		if stratComputeEndIndex > len(allCandleData) {
+			stratComputeEndIndex = len(allCandleData)
+		}
+		// fmt.Printf("computing index %v to %v", stratComputeStartIndex, stratComputeEndIndex)
+		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
+
+		//run strat for all chunk's candles
+		var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
+		var chunkAddedPCData []ProfitCurveDataPoint
+		var chunkAddedSTData []SimulatedTradeDataPoint
+		var labels map[string]map[int]string
+		var trendData []upwardTrend
+		for _, candle := range periodCandles {
+			allOpens = append(allOpens, candle.Open)
+			allHighs = append(allHighs, candle.High)
+			allLows = append(allLows, candle.Low)
+			allCloses = append(allCloses, candle.Close)
+			//TODO: build results and run for different param sets
+			labels, trendData = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+
+			//build display data using strategySim
+			var pcData ProfitCurveDataPoint
+			var simTradeData SimulatedTradeDataPoint
+			chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, &chunkAddedPCData, candle, strategySim, relIndex, labels)
+			if pcData.Equity > 0 {
+				chunkAddedPCData = append(chunkAddedPCData, pcData)
+			}
+			if simTradeData.DateTime != "" {
+				chunkAddedSTData = append(chunkAddedSTData, simTradeData)
+			}
+
+			//absolute index from absolute start of computation period
+			relIndex++
+		}
+
+		//update more global vars
+		retCandles = append(retCandles, chunkAddedCandles...)
+		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
+		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
+		// fmt.Printf("\nBOOMM: %v\n", len(retCandles))
+
+		progressBar(userID, rid, len(retCandles), startTime, endTime)
+
+		//stream data back to client in every chunk
+		fmt.Println("T")
+		if chunkAddedCandles != nil {
+			packetSender(userID, rid,
+				chunkAddedCandles,
+				trendData,
 				[]SimulatedTradeData{
 					{
 						Label: "strat1",
