@@ -62,7 +62,6 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
 	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
-
 	// Delete an element in a bucket if len greater than 10
 	bucketName := "res-" + userID
 	fmt.Println(bucketName)

@@ -267,7 +267,11 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 		fmt.Printf("chunkCandles fetch err %v", startTime.Format(httpTimeFormat))
 		return
 	}
-
+	// fmt.Println(" ")
+	// fmt.Println(startTime, endTime)
+	// fmt.Println(len(chunkCandles))
+	// fmt.Println(totalNumOfChunkSlice)
+	// fmt.Println(" ")
 	// chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
 	// if err2 != nil {
 	// 	fmt.Printf("parsing lastCandleTime err = %v", err2)
@@ -350,6 +354,10 @@ func runBacktest(
 	}
 	for _, e := range chunksArr {
 		allCandleData = append(allCandleData, *e...)
+		// progressBar(userID, rid, len(allCandleData), startTime, endTime)
+
+		// fmt.Printf("\nBAM: %v\n", len(allCandleData))
+
 	}
 	//run strat on all candles in chunk, stream each chunk to client
 	stratComputeStartIndex := 0
@@ -397,8 +405,9 @@ func runBacktest(
 		retCandles = append(retCandles, chunkAddedCandles...)
 		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
 		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
+		// fmt.Printf("\nBOOMM: %v\n", len(retCandles))
 
-		progressBar(userID, rid, retCandles, startTime, endTime)
+		progressBar(userID, rid, len(retCandles), startTime, endTime)
 
 		//stream data back to client in every chunk
 		if chunkAddedCandles != nil {
@@ -513,7 +522,7 @@ func runBacktestSequential(
 			relIndex++
 		}
 
-		progressBar(userID, rid, retCandles, startTime, endTime)
+		// progressBar(userID, rid, retCandles, startTime, endTime)
 
 		//stream data back to client in every chunk
 		//rm duplicates
