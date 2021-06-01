@@ -214,8 +214,8 @@ func scan1(
 				startCandleIndex = stored.PivotLows[i-1]
 				allPivotLowsStart = append(allPivotLowsStart, close[startCandleIndex])
 				pivotHighsStart = close[startCandleIndex]
-				fmt.Printf("\nindex: %v\n", startCandleIndex)
-				fmt.Printf("\ncandle: %v\n", candle[len(candle)-1].PeriodStart)
+				// fmt.Printf("\nindex: %v\n", startCandleIndex)
+				// fmt.Printf("\ncandle: %v\n", candle[startCandleIndex].PeriodStart)
 
 				// fmt.Printf("\nstartCandleIndex: %v\n", startCandleIndex)
 			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
@@ -238,6 +238,12 @@ func scan1(
 				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
 				trend.Growth = (MaxFloatSlice(pivotHighsInterval) - pivotHighsStart) / pivotHighsStart * 100
 				trend.Duration = endCandleIndex - startCandleIndex
+				trend.EntryTime = candle[startCandleIndex].PeriodStart
+				for _, e := range pivotHighsIndexInterval {
+					if high[e] == MaxFloatSlice(pivotHighsInterval) {
+						trend.ExtentTime = candle[e].PeriodStart
+					}
+				}
 				trendArray = append(trendArray, trend)
 			}
 		}

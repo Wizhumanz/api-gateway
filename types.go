@@ -189,10 +189,10 @@ type ProfitCurveData struct {
 }
 
 type upwardTrend struct {
-	// EntryTime  string  `json:"EntryTime"`
-	// ExtentTime string  `json:"ExtentTime"`
-	Duration int     `json:"Duration"`
-	Growth   float64 `json:"Growth"`
+	EntryTime  string  `json:"EntryTime"`
+	ExtentTime string  `json:"ExtentTime"`
+	Duration   int     `json:"Duration"`
+	Growth     float64 `json:"Growth"`
 }
 
 type PivotsStore struct {
