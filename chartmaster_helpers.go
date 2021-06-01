@@ -136,11 +136,6 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 	if strat.Actions[relIndex].Action == "ENTER" {
 		newCandleD.StratEnterPrice = strat.Actions[relIndex].Price
 	}
-	if relIndex == 87 {
-		for k, v := range strat.Actions {
-			fmt.Printf(colorYellow+"%v = %v\n"+colorYellow, k, v)
-		}
-	}
 	if strat.Actions[relIndex].Action == "SL" || strat.Actions[relIndex].Action == "TP" {
 		newCandleD.StratExitPrice = strat.Actions[relIndex].Price
 	}
