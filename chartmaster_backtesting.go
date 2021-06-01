@@ -26,7 +26,7 @@ var comparePivotHighs []int
 var comparePivotLows []int
 
 func scan1(
-	candle Candlestick, risk, lev, accSz float64,
+	candle []Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	strategy *StrategySimulator,
@@ -36,8 +36,6 @@ func scan1(
 	// }
 	// fmt.Printf("Risk = %v, Leverage = %v, AccCap = $%v \n", risk, lev, accSz)
 
-	foundPL := false
-	foundPH := false
 	stored, ok := (*storage).(PivotsStore)
 	if !ok {
 		if relCandleIndex == 1 {
@@ -64,12 +62,6 @@ func scan1(
 	newLabels["middle"] = map[int]string{
 		0: fmt.Sprintf("%v", relCandleIndex),
 	}
-
-	// if relCandleIndex > 3 && relCandleIndex < 10 {
-	// 	fmt.Printf("INDEX %v\n", relCandleIndex)
-	// 	fmt.Printf("current low %v\n", low[len(low)-1])
-	// 	fmt.Printf("lookForHigh = %v\n", lookForHigh)
-	// }
 
 	pivotBarsBack := 0
 	var lastPivotIndex int
@@ -223,7 +215,7 @@ func scan1(
 				allPivotLowsStart = append(allPivotLowsStart, close[startCandleIndex])
 				pivotHighsStart = close[startCandleIndex]
 				fmt.Printf("\nindex: %v\n", startCandleIndex)
-				fmt.Printf("\ncandle: %v\n", candle.PeriodStart)
+				fmt.Printf("\ncandle: %v\n", candle[len(candle)-1].PeriodStart)
 
 				// fmt.Printf("\nstartCandleIndex: %v\n", startCandleIndex)
 			} else if i > 0 && startTrend && !endTrend && low[stored.PivotLows[i-1]] > low[stored.PivotLows[i]] {
@@ -255,41 +247,6 @@ func scan1(
 		fmt.Printf("\ntrendArray: %v\n", trendArray)
 
 	}
-
-	//manage positions
-	if (*strategy).PosLongSize == 0 && relCandleIndex > 0 { //no long pos
-		//enter if current PL higher than previous
-		if foundPL {
-			if len(stored.PivotLows)-2 >= 0 {
-				currentPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
-				prevPL := low[stored.PivotLows[len(stored.PivotLows)-2]]
-				// fmt.Printf(colorCyan+"currentPL = %v (%v), prevPL = %v (%v)\n"+colorReset, currentPL, stored.PivotLows[len(stored.PivotLows)-1], prevPL, stored.PivotLows[len(stored.PivotLows)-2])
-				if currentPL > prevPL {
-					// fmt.Printf("Buying at %v\n", close[relCandleIndex-1])
-					entryPrice := close[relCandleIndex-1]
-					slPrice := prevPL
-					rawRiskPerc := (entryPrice - slPrice) / entryPrice
-					accRiskedCap := (risk / 100) * float64(accSz)
-					posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
-					posSize := posCap / entryPrice
-					// fmt.Printf("Entering with %v\n", posSize)
-					strategy.Buy(close[relCandleIndex-1], slPrice, posSize, true, relCandleIndex)
-					// fmt.Printf("BUY IN %v\n", close[relCandleIndex])
-				}
-			}
-		}
-	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
-		if foundPH {
-			strategy.CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "TP")
-			// newLabels["middle"] = map[int]string{
-			// 	// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
-			// 	0: "EXIT TRADE " + fmt.Sprint(relCandleIndex),
-			// }
-		} else {
-			strategy.CheckPositions(candle.Open, candle.High, candle.Low, candle.Close, relCandleIndex)
-		}
-	}
-	// fmt.Printf("\nJESUS: %v\n", trendArray)
 
 	*storage = stored
 	return newLabels, trendArray
@@ -693,7 +650,7 @@ func runBacktest(
 
 func runScan(
 	risk, lev, accSz float64,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) (map[string]map[int]string, []upwardTrend),
+	userStrat func([]Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) (map[string]map[int]string, []upwardTrend),
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []upwardTrend, []SimulatedTradeData),
@@ -723,6 +680,7 @@ func runScan(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
+	allCandles := []Candlestick{}
 	relIndex := 1
 	fetchCandlesStart := startTime
 
@@ -795,8 +753,9 @@ func runScan(
 			allHighs = append(allHighs, candle.High)
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
+			allCandles = append(allCandles, candle)
 			//TODO: build results and run for different param sets
-			labels, trendData = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+			labels, trendData = userStrat(allCandles, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
 
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint
