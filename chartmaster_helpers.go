@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -17,6 +18,20 @@ import (
 	"github.com/gorilla/websocket"
 	"google.golang.org/api/iterator"
 )
+
+func maxFloatSlice(v []float64) float64 {
+	sort.Float64s(v)
+	return v[len(v)-1]
+}
+
+func containsInt(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
 
 func copyObjs(base []Candlestick, copyer func(Candlestick) CandlestickChartData) []CandlestickChartData {
 	var ret []CandlestickChartData

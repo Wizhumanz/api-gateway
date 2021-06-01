@@ -195,11 +195,6 @@ type upwardTrend struct {
 	Growth     float64 `json:"Growth"`
 }
 
-type PivotsStore struct {
-	PivotHighs []int
-	PivotLows  []int
-}
-
 type SimulatedTradeDataPoint struct {
 	DateTime      string  `json:"DateTime"`
 	Direction     string  `json:"Direction"`

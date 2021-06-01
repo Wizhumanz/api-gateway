@@ -4,26 +4,13 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"sort"
 	"time"
 )
 
-func MaxFloatSlice(v []float64) float64 {
-	sort.Float64s(v)
-	return v[len(v)-1]
+type PivotsStore struct {
+	PivotHighs []int
+	PivotLows  []int
 }
-
-func containsInt(s []int, e int) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
-var comparePivotHighs []int
-var comparePivotLows []int
 
 func scan1(
 	candle []Candlestick, risk, lev, accSz float64,
@@ -31,6 +18,8 @@ func scan1(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) (map[string]map[int]string, []upwardTrend) {
+	var comparePivotLows []int
+
 	// if len(close) > 0 {
 	// 	fmt.Printf("len(close) = %v, last = %v", len(close), close[len(close)-1])
 	// }
@@ -235,12 +224,12 @@ func scan1(
 						pivotHighsInterval = append(pivotHighsInterval, high[t])
 					}
 				}
-				allPivotHighsExtent = append(allPivotHighsExtent, MaxFloatSlice(pivotHighsInterval))
-				trend.Growth = (MaxFloatSlice(pivotHighsInterval) - pivotHighsStart) / pivotHighsStart * 100
+				allPivotHighsExtent = append(allPivotHighsExtent, maxFloatSlice(pivotHighsInterval))
+				trend.Growth = (maxFloatSlice(pivotHighsInterval) - pivotHighsStart) / pivotHighsStart * 100
 				trend.Duration = endCandleIndex - startCandleIndex
 				trend.EntryTime = candle[startCandleIndex].PeriodStart
 				for _, e := range pivotHighsIndexInterval {
-					if high[e] == MaxFloatSlice(pivotHighsInterval) {
+					if high[e] == maxFloatSlice(pivotHighsInterval) {
 						trend.ExtentTime = candle[e].PeriodStart
 					}
 				}
