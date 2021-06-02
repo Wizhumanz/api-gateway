@@ -204,41 +204,45 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 
 	//profit curve
 	var pd ProfitCurveDataPoint
-	//only add data point if changed from last point OR 1st or 2nd datapoint
-	if (strat.GetEquity() != 0) && (len(*profitCurve) == 0) && (relIndex != 0) {
-		pd = ProfitCurveDataPoint{
-			DateTime: c.DateTime,
-			Equity:   strat.GetEquity(),
-		}
-	} else if (relIndex == 0) || (strat.GetEquity() != (*profitCurve)[len(*profitCurve)-1].Equity) {
-		pd = ProfitCurveDataPoint{
-			DateTime: c.DateTime,
-			Equity:   strat.GetEquity(),
+	if profitCurve != nil {
+		//only add data point if changed from last point OR 1st or 2nd datapoint
+		if (strat.GetEquity() != 0) && (len(*profitCurve) == 0) && (relIndex != 0) {
+			pd = ProfitCurveDataPoint{
+				DateTime: c.DateTime,
+				Equity:   strat.GetEquity(),
+			}
+		} else if (relIndex == 0) || (strat.GetEquity() != (*profitCurve)[len(*profitCurve)-1].Equity) {
+			pd = ProfitCurveDataPoint{
+				DateTime: c.DateTime,
+				Equity:   strat.GetEquity(),
+			}
 		}
 	}
 
 	//sim trades
 	sd := SimulatedTradeDataPoint{}
-	if strat.Actions[relIndex].Action == "SL" || strat.Actions[relIndex].Action == "TP" {
-		//find entry conditions
-		var entryPrice float64
-		var size float64
-		for i := 1; i < relIndex; i++ {
-			checkAction := strat.Actions[relIndex-i]
-			if checkAction.Action == "ENTER" {
-				entryPrice = checkAction.Price
-				size = checkAction.PosSize
-				break
+	if len(strat.Actions) > 0 {
+		if strat.Actions[relIndex].Action == "SL" || strat.Actions[relIndex].Action == "TP" {
+			//find entry conditions
+			var entryPrice float64
+			var size float64
+			for i := 1; i < relIndex; i++ {
+				checkAction := strat.Actions[relIndex-i]
+				if checkAction.Action == "ENTER" {
+					entryPrice = checkAction.Price
+					size = checkAction.PosSize
+					break
+				}
 			}
-		}
 
-		sd.DateTime = c.DateTime
-		sd.Direction = "LONG" //TODO: fix later when strategy changes
-		sd.EntryPrice = entryPrice
-		sd.ExitPrice = strat.Actions[relIndex].Price
-		sd.PosSize = size
-		sd.RiskedEquity = size * entryPrice
-		sd.RawProfitPerc = ((sd.ExitPrice - sd.EntryPrice) / sd.EntryPrice) * 100
+			sd.DateTime = c.DateTime
+			sd.Direction = "LONG" //TODO: fix later when strategy changes
+			sd.EntryPrice = entryPrice
+			sd.ExitPrice = strat.Actions[relIndex].Price
+			sd.PosSize = size
+			sd.RiskedEquity = size * entryPrice
+			sd.RawProfitPerc = ((sd.ExitPrice - sd.EntryPrice) / sd.EntryPrice) * 100
+		}
 	}
 
 	return retCandlesArr, pd, sd
@@ -397,6 +401,76 @@ func computeBacktest(
 	return retCandles, retProfitCurve, retSimTrades
 }
 
+func computeScan(
+	allCandleData []Candlestick,
+	packetSize int,
+	userID, rid string,
+	startTime, endTime time.Time,
+	scannerFunc func([]Candlestick, []float64, []float64, []float64, []float64, int, *interface{}) (map[string]map[int]string, PivotTrendScanDataPoint),
+	packetSender func(string, string, []CandlestickChartData, []PivotTrendScanDataPoint),
+) ([]CandlestickChartData, []PivotTrendScanDataPoint) {
+	var store interface{} //save state between strategy executions on each candle
+	var retCandles []CandlestickChartData
+	var retScanRes []PivotTrendScanDataPoint
+
+	allOpens := []float64{}
+	allHighs := []float64{}
+	allLows := []float64{}
+	allCloses := []float64{}
+	allCandles := []Candlestick{}
+	relIndex := 0
+	stratComputeStartIndex := 0
+	for {
+		if stratComputeStartIndex > len(allCandleData) {
+			break
+		}
+
+		stratComputeEndIndex := stratComputeStartIndex + packetSize
+		if stratComputeEndIndex > len(allCandleData) {
+			stratComputeEndIndex = len(allCandleData)
+		}
+		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
+
+		//run strat for all chunk's candles
+		var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
+		var labels map[string]map[int]string
+		for _, candle := range periodCandles {
+			//run scanner func
+			allCandles = append(allCandles, candle)
+			allOpens = append(allOpens, candle.Open)
+			allHighs = append(allHighs, candle.High)
+			allLows = append(allLows, candle.Low)
+			allCloses = append(allCloses, candle.Close)
+			var pivotScanData PivotTrendScanDataPoint
+			labels, pivotScanData = scannerFunc(allCandles, allOpens, allHighs, allLows, allCloses, relIndex, &store)
+
+			//save res data
+			chunkAddedCandles, _, _ = saveDisplayData(chunkAddedCandles, nil, candle, StrategySimulator{}, relIndex, labels)
+			if pivotScanData.Growth != 0 {
+				retScanRes = append(retScanRes, pivotScanData)
+			}
+
+			//absolute index from absolute start of computation period
+			relIndex++
+		}
+
+		//update more global vars
+		retCandles = append(retCandles, chunkAddedCandles...)
+
+		progressBar(userID, rid, len(retCandles), startTime, endTime)
+
+		//stream data back to client in every chunk
+		if chunkAddedCandles != nil {
+			packetSender(userID, rid, chunkAddedCandles, retScanRes)
+			stratComputeStartIndex = stratComputeEndIndex
+		} else {
+			break
+		}
+	}
+
+	return retCandles, retScanRes
+}
+
 func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 	packet := WebsocketPacket{
 		ResultID: resID,
@@ -440,6 +514,37 @@ func streamBacktestResData(userID, rid string, c []CandlestickChartData, pc []Pr
 				stStreamData = append(stStreamData, trade)
 			}
 			streamPacket(ws, stStreamData, rid)
+		}
+
+		//candlesticks
+		var pushCandles []CandlestickChartData
+		for _, candle := range c {
+			if candle.DateTime == "" {
+
+			} else {
+				pushCandles = append(pushCandles, candle)
+			}
+		}
+		var cStreamData []interface{}
+		for _, can := range pushCandles {
+			cStreamData = append(cStreamData, can)
+		}
+		streamPacket(ws, cStreamData, rid)
+	}
+}
+
+func streamScanResData(userID, rid string, c []CandlestickChartData, scanData []PivotTrendScanDataPoint) {
+	ws := wsConnectionsChartmaster[userID]
+	if ws != nil {
+		//scan pivot data point
+		if len(scanData) > 0 {
+			fmt.Println(scanData)
+
+			// var data []interface{}
+			// for _, e := range scanData {
+			// 	data = append(data, e)
+			// }
+			// streamPacket(ws, data, rid)
 		}
 
 		//candlesticks

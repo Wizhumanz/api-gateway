@@ -313,10 +313,3 @@ func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int, 
 		PosSize: closeSz,
 	}
 }
-
-type PivotTrendScanDataPoint struct {
-	EntryTime  string  `json:"EntryTime"`
-	ExtentTime string  `json:"ExtentTime"`
-	Duration   int     `json:"Duration"`
-	Growth     float64 `json:"Growth"`
-}

@@ -62,13 +62,14 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var candles []CandlestickChartData
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
+	// var scanRes []PivotTrendScanDataPoint
 	if reqType == "SCAN" {
-		//TODO: diff function for scanning
-		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, userID, rid, ticker, period, start, end, candlePacketSize, strat1, streamBacktestResData)
+		_, _ = runScan(userID, rid, ticker, period, start, end, candlePacketSize, scanPivotTrends, streamScanResData)
+		//TODO: save scan results like backtest results?
 	} else {
 		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, userID, rid, ticker, period, start, end, candlePacketSize, strat1, streamBacktestResData)
 
-		// Delete an element in history if more than 10 items
+		// delete an element in history if more than 10 items
 		bucketName := "res-" + userID
 		fmt.Println(bucketName)
 		bucketData := listFiles(bucketName)
