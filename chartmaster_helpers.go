@@ -470,10 +470,6 @@ func computeScan(
 		}
 	}
 
-	for _, d := range retScanRes {
-		fmt.Println(d)
-	}
-
 	return retCandles, retScanRes
 }
 
