@@ -30,7 +30,7 @@ func strat1(
 		}
 	}
 
-	newLabels, foundPL := findPivots(open, high, low, close, relCandleIndex, &stored)
+	newLabels, foundPL := findPivots(open, high, low, close, relCandleIndex, &(stored.PivotHighs), &(stored.PivotLows))
 
 	//manage positions
 	if (*strategy).PosLongSize == 0 && relCandleIndex > 0 { //no long pos
@@ -91,12 +91,18 @@ type PivotTrendScanDataPoint struct {
 	Growth     float64 `json:"Growth"`
 }
 
+type PivotTrendScanStore struct {
+	PivotHighs   []int
+	PivotLows    []int
+	CurrentPoint PivotTrendScanDataPoint
+}
+
 func scanPivotTrends(
 	candles []Candlestick,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	storage *interface{}) (map[string]map[int]string, PivotTrendScanDataPoint) {
-	stored, ok := (*storage).(PivotsStore)
+	stored, ok := (*storage).(PivotTrendScanStore)
 	if !ok {
 		if relCandleIndex == 0 {
 			stored.PivotHighs = []int{}
@@ -106,15 +112,18 @@ func scanPivotTrends(
 			return nil, PivotTrendScanDataPoint{}
 		}
 	}
-	newLabels, _ := findPivots(open, high, low, close, relCandleIndex, &stored)
+	newLabels, _ := findPivots(open, high, low, close, relCandleIndex, &(stored.PivotHighs), &(stored.PivotLows))
 	// newLabels["middle"] = map[int]string{
 	// 	0: fmt.Sprintf("%v", relCandleIndex),
 	// }
 
-	//TODO: make pivot scanner
 	retData := PivotTrendScanDataPoint{}
-	if relCandleIndex%10 == 0 {
-		retData.Growth = 69
+	if len(stored.PivotLows) >= 2 {
+		latestPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
+		prevPL := low[stored.PivotLows[len(stored.PivotLows)-2]]
+		if latestPL > prevPL {
+
+		}
 	}
 
 	*storage = stored

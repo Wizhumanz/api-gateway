@@ -5,16 +5,16 @@ import "math"
 func findPivots(
 	open, high, low, close []float64,
 	relCandleIndex int,
-	stored *PivotsStore) (map[string]map[int]string, bool) {
+	ph, pl *[]int) (map[string]map[int]string, bool) {
 	foundPL := false
 
 	//find pivot highs + lows
 	var lookForHigh bool
-	if len((*stored).PivotHighs) == 1 && len((*stored).PivotLows) == 0 {
+	if len(*ph) == 1 && len(*pl) == 0 {
 		lookForHigh = false
-	} else if len((*stored).PivotHighs) == 0 && len((*stored).PivotLows) == 0 {
+	} else if len(*ph) == 0 && len(*pl) == 0 {
 		lookForHigh = true
-	} else if (*stored).PivotHighs[len((*stored).PivotHighs)-1] < (*stored).PivotLows[len((*stored).PivotLows)-1] {
+	} else if (*ph)[len(*ph)-1] < (*pl)[len(*pl)-1] {
 		lookForHigh = true
 	} else {
 		lookForHigh = false
@@ -26,14 +26,14 @@ func findPivots(
 
 	pivotBarsBack := 0
 	var lastPivotIndex int
-	if len((*stored).PivotHighs) == 0 && len((*stored).PivotLows) == 0 {
+	if len(*ph) == 0 && len(*pl) == 0 {
 		lastPivotIndex = 0
-	} else if len((*stored).PivotHighs) == 0 {
-		lastPivotIndex = (*stored).PivotLows[len((*stored).PivotLows)-1]
-	} else if len((*stored).PivotLows) == 0 {
-		lastPivotIndex = (*stored).PivotHighs[len((*stored).PivotHighs)-1]
+	} else if len(*ph) == 0 {
+		lastPivotIndex = (*pl)[len(*pl)-1]
+	} else if len(*pl) == 0 {
+		lastPivotIndex = (*ph)[len(*ph)-1]
 	} else {
-		lastPivotIndex = int(math.Max(float64((*stored).PivotHighs[len((*stored).PivotHighs)-1]), float64((*stored).PivotLows[len((*stored).PivotLows)-1])))
+		lastPivotIndex = int(math.Max(float64((*ph)[len(*ph)-1]), float64((*pl)[len(*pl)-1])))
 		lastPivotIndex = int(math.Max(float64(1), float64(lastPivotIndex))) //make sure index is at least 1 to subtract 1 later
 		lastPivotIndex++                                                    //don't allow both pivot high and low on same candle
 	}
@@ -44,7 +44,7 @@ func findPivots(
 			if (low[i+1] < low[i]) && (high[i+1] < high[i]) {
 				//check if pivot already exists
 				found := false
-				for _, ph := range (*stored).PivotHighs {
+				for _, ph := range *ph {
 					if ph == i {
 						found = true
 						break
@@ -56,9 +56,9 @@ func findPivots(
 
 				//find highest high since last PL
 				newPHIndex := i
-				if len((*stored).PivotLows) > 0 && len((*stored).PivotHighs) > 0 && newPHIndex > 0 {
-					latestPLIndex := (*stored).PivotLows[len((*stored).PivotLows)-1]
-					latestPHIndex := (*stored).PivotHighs[len((*stored).PivotHighs)-1]
+				if len(*pl) > 0 && len(*ph) > 0 && newPHIndex > 0 {
+					latestPLIndex := (*pl)[len(*pl)-1]
+					latestPHIndex := (*ph)[len(*ph)-1]
 					for f := newPHIndex - 1; f >= latestPLIndex && f > latestPHIndex; f-- {
 						if high[f] > high[newPHIndex] && !found {
 							newPHIndex = f
@@ -72,7 +72,7 @@ func findPivots(
 				}
 
 				if newPHIndex >= 0 {
-					(*stored).PivotHighs = append((*stored).PivotHighs, newPHIndex)
+					*ph = append(*ph, newPHIndex)
 					pivotBarsBack = relCandleIndex - newPHIndex
 
 					newLabels["top"] = map[int]string{
@@ -90,7 +90,7 @@ func findPivots(
 			if (high[i+1] > high[i]) && (low[i+1] > low[i]) {
 				//check if pivot already exists
 				found := false
-				for _, pl := range (*stored).PivotLows {
+				for _, pl := range *pl {
 					if pl == i {
 						found = true
 						break
@@ -107,9 +107,9 @@ func findPivots(
 				// 	fmt.Printf(colorYellow+"<%v> new PL init index = %v\n"+colorReset, relCandleIndex, newPLIndex)
 				// }
 
-				if len((*stored).PivotHighs) > 0 && len((*stored).PivotLows) > 0 && newPLIndex > 0 {
-					latestPHIndex := (*stored).PivotHighs[len((*stored).PivotHighs)-1]
-					latestPLIndex := (*stored).PivotLows[len((*stored).PivotLows)-1]
+				if len(*ph) > 0 && len(*pl) > 0 && newPLIndex > 0 {
+					latestPHIndex := (*ph)[len(*ph)-1]
+					latestPLIndex := (*pl)[len(*pl)-1]
 					// if relCandleIndex > 150 && relCandleIndex < 170 {
 					// 	fmt.Printf("SEARCH lowest low latestPHIndex = %v, latestPLIndex = %v\n", latestPHIndex, latestPLIndex)
 					// }
@@ -126,7 +126,7 @@ func findPivots(
 				}
 
 				if newPLIndex >= 0 {
-					(*stored).PivotLows = append((*stored).PivotLows, newPLIndex)
+					*pl = append(*pl, newPLIndex)
 					pivotBarsBack = relCandleIndex - newPLIndex
 					newLabels["bottom"] = map[int]string{
 						// pivotBarsBack: fmt.Sprintf("L from %v", relCandleIndex),
