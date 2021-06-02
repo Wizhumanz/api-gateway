@@ -37,6 +37,7 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	risk := req.Risk
 	leverage := req.Leverage
 	size := req.Size
+	reqType := req.Operation
 
 	candlePacketSize, err := strconv.Atoi(req.CandlePacketSize)
 	if err != nil {
@@ -61,17 +62,23 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var candles []CandlestickChartData
 	var profitCurve []ProfitCurveData
 	var simTrades []SimulatedTradeData
-	candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
-	// Delete an element in a bucket if len greater than 10
-	bucketName := "res-" + userID
-	fmt.Println(bucketName)
-	bucketData := listFiles(bucketName)
-	if len(bucketData) >= 10 {
-		deleteFile(bucketName, bucketData[0])
-	}
+	if reqType == "SCAN" {
+		//TODO: diff function for scanning
+		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+	} else {
+		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
 
-	//save result to bucket
-	go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, req.TimeStart, req.TimeEnd)
+		// Delete an element in history if more than 10 items
+		bucketName := "res-" + userID
+		fmt.Println(bucketName)
+		bucketData := listFiles(bucketName)
+		if len(bucketData) >= 10 {
+			deleteFile(bucketName, bucketData[0])
+		}
+
+		//save result to bucket
+		go saveBacktestRes(candles, profitCurve, simTrades, rid, bucketName, ticker, period, req.TimeStart, req.TimeEnd)
+	}
 
 	// return
 	w.Header().Set("Content-Type", "application/json")

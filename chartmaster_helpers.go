@@ -244,6 +244,55 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 	return retCandlesArr, pd, sd
 }
 
+func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, period string,
+	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time) {
+	var chunkCandles []Candlestick
+	//check if candles exist in cache
+	redisKeyPrefix := ticker + ":" + period + ":"
+	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
+	testRes, err := rdbChartmaster.HGetAll(ctx, testKey).Result()
+	if err != nil {
+		fmt.Printf("redis test fetch err %v\n")
+		return
+	}
+	if (testRes["open"] == "") || (testRes["close"] == "") {
+		fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
+		//if no data in cache, do fresh GET and save to cache
+		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+	} else {
+		//otherwise, get data in cache
+		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
+	}
+	if len(chunkCandles) == 0 {
+		fmt.Printf("chunkCandles fetch err %v\n", startTime.Format(httpTimeFormat))
+		return
+	}
+
+	*chunkSlice = chunkCandles
+}
+
+func concFetchCandleData(startTime, endTime time.Time, period, ticker string, packetSize int, chunksArr *[]*[]Candlestick) {
+	fetchCandlesStart := startTime
+	for {
+		if fetchCandlesStart.After(endTime) {
+			break
+		}
+
+		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * time.Duration(packetSize))
+		if fetchCandlesEnd.After(endTime) {
+			fetchCandlesEnd = endTime
+		}
+		var chunkSlice []Candlestick
+
+		*chunksArr = append(*chunksArr, &chunkSlice)
+		go getChunkCandleData(&chunkSlice, packetSize, ticker, period,
+			startTime, endTime, fetchCandlesStart, fetchCandlesEnd)
+
+		//increment
+		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
+	}
+}
+
 func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 	packet := WebsocketPacket{
 		ResultID: resID,

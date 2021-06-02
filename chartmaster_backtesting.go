@@ -94,43 +94,8 @@ func scanPivotTrends(
 	relCandleIndex int,
 	strategy *StrategySimulator,
 	storage *interface{}) (map[string]map[int]string, PivotTrendScanDataPoint) {
-
-}
-
-func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, period string,
-	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time, buildCandleDataSync chan string) {
-	var chunkCandles []Candlestick
-	//check if candles exist in cache
-	redisKeyPrefix := ticker + ":" + period + ":"
-	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
-	testRes, err := rdbChartmaster.HGetAll(ctx, testKey).Result()
-	if err != nil {
-		fmt.Printf("redis test fetch err %v\n")
-		return
-	}
-	if (testRes["open"] == "") || (testRes["close"] == "") {
-		fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
-		//if no data in cache, do fresh GET and save to cache
-		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
-	} else {
-		//otherwise, get data in cache
-		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
-	}
-	if len(chunkCandles) == 0 {
-		fmt.Printf("chunkCandles fetch err %v\n", startTime.Format(httpTimeFormat))
-		return
-	}
-	// fmt.Println(" ")
-	// fmt.Println(startTime, endTime)
-	// fmt.Println(len(chunkCandles))
-	// fmt.Println(totalNumOfChunkSlice)
-	// fmt.Println(" ")
-	// chunkLastCandleTime, err2 := time.Parse(httpTimeFormat, chunkCandles[len(chunkCandles)-1].DateTime)
-	// if err2 != nil {
-	// 	fmt.Printf("parsing lastCandleTime err = %v", err2)
-	// }
-
-	*chunkSlice = chunkCandles
+	//TODO: make pivot scanner
+	return nil, PivotTrendScanDataPoint{}
 }
 
 func runBacktest(
@@ -141,7 +106,6 @@ func runBacktest(
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	//init
-	buildCandleDataSync := make(chan string)
 	var store interface{} //save state between strategy executions on each candle
 	var retCandles []CandlestickChartData
 	var retProfitCurve []ProfitCurveData
@@ -161,34 +125,9 @@ func runBacktest(
 	strategySim.Init(accSz)
 	var allCandleData []Candlestick
 
-	allOpens := []float64{}
-	allHighs := []float64{}
-	allLows := []float64{}
-	allCloses := []float64{}
-	relIndex := 0
-	fetchCandlesStart := startTime
-
 	//fetch all candle data concurrently
-	for {
-		if fetchCandlesStart.After(endTime) {
-			break
-		}
+	concFetchCandleData(startTime, endTime, period, ticker, packetSize, &chunksArr)
 
-		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * time.Duration(packetSize))
-		if fetchCandlesEnd.After(endTime) {
-			fetchCandlesEnd = endTime
-		}
-		var chunkSlice []Candlestick
-
-		chunksArr = append(chunksArr, &chunkSlice)
-		go getChunkCandleData(&chunkSlice, packetSize, ticker, period,
-			startTime, endTime, fetchCandlesStart, fetchCandlesEnd, buildCandleDataSync)
-
-		//increment
-		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
-	}
-
-	// fmt.Printf("\n total: %v\n", endTime.Sub(startTime).Minutes())
 	//wait for all candle data fetch complete before running strategy
 	for {
 		allChunksFilled := true
@@ -199,20 +138,21 @@ func runBacktest(
 			}
 		}
 		if allChunksFilled {
-			// for _, e := range chunksArr {
-			// 	fmt.Printf("\nHERE: %v\n", len(*e) == 0)
-			// }
 			break
 		}
 	}
+
 	for _, e := range chunksArr {
 		allCandleData = append(allCandleData, *e...)
 		// progressBar(userID, rid, len(allCandleData), startTime, endTime)
-
-		// fmt.Printf("\nBAM: %v\n", len(allCandleData))
-
 	}
+
 	//run strat on all candles in chunk, stream each chunk to client
+	allOpens := []float64{}
+	allHighs := []float64{}
+	allLows := []float64{}
+	allCloses := []float64{}
+	relIndex := 0
 	stratComputeStartIndex := 0
 	for {
 		if stratComputeStartIndex > len(allCandleData) {
@@ -223,7 +163,6 @@ func runBacktest(
 		if stratComputeEndIndex > len(allCandleData) {
 			stratComputeEndIndex = len(allCandleData)
 		}
-		// fmt.Printf("computing index %v to %v", stratComputeStartIndex, stratComputeEndIndex)
 		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
 
 		//run strat for all chunk's candles

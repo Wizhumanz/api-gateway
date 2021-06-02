@@ -167,6 +167,7 @@ type CandlestickChartData struct {
 }
 
 type ComputeRequest struct {
+	Operation        string `json:"operation"`
 	Ticker           string `json:"ticker"`
 	Period           string `json:"period"`
 	TimeStart        string `json:"time_start"`
