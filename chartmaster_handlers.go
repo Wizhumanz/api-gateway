@@ -64,9 +64,9 @@ func backtestHandler(w http.ResponseWriter, r *http.Request) {
 	var simTrades []SimulatedTradeData
 	if reqType == "SCAN" {
 		//TODO: diff function for scanning
-		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, userID, rid, ticker, period, start, end, candlePacketSize, strat1, streamBacktestResData)
 	} else {
-		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, strat1, userID, rid, ticker, period, start, end, candlePacketSize, streamBacktestResData)
+		candles, profitCurve, simTrades = runBacktest(rF, lF, szF, userID, rid, ticker, period, start, end, candlePacketSize, strat1, streamBacktestResData)
 
 		// Delete an element in history if more than 10 items
 		bucketName := "res-" + userID

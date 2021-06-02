@@ -293,6 +293,110 @@ func concFetchCandleData(startTime, endTime time.Time, period, ticker string, pa
 	}
 }
 
+func computeBacktest(
+	allCandleData []Candlestick,
+	risk, lev, accSz float64,
+	packetSize int,
+	userID, rid string,
+	startTime, endTime time.Time,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
+) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
+	var store interface{} //save state between strategy executions on each candle
+	var retCandles []CandlestickChartData
+	var retProfitCurve []ProfitCurveData
+	var retSimTrades []SimulatedTradeData
+	retProfitCurve = []ProfitCurveData{
+		{
+			Label: "strat1", //TODO: prep for dynamic strategy param values
+		},
+	}
+	retSimTrades = []SimulatedTradeData{
+		{
+			Label: "strat1",
+		},
+	}
+	strategySim := StrategySimulator{}
+	strategySim.Init(accSz)
+
+	allOpens := []float64{}
+	allHighs := []float64{}
+	allLows := []float64{}
+	allCloses := []float64{}
+	relIndex := 0
+	stratComputeStartIndex := 0
+	for {
+		if stratComputeStartIndex > len(allCandleData) {
+			break
+		}
+
+		stratComputeEndIndex := stratComputeStartIndex + packetSize
+		if stratComputeEndIndex > len(allCandleData) {
+			stratComputeEndIndex = len(allCandleData)
+		}
+		periodCandles := allCandleData[stratComputeStartIndex:stratComputeEndIndex]
+
+		//run strat for all chunk's candles
+		var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
+		var chunkAddedPCData []ProfitCurveDataPoint
+		var chunkAddedSTData []SimulatedTradeDataPoint
+		var labels map[string]map[int]string
+		for _, candle := range periodCandles {
+			allOpens = append(allOpens, candle.Open)
+			allHighs = append(allHighs, candle.High)
+			allLows = append(allLows, candle.Low)
+			allCloses = append(allCloses, candle.Close)
+			//TODO: build results and run for different param sets
+			labels = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+
+			//build display data using strategySim
+			var pcData ProfitCurveDataPoint
+			var simTradeData SimulatedTradeDataPoint
+			chunkAddedCandles, pcData, simTradeData = saveDisplayData(chunkAddedCandles, &chunkAddedPCData, candle, strategySim, relIndex, labels)
+			if pcData.Equity > 0 {
+				chunkAddedPCData = append(chunkAddedPCData, pcData)
+			}
+			if simTradeData.DateTime != "" {
+				chunkAddedSTData = append(chunkAddedSTData, simTradeData)
+			}
+
+			//absolute index from absolute start of computation period
+			relIndex++
+		}
+
+		//update more global vars
+		retCandles = append(retCandles, chunkAddedCandles...)
+		(retProfitCurve)[0].Data = append((retProfitCurve)[0].Data, chunkAddedPCData...)
+		(retSimTrades)[0].Data = append((retSimTrades)[0].Data, chunkAddedSTData...)
+
+		progressBar(userID, rid, len(retCandles), startTime, endTime)
+
+		//stream data back to client in every chunk
+		if chunkAddedCandles != nil {
+			packetSender(userID, rid,
+				chunkAddedCandles,
+				[]ProfitCurveData{
+					{
+						Label: "strat1", //TODO: prep for dynamic strategy param values
+						Data:  chunkAddedPCData,
+					},
+				},
+				[]SimulatedTradeData{
+					{
+						Label: "strat1",
+						Data:  chunkAddedSTData,
+					},
+				})
+
+			stratComputeStartIndex = stratComputeEndIndex
+		} else {
+			break
+		}
+	}
+
+	return retCandles, retProfitCurve, retSimTrades
+}
+
 func streamPacket(ws *websocket.Conn, chartData []interface{}, resID string) {
 	packet := WebsocketPacket{
 		ResultID: resID,
