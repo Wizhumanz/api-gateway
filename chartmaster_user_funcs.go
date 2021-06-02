@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type PivotsStore struct {
 	PivotHighs     []int
@@ -85,16 +88,19 @@ func strat1(
 }
 
 type PivotTrendScanDataPoint struct {
-	EntryTime  string  `json:"EntryTime"`
-	ExtentTime string  `json:"ExtentTime"`
-	Duration   int     `json:"Duration"`
-	Growth     float64 `json:"Growth"`
+	EntryTime             string  `json:"EntryTime"`
+	EntryFirstPivotIndex  int     `json:"EntryFirstPivotIndex"`
+	EntrySecondPivotIndex int     `json:"EntrySecondPivotIndex"`
+	ExtentTime            string  `json:"ExtentTime"`
+	Duration              float64 `json:"Duration"`
+	Growth                float64 `json:"Growth"`
 }
 
 type PivotTrendScanStore struct {
-	PivotHighs   []int
-	PivotLows    []int
-	CurrentPoint PivotTrendScanDataPoint
+	PivotHighs    []int
+	PivotLows     []int
+	CurrentPoint  PivotTrendScanDataPoint
+	WatchingTrend bool
 }
 
 func scanPivotTrends(
@@ -119,10 +125,68 @@ func scanPivotTrends(
 
 	retData := PivotTrendScanDataPoint{}
 	if len(stored.PivotLows) >= 2 {
-		latestPL := low[stored.PivotLows[len(stored.PivotLows)-1]]
-		prevPL := low[stored.PivotLows[len(stored.PivotLows)-2]]
-		if latestPL > prevPL {
+		if stored.WatchingTrend {
+			//manage/watch ongoing trend
+			retData = stored.CurrentPoint
 
+			//search for all pivot highs since entry pivots
+			var checkPHIndexes []int
+			for _, phi := range stored.PivotHighs {
+				if phi > retData.EntrySecondPivotIndex {
+					checkPHIndexes = append(checkPHIndexes, phi)
+				}
+			}
+
+			//for each high, check if break trend
+			for i := 0; i+1 < len(checkPHIndexes); i++ {
+				if high[checkPHIndexes[i]] >= high[checkPHIndexes[i+1]] {
+					trendBreakIndex := checkPHIndexes[i+1]
+
+					newLabels["middle"] = map[int]string{
+						relCandleIndex - trendBreakIndex: "X",
+					}
+
+					//find highest point between second entry pivot and trend break
+					trendExtentIndex := retData.EntrySecondPivotIndex
+					for i := retData.EntrySecondPivotIndex + 1; i <= relCandleIndex; i++ {
+						if high[i] > high[trendExtentIndex] {
+							trendExtentIndex = i
+						}
+					}
+					newLabels["middle"] = map[int]string{
+						relCandleIndex - trendExtentIndex: "^",
+					}
+					retData.ExtentTime = candles[trendExtentIndex].DateTime
+
+					retData.Growth = (high[trendBreakIndex] - low[retData.EntrySecondPivotIndex]) / low[retData.EntrySecondPivotIndex]
+
+					entryTime, _ := time.Parse(httpTimeFormat, retData.EntryTime)
+					trendEndTime, _ := time.Parse(httpTimeFormat, candles[trendBreakIndex].DateTime)
+					retData.Duration = trendEndTime.Sub(entryTime).Minutes()
+
+					//reset
+					stored.WatchingTrend = false
+					stored.CurrentPoint = PivotTrendScanDataPoint{}
+					break
+				}
+			}
+		} else {
+			//find new trend to watch
+			latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
+			latestPL := low[latestPLIndex]
+			prevPLIndex := stored.PivotLows[len(stored.PivotLows)-2]
+			prevPL := low[prevPLIndex]
+			if latestPL > prevPL {
+				retData.EntryTime = candles[latestPLIndex].DateTime
+				retData.EntryFirstPivotIndex = prevPLIndex
+				retData.EntrySecondPivotIndex = latestPLIndex
+				stored.CurrentPoint = retData
+				stored.WatchingTrend = true
+
+				newLabels["middle"] = map[int]string{
+					relCandleIndex - latestPLIndex: "L2",
+				}
+			}
 		}
 	}
 

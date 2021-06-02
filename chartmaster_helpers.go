@@ -256,7 +256,7 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
 	testRes, err := rdbChartmaster.HGetAll(ctx, testKey).Result()
 	if err != nil {
-		fmt.Printf("redis test fetch err %v\n")
+		fmt.Printf("redis test fetch err %v\n", err)
 		return
 	}
 	if (testRes["open"] == "") || (testRes["close"] == "") {
@@ -538,13 +538,11 @@ func streamScanResData(userID, rid string, c []CandlestickChartData, scanData []
 	if ws != nil {
 		//scan pivot data point
 		if len(scanData) > 0 {
-			fmt.Println(scanData)
-
-			// var data []interface{}
-			// for _, e := range scanData {
-			// 	data = append(data, e)
-			// }
-			// streamPacket(ws, data, rid)
+			var data []interface{}
+			for _, e := range scanData {
+				data = append(data, e)
+			}
+			streamPacket(ws, data, rid)
 		}
 
 		//candlesticks
