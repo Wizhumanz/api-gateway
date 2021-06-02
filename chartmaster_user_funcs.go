@@ -158,7 +158,7 @@ func scanPivotTrends(
 					}
 					retData.ExtentTime = candles[trendExtentIndex].DateTime
 
-					retData.Growth = (high[trendBreakIndex] - low[retData.EntrySecondPivotIndex]) / low[retData.EntrySecondPivotIndex]
+					retData.Growth = ((high[trendBreakIndex] - low[retData.EntrySecondPivotIndex]) / low[retData.EntrySecondPivotIndex]) * 100
 
 					entryTime, _ := time.Parse(httpTimeFormat, retData.EntryTime)
 					trendEndTime, _ := time.Parse(httpTimeFormat, candles[trendBreakIndex].DateTime)
