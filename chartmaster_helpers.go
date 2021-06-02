@@ -433,6 +433,7 @@ func computeScan(
 
 		//run strat for all chunk's candles
 		var chunkAddedCandles []CandlestickChartData //separate chunk added vars to stream new data in packet only
+		var chunkAddedScanData []PivotTrendScanDataPoint
 		var labels map[string]map[int]string
 		for _, candle := range periodCandles {
 			//run scanner func
@@ -447,7 +448,7 @@ func computeScan(
 			//save res data
 			chunkAddedCandles, _, _ = saveDisplayData(chunkAddedCandles, nil, candle, StrategySimulator{}, relIndex, labels)
 			if pivotScanData.Growth != 0 {
-				retScanRes = append(retScanRes, pivotScanData)
+				chunkAddedScanData = append(chunkAddedScanData, pivotScanData)
 			}
 
 			//absolute index from absolute start of computation period
@@ -456,16 +457,21 @@ func computeScan(
 
 		//update more global vars
 		retCandles = append(retCandles, chunkAddedCandles...)
+		retScanRes = append(retScanRes, chunkAddedScanData...)
 
 		progressBar(userID, rid, len(retCandles), startTime, endTime)
 
 		//stream data back to client in every chunk
 		if chunkAddedCandles != nil {
-			packetSender(userID, rid, chunkAddedCandles, retScanRes)
+			packetSender(userID, rid, chunkAddedCandles, chunkAddedScanData)
 			stratComputeStartIndex = stratComputeEndIndex
 		} else {
 			break
 		}
+	}
+
+	for _, d := range retScanRes {
+		fmt.Println(d)
 	}
 
 	return retCandles, retScanRes
@@ -538,6 +544,8 @@ func streamScanResData(userID, rid string, c []CandlestickChartData, scanData []
 	if ws != nil {
 		//scan pivot data point
 		if len(scanData) > 0 {
+			fmt.Printf("%v to %v\n", scanData[0].EntryTime, scanData[len(scanData)-1].EntryTime)
+
 			var data []interface{}
 			for _, e := range scanData {
 				data = append(data, e)
