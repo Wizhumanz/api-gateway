@@ -135,11 +135,25 @@ func breakTrend(candles []Candlestick, breakIndex, relCandleIndex int, high, clo
 	(*stored).MinSearchIndex = breakIndex //don't enter with same PL as past trend, must be after break of past trend
 }
 
+func contains(sli []int, find int) bool {
+	found := false
+	for _, e := range sli {
+		if e == find {
+			found = true
+			break
+		}
+	}
+	return found
+}
+
 func scanPivotTrends(
 	candles []Candlestick,
 	open, high, low, close []float64,
 	relCandleIndex int,
 	storage *interface{}) (map[string]map[int]string, PivotTrendScanDataPoint) {
+	exitWatchPivots := 3
+	checkTrendFromStartingPivots := false
+
 	stored, ok := (*storage).(PivotTrendScanStore)
 	if !ok {
 		if relCandleIndex == 0 {
@@ -170,35 +184,107 @@ func scanPivotTrends(
 				return newLabels, retData
 			}
 
-			//TODO: check for dynamic number of trend breaks
+			//check for dynamic number of trend breaks
+			type PivotCalc struct {
+				Index int
+				Type  string //"PL" or "PH"
+			}
+			var pivotIndexesToCheck []PivotCalc
+			//find all pivots since trend start, append to slice in order
+			for i := retData.EntryFirstPivotIndex; i < relCandleIndex; i++ {
+				addPivot := PivotCalc{}
+				if contains(stored.PivotLows, i) {
+					addPivot.Index = i
+					addPivot.Type = "PL"
+				} else if contains(stored.PivotHighs, i) {
+					addPivot.Index = i
+					addPivot.Type = "PH"
+				}
 
-			//search for all pivot highs since entry pivots
-			var checkPHIndexes []int
-			for _, phi := range stored.PivotHighs {
-				if phi > retData.EntryFirstPivotIndex {
-					checkPHIndexes = append(checkPHIndexes, phi)
+				if addPivot.Index != 0 {
+					pivotIndexesToCheck = append(pivotIndexesToCheck, addPivot)
 				}
 			}
-			var checkPLIndexes []int
-			for _, pli := range stored.PivotLows {
-				if pli >= retData.EntryFirstPivotIndex {
-					checkPLIndexes = append(checkPLIndexes, pli)
-				}
-			}
 
-			//for each pivot, check if break trend
-			for i := 0; i+1 < len(checkPHIndexes); i++ {
-				if high[checkPHIndexes[i]] >= high[checkPHIndexes[i+1]] {
-					breakTrend(candles, checkPHIndexes[i+1], relCandleIndex, high, close, &newLabels, &retData, &stored)
+			//check each pivot for trend break
+			var trendBreakPivots []PivotCalc
+			for j, p := range pivotIndexesToCheck {
+				if j > len(pivotIndexesToCheck)-1 {
 					break
 				}
-			}
-			for i := 0; i+1 < len(checkPLIndexes); i++ {
-				if low[checkPLIndexes[i]] >= low[checkPLIndexes[i+1]] {
-					breakTrend(candles, checkPLIndexes[i+1], relCandleIndex, high, close, &newLabels, &retData, &stored)
-					break
+				//don't check trend's starting pivots
+				if j < 2 {
+					continue
+				}
+
+				//determine pivot type, set vars
+				currentPivotIndex := pivotIndexesToCheck[j].Index
+				var prevPivotIndex int
+				var checkVal []float64
+				if contains(stored.PivotHighs, pivotIndexesToCheck[j].Index) {
+					checkVal = high
+					if checkTrendFromStartingPivots {
+						prevPivotIndex = pivotIndexesToCheck[1].Index //use trend's starting high
+					} else {
+						prevPivotIndex = pivotIndexesToCheck[j-2].Index
+					}
+				} else {
+					checkVal = low
+					if checkTrendFromStartingPivots {
+						prevPivotIndex = pivotIndexesToCheck[0].Index //use trend's starting high
+					} else {
+						prevPivotIndex = pivotIndexesToCheck[j-2].Index
+					}
+				}
+
+				//check if break trend
+				if checkVal[prevPivotIndex] > checkVal[currentPivotIndex] {
+					//if lower high, record as trend break
+					trendBreakPivots = append(trendBreakPivots, p)
+					if len(trendBreakPivots) >= exitWatchPivots {
+						break
+					}
+				} else {
+					if len(trendBreakPivots) < exitWatchPivots {
+						trendBreakPivots = []PivotCalc{} //reset exit watch if not consecutive breaks
+					} else {
+						break
+					}
 				}
 			}
+
+			//break trend scan if exitWatch sufficient
+			if len(trendBreakPivots) >= exitWatchPivots {
+				breakTrend(candles, trendBreakPivots[exitWatchPivots-1].Index, relCandleIndex, high, close, &newLabels, &retData, &stored)
+			}
+
+			// //search for all pivot highs since entry pivots
+			// var checkPHIndexes []int
+			// for _, phi := range stored.PivotHighs {
+			// 	if phi > retData.EntryFirstPivotIndex {
+			// 		checkPHIndexes = append(checkPHIndexes, phi)
+			// 	}
+			// }
+			// var checkPLIndexes []int
+			// for _, pli := range stored.PivotLows {
+			// 	if pli >= retData.EntryFirstPivotIndex {
+			// 		checkPLIndexes = append(checkPLIndexes, pli)
+			// 	}
+			// }
+
+			// //for each pivot, check if break trend
+			// for i := 0; i+1 < len(checkPHIndexes); i++ {
+			// 	if high[checkPHIndexes[i]] >= high[checkPHIndexes[i+1]] {
+			// 		breakTrend(candles, checkPHIndexes[i+1], relCandleIndex, high, close, &newLabels, &retData, &stored)
+			// 		break
+			// 	}
+			// }
+			// for i := 0; i+1 < len(checkPLIndexes); i++ {
+			// 	if low[checkPLIndexes[i]] >= low[checkPLIndexes[i+1]] {
+			// 		breakTrend(candles, checkPLIndexes[i+1], relCandleIndex, high, close, &newLabels, &retData, &stored)
+			// 		break
+			// 	}
+			// }
 		} else {
 			// fmt.Printf("finding new trend %v %v\n", relCandleIndex, candles[len(candles)-1].DateTime)
 
