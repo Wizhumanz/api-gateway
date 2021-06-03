@@ -163,8 +163,11 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 			index := len(retCandlesArr) - labelBB - 1
 			// fmt.Printf("TOP labelBB = %v\n", len(retCandlesArr), labelBB)
 			if index >= 0 {
-				retCandlesArr[index].LabelTop = labelText
-				// fmt.Printf("TOP label '%v' to index %v\n", labelText, index)
+				if retCandlesArr[index].LabelTop != "" {
+					retCandlesArr[index].LabelTop = retCandlesArr[index].LabelTop + "-" + labelText
+				} else {
+					retCandlesArr[index].LabelTop = labelText
+				}
 			}
 		}
 
@@ -179,8 +182,11 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 			index := len(retCandlesArr) - labelBB - 1
 			// fmt.Printf("MID labelBB = %v\n", len(retCandlesArr), labelBB)
 			if index >= 0 {
-				retCandlesArr[index].LabelMiddle = labelText
-				// fmt.Printf("MID label '%v' to index %v\n", labelText, index)
+				if retCandlesArr[index].LabelMiddle != "" {
+					retCandlesArr[index].LabelMiddle = retCandlesArr[index].LabelMiddle + "-" + labelText
+				} else {
+					retCandlesArr[index].LabelMiddle = labelText
+				}
 			}
 		}
 
@@ -195,8 +201,11 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 			index := len(retCandlesArr) - labelBB - 1
 			// fmt.Printf("BOTTOM labelBB = %v\n", len(retCandlesArr), labelBB)
 			if index >= 0 {
-				retCandlesArr[index].LabelBottom = labelText
-				// fmt.Printf("BOTTOM label '%v' to index %v\n", labelText, index)
+				if retCandlesArr[index].LabelBottom != "" {
+					retCandlesArr[index].LabelBottom = retCandlesArr[index].LabelBottom + "-" + labelText
+				} else {
+					retCandlesArr[index].LabelBottom = labelText
+				}
 			}
 		}
 	}
