@@ -58,8 +58,6 @@ var wsConnectionsChartmaster map[string]*websocket.Conn
 func main() {
 	httpTimeFormat = "2006-01-02T15:04:05"
 
-	botStrategy("BINANCEFTS_PERP_BTC_USDT", "1MIN")
-
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	wsConnections = make(map[string]*websocket.Conn)
@@ -68,11 +66,8 @@ func main() {
 	initRedis()
 	initDatastore()
 
-	// http.Handle("/", http.FileServer(http.Dir(".")))
-	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
-	// addr := "localhost:4243"
-	// log.Printf("Listening on %s", addr)
-	// log.Fatal(http.ListenAndServe(addr, nil))
+	msngr.GoogleProjectID = "myika-anastasia"
+	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
 	periodDurationMap["2MIN"] = 2 * time.Minute
@@ -93,6 +88,8 @@ func main() {
 	periodDurationMap["12HRS"] = 12 * time.Hour
 	periodDurationMap["1DAY"] = 24 * time.Hour
 	periodDurationMap["2DAY"] = 48 * time.Hour
+
+	botStrategy("BINANCEFTS_PERP_BTC_USDT", "1MIN")
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
@@ -128,9 +125,6 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/getChartmasterTickers").HandlerFunc(getTickersHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory").HandlerFunc(getBacktestHistoryHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory/{id}").HandlerFunc(getBacktestResHandler)
-
-	msngr.GoogleProjectID = "myika-anastasia"
-	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
