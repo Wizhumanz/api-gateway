@@ -58,6 +58,8 @@ var wsConnectionsChartmaster map[string]*websocket.Conn
 func main() {
 	httpTimeFormat = "2006-01-02T15:04:05"
 
+	botStrategy("BINANCEFTS_PERP_BTC_USDT", "1MIN")
+
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	wsConnections = make(map[string]*websocket.Conn)

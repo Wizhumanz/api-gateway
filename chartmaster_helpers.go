@@ -78,7 +78,7 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 	if errJson != nil {
 		fmt.Printf("JSON unmarshall candle data err %v\n", errJson)
 	}
-
+	fmt.Println(jStruct)
 	//save data to cache so don't have to fetch again
 	if len(jStruct) > 0 {
 		go cacheCandleData(jStruct, ticker, period)
