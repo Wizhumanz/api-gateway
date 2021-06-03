@@ -10,7 +10,7 @@ func MinuteTicker() *time.Ticker {
 	t := &time.Ticker{C: c}
 	go func() {
 		for {
-			n := time.Now()
+			n := time.Now().UTC()
 			if n.Second() == 0 {
 				c <- n
 			}
@@ -22,13 +22,13 @@ func MinuteTicker() *time.Ticker {
 
 func botStrategy(ticker, period string) {
 	var fetchedCandles []Candlestick
-	// for n := range MinuteTicker().C {
-	// 	fmt.Println("NOW: ", n)
-	// 	fetchedCandles = fetchCandleData(ticker, period, n.Add(-time.Minute*1000), n.Add(-time.Minute*990))
-	// 	fmt.Println(fetchedCandles)
-	// }
-	n := time.Now()
-	fetchedCandles = fetchCandleData(ticker, period, n.Add(-time.Minute*2000), n.Add(-time.Minute*1990))
-	fmt.Println(fetchedCandles)
+	for n := range MinuteTicker().C {
+		fmt.Println("NOW: ", n)
+		fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n)
+		fmt.Println(fetchedCandles)
+	}
+	// n := time.Now().UTC()
+	// fetchedCandles = fetchCandleData(ticker, period, n.Add(-1*periodDurationMap[period]), n.Add(-1*periodDurationMap[period]))
+	// fmt.Println(fetchedCandles)
 
 }
