@@ -44,10 +44,16 @@ type webHookRequest struct {
 }
 
 type User struct {
-	K        *datastore.Key `datastore:"__key__"`
-	Name     string         `json:"name"`
-	Email    string         `json:"email"`
-	Password string         `json:"password"`
+	K            *datastore.Key `datastore:"__key__"`
+	KEY          string         `json:"KEY"`
+	Tier         float64        `json:"tier,string"`
+	Name         string         `json:"name"`
+	Email        string         `json:"email"`
+	Password     string         `json:"password"`
+	SessionID    string         `json:"sessionID"`
+	Timestamp    string         `json:"timestamp"`
+	AggregateID  int            `json:"aggregateID,string"`
+	Cancellation bool           `json:"cancellation"`
 }
 
 func (l User) String() string {
