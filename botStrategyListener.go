@@ -28,7 +28,7 @@ func MinuteTicker(period string) *time.Ticker {
 	return t
 }
 
-func botStrategy(ticker, period string) {
+func botStrategy(ticker, period string, risk, lev, accSz float64) {
 	var fetchedCandles []Candlestick
 	var store interface{} //save state between strategy executions on each candle
 
@@ -66,13 +66,12 @@ func botStrategy(ticker, period string) {
 
 				//run strat for all chunk's candles
 
-				var labels map[string]map[int]string
 				allOpens = append(allOpens, fetchedCandles[0].Open)
 				allHighs = append(allHighs, fetchedCandles[0].High)
 				allLows = append(allLows, fetchedCandles[0].Low)
 				allCloses = append(allCloses, fetchedCandles[0].Close)
 				//TODO: build results and run for different param sets
-				labels = strat1(fetchedCandles[0], risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+				strat1(fetchedCandles[0], risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
 
 				//absolute index from absolute start of computation period
 				relIndex++
