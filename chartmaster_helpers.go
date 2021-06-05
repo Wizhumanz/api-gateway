@@ -27,7 +27,7 @@ func copyObjs(base []Candlestick, copyer func(Candlestick) CandlestickChartData)
 }
 
 func cacheCandleData(candles []Candlestick, ticker, period string) {
-	// fmt.Printf("Adding %v candles to cache %v %v\n", len(candles), ticker, period)
+	fmt.Printf(colorYellow+"Saving %v candles from %v to %v\n"+colorReset, len(candles), candles[0].PeriodStart, candles[len(candles)-1].PeriodStart)
 	//progress indicator
 	indicatorParts := 30
 	totalLen := len(candles)
@@ -39,7 +39,11 @@ func cacheCandleData(candles []Candlestick, ticker, period string) {
 		// fmt.Println(c)
 		ctx := context.Background()
 		key := ticker + ":" + period + ":" + c.PeriodStart
-		rdbChartmaster.HMSet(ctx, key, "open", c.Open, "high", c.High, "low", c.Low, "close", c.Close, "volume", c.Volume, "tradesCount", c.TradesCount, "timeOpen", c.TimeOpen, "timeClose", c.TimeClose, "periodStart", c.PeriodStart, "periodEnd", c.PeriodEnd)
+		_, err := rdbChartmaster.HMSet(ctx, key, "open", c.Open, "high", c.High, "low", c.Low, "close", c.Close, "volume", c.Volume, "tradesCount", c.TradesCount, "timeOpen", c.TimeOpen, "timeClose", c.TimeClose, "periodStart", c.PeriodStart, "periodEnd", c.PeriodEnd).Result()
+		if err != nil {
+			fmt.Printf("redis cache candlestick data err: %v\n", err)
+			return
+		}
 
 		if (i > 1) && ((i % lenPart) == 0) {
 			fmt.Printf("Section %v of %v complete\n", (i / lenPart), indicatorParts)
@@ -59,6 +63,7 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 		period,
 		start.Format(httpTimeFormat),
 		fetchEndTime.Format(httpTimeFormat))
+	fmt.Println(full)
 
 	req, _ := http.NewRequest("GET", full, nil)
 	req.Header.Add("X-CoinAPI-Key", "A2642A7A-A8C8-48C1-83CE-8D258BD7BBF5")
@@ -80,12 +85,15 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 	}
 
 	//save data to cache so don't have to fetch again
-	if len(jStruct) > 0 {
+	if len(jStruct) > 0 && jStruct[0].Open != 0 {
 		go cacheCandleData(jStruct, ticker, period)
 
+		//temp save to loval file to preserve CoinAPI credits
 		fileName := fmt.Sprintf("%v,%v,%v,%v|%v.json", ticker, period, start, end, time.Now().Unix())
 		file, _ := json.MarshalIndent(jStruct, "", " ")
 		_ = ioutil.WriteFile(fileName, file, 0644)
+	} else {
+		fmt.Println(body)
 	}
 
 	fmt.Println("Fresh fetch complete")

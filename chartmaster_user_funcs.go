@@ -152,7 +152,8 @@ func scanPivotTrends(
 	relCandleIndex int,
 	storage *interface{}) (map[string]map[int]string, PivotTrendScanDataPoint) {
 	exitWatchPivots := 3
-	checkTrendFromStartingPivots := false
+	checkTrendBreakFromStartingPivots := false
+	minEntryPivotsDiffPerc := 0.36
 
 	stored, ok := (*storage).(PivotTrendScanStore)
 	if !ok {
@@ -223,14 +224,14 @@ func scanPivotTrends(
 				var checkVal []float64
 				if contains(stored.PivotHighs, pivotIndexesToCheck[j].Index) {
 					checkVal = high
-					if checkTrendFromStartingPivots {
+					if checkTrendBreakFromStartingPivots {
 						prevPivotIndex = pivotIndexesToCheck[1].Index //use trend's starting high
 					} else {
 						prevPivotIndex = pivotIndexesToCheck[j-2].Index
 					}
 				} else {
 					checkVal = low
-					if checkTrendFromStartingPivots {
+					if checkTrendBreakFromStartingPivots {
 						prevPivotIndex = pivotIndexesToCheck[0].Index //use trend's starting high
 					} else {
 						prevPivotIndex = pivotIndexesToCheck[j-2].Index
@@ -293,7 +294,8 @@ func scanPivotTrends(
 			latestPL := low[latestPLIndex]
 			prevPLIndex := stored.PivotLows[len(stored.PivotLows)-2]
 			prevPL := low[prevPLIndex]
-			if latestPL > prevPL && latestPLIndex > stored.MinSearchIndex && prevPLIndex > stored.MinSearchIndex {
+			entryPivotsDiffPerc := ((latestPL - prevPL) / prevPL) * 100
+			if latestPL > prevPL && latestPLIndex > stored.MinSearchIndex && prevPLIndex > stored.MinSearchIndex && entryPivotsDiffPerc > minEntryPivotsDiffPerc {
 				retData.EntryTime = candles[latestPLIndex].DateTime
 				retData.EntryFirstPivotIndex = prevPLIndex
 				retData.EntrySecondPivotIndex = latestPLIndex
