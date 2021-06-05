@@ -247,6 +247,14 @@ func (c *Candlestick) Create(redisData map[string]string) {
 	c.DateTime = t.Format(httpTimeFormat)
 }
 
+type StrategyExecutor interface {
+	GetTotalEquity() float64
+	GetAvailableEquity() float64
+	GetPosLongSize() float64
+	Buy(float64, float64, float64, bool, int)
+	CloseLong(float64, float64, int, string)
+}
+
 type StrategySimulatorAction struct {
 	Action  string
 	Price   float64
@@ -255,8 +263,8 @@ type StrategySimulatorAction struct {
 }
 
 type StrategySimulator struct {
-	PosLongSize     float64
-	PosShortSize    float64
+	posLongSize     float64
+	posShortSize    float64
 	totalEquity     float64
 	availableEquity float64
 	Actions         map[int]StrategySimulatorAction //map bar index to action that occured at that index
@@ -268,8 +276,16 @@ func (strat *StrategySimulator) Init(e float64) {
 	strat.Actions = map[int]StrategySimulatorAction{}
 }
 
-func (strat *StrategySimulator) GetEquity() float64 {
+func (strat *StrategySimulator) GetTotalEquity() float64 {
 	return strat.totalEquity
+}
+
+func (strat *StrategySimulator) GetAvailableEquity() float64 {
+	return strat.availableEquity
+}
+
+func (strat *StrategySimulator) GetPosLongSize() float64 {
+	return strat.posLongSize
 }
 
 func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLong bool, cIndex int) {
@@ -281,9 +297,9 @@ func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLon
 	strat.availableEquity = strat.availableEquity - (orderSize * price)
 
 	if directionIsLong {
-		strat.PosLongSize = orderSize
+		strat.posLongSize = orderSize
 	} else {
-		strat.PosShortSize = orderSize
+		strat.posShortSize = orderSize
 	}
 
 	strat.Actions[cIndex] = StrategySimulatorAction{
@@ -298,12 +314,12 @@ func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int, 
 	//close entire long
 	closeSz := 0.0
 	if orderSize == 0 {
-		closeSz = strat.PosLongSize
-		strat.totalEquity = strat.availableEquity + (strat.PosLongSize * price)
-		strat.PosLongSize = 0
+		closeSz = strat.posLongSize
+		strat.totalEquity = strat.availableEquity + (strat.posLongSize * price)
+		strat.posLongSize = 0
 	} else {
 		strat.totalEquity = strat.availableEquity + (orderSize * price)
-		strat.PosLongSize = strat.PosLongSize - orderSize
+		strat.posLongSize = strat.posLongSize - orderSize
 	}
 	strat.availableEquity = strat.totalEquity
 

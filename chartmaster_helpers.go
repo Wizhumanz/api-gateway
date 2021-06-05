@@ -205,15 +205,15 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 	var pd ProfitCurveDataPoint
 	if profitCurve != nil {
 		//only add data point if changed from last point OR 1st or 2nd datapoint
-		if (strat.GetEquity() != 0) && (len(*profitCurve) == 0) && (relIndex != 0) {
+		if (strat.GetTotalEquity() != 0) && (len(*profitCurve) == 0) && (relIndex != 0) {
 			pd = ProfitCurveDataPoint{
 				DateTime: c.DateTime,
-				Equity:   strat.GetEquity(),
+				Equity:   strat.GetTotalEquity(),
 			}
-		} else if (relIndex == 0) || (strat.GetEquity() != (*profitCurve)[len(*profitCurve)-1].Equity) {
+		} else if (relIndex == 0) || (strat.GetTotalEquity() != (*profitCurve)[len(*profitCurve)-1].Equity) {
 			pd = ProfitCurveDataPoint{
 				DateTime: c.DateTime,
-				Equity:   strat.GetEquity(),
+				Equity:   strat.GetTotalEquity(),
 			}
 		}
 	}
@@ -302,7 +302,7 @@ func computeBacktest(
 	packetSize int,
 	userID, rid string,
 	startTime, endTime time.Time,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	var store interface{} //save state between strategy executions on each candle

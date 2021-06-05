@@ -18,7 +18,7 @@ func strat1(
 	candle Candlestick, risk, lev, accSz float64,
 	open, high, low, close []float64,
 	relCandleIndex int,
-	strategy *StrategySimulator,
+	strategy *StrategyExecutor,
 	storage *interface{}) map[string]map[int]string {
 	tpPerc := 0.5
 
@@ -36,7 +36,7 @@ func strat1(
 	newLabels, foundPL := findPivots(open, high, low, close, relCandleIndex, &(stored.PivotHighs), &(stored.PivotLows))
 
 	//manage positions
-	if (*strategy).PosLongSize == 0 && relCandleIndex > 0 { //no long pos
+	if (*strategy).GetPosLongSize() == 0 && relCandleIndex > 0 { //no long pos
 		//enter if current PL higher than previous
 		if foundPL {
 			if len(stored.PivotLows)-2 >= 0 {
@@ -52,22 +52,22 @@ func strat1(
 					rawRiskPerc := (entryPrice - slPrice) / entryPrice
 					accRiskedCap := (risk / 100) * float64(accSz)
 					posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
-					if posCap > strategy.availableEquity {
-						posCap = strategy.availableEquity
+					if posCap > (*strategy).GetAvailableEquity() {
+						posCap = (*strategy).GetAvailableEquity()
 					}
 					posSize := posCap / entryPrice
 
-					strategy.Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
+					(*strategy).Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 					// newLabels["middle"] = map[int]string{
 					// 	0: fmt.Sprintf("%v|SL %v, TP %v", relCandleIndex, slPrice, ((1 + (tpPerc / 100)) * stored.LongEntryPrice)),
 					// }
 				}
 			}
 		}
-	} else if strategy.PosLongSize > 0 && relCandleIndex > 0 { //long pos open
+	} else if (*strategy).GetPosLongSize() > 0 && relCandleIndex > 0 { //long pos open
 		tpPrice := ((1 + (tpPerc / 100)) * stored.LongEntryPrice)
 		if high[relCandleIndex] >= tpPrice {
-			strategy.CloseLong(tpPrice, 0, relCandleIndex, "TP")
+			(*strategy).CloseLong(tpPrice, 0, relCandleIndex, "TP")
 			stored.LongEntryPrice = 0
 			stored.LongSLPrice = 0
 			// newLabels["middle"] = map[int]string{
@@ -76,7 +76,7 @@ func strat1(
 			// }
 		} else {
 			if low[relCandleIndex] <= stored.LongSLPrice {
-				strategy.CloseLong(stored.LongSLPrice, 0, relCandleIndex, "SL")
+				(*strategy).CloseLong(stored.LongSLPrice, 0, relCandleIndex, "SL")
 				stored.LongEntryPrice = 0
 				stored.LongSLPrice = 0
 			}
