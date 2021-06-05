@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func MinuteTicker(period string) *time.Ticker {
+func minuteTicker(period string) *time.Ticker {
 	c := make(chan time.Time, 1)
 	t := &time.Ticker{C: c}
 	var count float64
@@ -28,7 +28,7 @@ func MinuteTicker(period string) *time.Ticker {
 	return t
 }
 
-func botStrategy(ticker, period string) {
+func liveStrategyExecute(ticker, period string) {
 	var fetchedCandles []Candlestick
 
 	timeNow := time.Now().UTC()
@@ -45,33 +45,14 @@ func botStrategy(ticker, period string) {
 
 	for {
 		if t == time.Now().UTC() {
-			fmt.Println("WORKING")
-
 			fetchedCandles = fetchCandleData(ticker, period, t.Add(-periodDurationMap[period]*1), t.Add(-periodDurationMap[period]*1))
 			fmt.Println(fetchedCandles)
 
-			for n := range MinuteTicker(period).C {
+			for n := range minuteTicker(period).C {
 				fmt.Println("NOW: ", n)
 				fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
 				fmt.Println(fetchedCandles)
 			}
 		}
 	}
-
-	// for n := range MinuteTicker(period).C {
-	// 	fmt.Println("NOW: ", n)
-	// 	fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
-	// 	fmt.Println(fetchedCandles)
-
-	// 	layout := "2006-01-02T15:04:05.000Z"
-	// 	str := strings.Replace(fetchedCandles[len(fetchedCandles)-1].PeriodEnd, "0000", "", 1)
-
-	// 	t, _ := time.Parse(layout, str)
-	// 	fmt.Println(t)
-	// }
-
-	// n := time.Now().UTC()
-	// fetchedCandles = fetchCandleData(ticker, period, n.Add(-1*periodDurationMap[period]), n.Add(-1*periodDurationMap[period]))
-	// fmt.Println(fetchedCandles)
-
 }
