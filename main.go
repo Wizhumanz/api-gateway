@@ -90,6 +90,13 @@ func main() {
 	periodDurationMap["2DAY"] = 48 * time.Hour
 
 	// botStrategy("BINANCEFTS_PERP_BTC_USDT", "6MIN")
+	// msgs := []string{}
+	// msgs = append(msgs, "TradeStreamName")
+	// msgs = append(msgs, "Test")
+	// msgs = append(msgs, "CMD")
+	// msgs = append(msgs, "EXIT")
+	// msngr.AddToStream("webhookTrades", msgs)
+	// fmt.Println(msgs)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)

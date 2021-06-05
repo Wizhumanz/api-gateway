@@ -30,6 +30,15 @@ func MinuteTicker(period string) *time.Ticker {
 
 func botStrategy(ticker, period string) {
 	var fetchedCandles []Candlestick
+	var store interface{} //save state between strategy executions on each candle
+
+	strategySim := StrategySimulator{}
+	allOpens := []float64{}
+	allHighs := []float64{}
+	allLows := []float64{}
+	allCloses := []float64{}
+	relIndex := 0
+	// packetSize := 80
 
 	timeNow := time.Now().UTC()
 	fmt.Println("NOW: ", timeNow)
@@ -54,6 +63,19 @@ func botStrategy(ticker, period string) {
 				fmt.Println("NOW: ", n)
 				fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
 				fmt.Println(fetchedCandles)
+
+				//run strat for all chunk's candles
+
+				var labels map[string]map[int]string
+				allOpens = append(allOpens, fetchedCandles[0].Open)
+				allHighs = append(allHighs, fetchedCandles[0].High)
+				allLows = append(allLows, fetchedCandles[0].Low)
+				allCloses = append(allCloses, fetchedCandles[0].Close)
+				//TODO: build results and run for different param sets
+				labels = strat1(fetchedCandles[0], risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+
+				//absolute index from absolute start of computation period
+				relIndex++
 			}
 		}
 	}
