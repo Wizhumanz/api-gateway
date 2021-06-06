@@ -283,11 +283,6 @@ func (strat *StrategyExecutor) GetPosLongSize() float64 {
 }
 
 func (strat *StrategyExecutor) Buy(price, sl, orderSize float64, directionIsLong bool, cIndex int) {
-	// if (orderSize * price) > strat.availableEquity {
-	// 	log.Fatal(colorRed + "Order size exceeds available equity" + colorReset)
-	// 	return
-	// }
-
 	strat.availableEquity = strat.availableEquity - (orderSize * price)
 
 	if directionIsLong {
