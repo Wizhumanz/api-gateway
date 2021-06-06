@@ -97,6 +97,7 @@ func main() {
 	// msgs = append(msgs, "EXIT")
 	// msngr.AddToStream("webhookTrades", msgs)
 	// fmt.Println(msgs)
+	// liveStrategyExecute("BINANCEFTS_PERP_BTC_USDT", "1MIN")
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)

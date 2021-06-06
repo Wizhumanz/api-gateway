@@ -11,7 +11,7 @@ func runBacktest(
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	var allCandleData []Candlestick
@@ -87,7 +87,7 @@ func runScan(
 
 func runBacktestSequential(
 	risk, lev, accSz float64,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategySimulator, *interface{}) map[string]map[int]string,
+	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string,
 	userID, rid, ticker, period string,
 	startTime, endTime time.Time,
 	packetSize int, packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
@@ -108,8 +108,8 @@ func runBacktestSequential(
 			Label: "strat1",
 		},
 	}
-	strategySim := StrategySimulator{}
-	strategySim.Init(accSz)
+	strategySim := StrategyExecutor{}
+	strategySim.Init(accSz, false)
 
 	//run backtest in chunks for client stream responsiveness
 	allOpens := []float64{}
