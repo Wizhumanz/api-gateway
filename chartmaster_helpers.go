@@ -131,7 +131,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 	return retCandles
 }
 
-func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveDataPoint, c Candlestick, strat StrategySimulator, relIndex int, labels map[string]map[int]string) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
+func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveDataPoint, c Candlestick, strat StrategyExecutor, relIndex int, labels map[string]map[int]string) ([]CandlestickChartData, ProfitCurveDataPoint, SimulatedTradeDataPoint) {
 	//candlestick
 	retCandlesArr := cArr
 	newCandleD := CandlestickChartData{
@@ -319,8 +319,8 @@ func computeBacktest(
 			Label: "strat1",
 		},
 	}
-	strategySim := StrategySimulator{}
-	strategySim.Init(accSz)
+	strategySim := StrategyExecutor{}
+	strategySim.Init(accSz, false)
 
 	allOpens := []float64{}
 	allHighs := []float64{}
@@ -445,7 +445,7 @@ func computeScan(
 			labels, pivotScanData = scannerFunc(allCandles, allOpens, allHighs, allLows, allCloses, relIndex, &store)
 
 			//save res data
-			chunkAddedCandles, _, _ = saveDisplayData(chunkAddedCandles, nil, candle, StrategySimulator{}, relIndex, labels)
+			chunkAddedCandles, _, _ = saveDisplayData(chunkAddedCandles, nil, candle, StrategyExecutor{}, relIndex, labels)
 			if pivotScanData.Growth != 0 {
 				chunkAddedScanData = append(chunkAddedScanData, pivotScanData)
 			}
