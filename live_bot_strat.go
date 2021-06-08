@@ -1,82 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
-	"cloud.google.com/go/datastore"
 	"gitlab.com/myikaco/msngr"
 )
 
-func startNewTradeStream(user User, botToUse Bot, size float64, ticker, dir string) {
-	//check bot validity
-	if botToUse.AccountRiskPercPerTrade == "" ||
-		botToUse.AccountSizePercToTrade == "" ||
-		botToUse.Leverage == "" {
-		fmt.Println(colorRed + "start new trade stream bot invalid err" + colorReset)
-		return
-	}
-
-	// save new TradeAction to DB
-	x := TradeAction{
-		UserID:    botToUse.UserID,
-		BotID:     fmt.Sprint(botToUse.K.ID),
-		Timestamp: time.Now().Format("2006-01-02_15:04:05_-0700"),
-		Ticker:    ticker,
-		Exchange:  botToUse.ExchangeConnection,
-		Size:      float32(size),
-		Direction: dir,
-	}
-
-	//set aggregate ID + trade desc
-	// NEW aggr ID (get highest, then increment)
-	var calcTA TradeAction
-	query := datastore.NewQuery("TradeAction").
-		Project("AggregateID").
-		Order("-AggregateID")
-	t := client.Run(ctx, query)
-	_, error := t.Next(&calcTA)
-	if error != nil {
-		// Handle error.
-	}
-
-	x.AggregateID = calcTA.AggregateID + 1
-	x.Action = "ENTERIntentSubmitted"
-
-	//add row to DB
-	fmt.Println("---")
-	fmt.Println(x)
-	kind := "TradeAction"
-	newKey := datastore.IncompleteKey(kind, nil)
-	if _, err := client.Put(ctx, newKey, &x); err != nil {
-		log.Fatalf("Failed to save TradeAction: %v", err)
-	}
-
-	//create redis stream key <aggregateID>:<userID>:<botID>
-	tradeStreamName := fmt.Sprint(x.AggregateID) + ":" + botToUse.UserID + ":" + botToUse.KEY
-
+// logLiveStrategyExecution
+func logLiveStrategyExecution(execTimestamp, storageObj string) {
 	// add new trade info into stream (triggers other services)
 	msgs := []string{}
-	msgs = append(msgs, "TradeStreamName")
-	msgs = append(msgs, tradeStreamName)
-	msgs = append(msgs, "AccountRiskPercPerTrade")
-	msgs = append(msgs, fmt.Sprint(botToUse.AccountRiskPercPerTrade))
-	msgs = append(msgs, "AccountSizePercToTrade")
-	msgs = append(msgs, fmt.Sprint(botToUse.AccountSizePercToTrade))
-	msgs = append(msgs, "Leverage")
-	msgs = append(msgs, fmt.Sprint(botToUse.Leverage))
-	msgs = append(msgs, "Ticker")
-	msgs = append(msgs, ticker)
-	msgs = append(msgs, "Size")
-	msgs = append(msgs, fmt.Sprint(size))
-	msgs = append(msgs, "Exchange")
-	msgs = append(msgs, botToUse.ExchangeConnection)
-	msgs = append(msgs, "CMD")
-	msgs = append(msgs, "ENTER")
+	msgs = append(msgs, "Timestamp")
+	msgs = append(msgs, execTimestamp)
+	msgs = append(msgs, "StorageObj")
+	msgs = append(msgs, storageObj)
 
-	msngr.AddToStream("newTrades", msgs)
+	msngr.AddToStream("activeBots", msgs)
 }
 
 func minuteTicker(period string) *time.Ticker {
@@ -103,16 +45,16 @@ func minuteTicker(period string) *time.Ticker {
 
 //1. store state of running strategy loops (across multiple instances)
 // a. api-gateway XADD trade stream ID to newTrades stream
-// b. strat-svc listen on trade streams
+// b. strat-svc listen on trade streams, add msg on every iteration of live loop
 // c. strat-svc instances check unacknowledged entries in newTrades stream, then XAUTOCLAIM old msgs in trade stream
 
-//2. store state of storage obj + relIndex + OHLC for each running live strategy loop
+// X 2. store state of storage obj + relIndex + OHLC for each running live strategy loop
 // key:JSON in redis
 
 //3. how to stop running live strategy loop when bot status changed to inactive
 // before exec strat on each iteration, check for ending command in trade stream
 
-func liveStrategyExecute(
+func executeLiveStrategy(
 	ticker, period string,
 	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string) {
 	var fetchedCandles []Candlestick
@@ -134,6 +76,9 @@ func liveStrategyExecute(
 
 			//fetch candle and run live strat on every interval tick
 			for n := range minuteTicker(period).C {
+				//TODO: fetch saved storage obj for strategy from redis
+				var stratStore interface{}
+
 				fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
 				//TODO: get bot's real settings to pass to strategy
 				userStrat(fetchedCandles[0], 0.0, 0.0, 0.0,
@@ -141,7 +86,14 @@ func liveStrategyExecute(
 					[]float64{fetchedCandles[0].High},
 					[]float64{fetchedCandles[0].Low},
 					[]float64{fetchedCandles[0].Close},
-					-1, &StrategyExecutor{}, nil)
+					-1, &StrategyExecutor{}, &stratStore)
+
+				//save state to retrieve for next iteration
+				obj, err := json.Marshal(stratStore)
+				if err != nil {
+					fmt.Printf(colorRed+"%v\n"+colorReset, err)
+				}
+				logLiveStrategyExecution(n.Format(httpTimeFormat), string(obj))
 			}
 		}
 	}
