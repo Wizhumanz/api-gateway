@@ -9,7 +9,7 @@ import (
 	"gitlab.com/myikaco/msngr"
 )
 
-// logLiveStrategyExecution
+// logLiveStrategyExecution saves state of strategy execution loop to bot's dedicated stream in redis
 func logLiveStrategyExecution(execTimestamp, storageObj, botStreamName string) {
 	// add new trade info into stream (triggers other services)
 	msgs := []string{}
@@ -30,8 +30,6 @@ func minuteTicker(period string) *time.Ticker {
 			n := time.Now().UTC()
 			if n.Second() == 0 {
 				count += 1
-				fmt.Printf("\nCount: %v\n", count)
-				fmt.Printf("\nTIME: %v\n", n)
 			}
 			if count > periodDurationMap[period].Minutes() {
 				c <- n
