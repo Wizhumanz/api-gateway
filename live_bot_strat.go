@@ -15,15 +15,15 @@ func activateBot(bot Bot) {
 	msgs = append(msgs, "Timestamp")
 	msgs = append(msgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
 	msgs = append(msgs, "BotID")
-	msgs = append(msgs, fmt.Sprint(bot.K.ID))
+	msgs = append(msgs, fmt.Sprint(bot.KEY))
 
 	botStreamMsgs := []string{}
-	botStreamMsgs = append(msgs, "Timestamp")
-	botStreamMsgs = append(msgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
-	botStreamMsgs = append(msgs, "CMD")
-	botStreamMsgs = append(msgs, "INIT")
+	botStreamMsgs = append(botStreamMsgs, "Timestamp")
+	botStreamMsgs = append(botStreamMsgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
+	botStreamMsgs = append(botStreamMsgs, "CMD")
+	botStreamMsgs = append(botStreamMsgs, "INIT")
 
-	msngr.AddToStream(fmt.Sprint(bot.K.ID), botStreamMsgs)
+	msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
 	msngr.AddToStream("activeBots", msgs)
 }
 
@@ -60,7 +60,7 @@ func minuteTicker(period string) *time.Ticker {
 }
 
 //1. store state of running strategy loops (across multiple instances)
-// a. api-gateway XADD trade stream ID to newTrades stream
+//X a. api-gateway XADD trade stream ID to newTrades stream
 // b. strat-svc listen on trade streams, add msg on every iteration of live loop
 // c. strat-svc instances check unacknowledged entries in newTrades stream, then XAUTOCLAIM old msgs in trade stream
 
