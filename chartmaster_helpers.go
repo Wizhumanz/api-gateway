@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -52,16 +53,6 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 	fetchEndTime := end.Add(1 * periodDurationMap[period])
 	fmt.Printf("FETCHING from %v to %v\n", start.Format(httpTimeFormat), fetchEndTime.Format(httpTimeFormat))
 
-	// for _, candle := range int(end.Sub(start).Minutes()) {
-
-	// }
-
-	// for i := 0; i < int(end.Sub(start).Minutes()); i++ {
-	// 	fmt.Printf("\nLook here man: %v \n", start.Add(time.Minute*time.Duration(i)))
-	// 	retCandles := getCachedCandleData(ticker, period, start.Add(time.Minute*time.Duration(i)), start.Add(time.Minute*time.Duration(i)))
-	// 	fmt.Printf("\nretCandles: %v \n", retCandles)
-
-	// }
 	//send request
 	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
 	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s",
@@ -71,7 +62,7 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 		fetchEndTime.Format(httpTimeFormat))
 
 	req, _ := http.NewRequest("GET", full, nil)
-	req.Header.Add("X-CoinAPI-Key", "A2642A7A-A8C8-48C1-83CE-8D258BD7BBF5")
+	req.Header.Add("X-CoinAPI-Key", "4D684039-406E-451F-BB2B-6BDC123808E1")
 	client := &http.Client{}
 	response, err := client.Do(req)
 
@@ -114,7 +105,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 		//if candle not found in cache, fetch new
 		if cachedData["open"] == "" {
 			//find end time for fetch
-			var fetchEndTime time.Time
+			// var fetchEndTime time.Time
 			calcTime := cTime
 			for {
 				calcTime = calcTime.Add(periodDurationMap[period])
@@ -122,16 +113,17 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 				cached, _ := rdbChartmaster.HGetAll(ctx, key).Result()
 				//find index where next cache starts again, or break if passed end time of backtest
 				if (cached["open"] != "") || (calcTime.After(end)) {
-					fetchEndTime = calcTime
+					// fetchEndTime = calcTime
 					break
 				}
 			}
-			//fetch missing candles
-			fetchedCandles := fetchCandleData(ticker, period, cTime, fetchEndTime)
-			retCandles = append(retCandles, fetchedCandles...)
-			//start getting cache again from last fetch time
-			cTime = fetchEndTime.Add(-periodDurationMap[period])
+			// //fetch missing candles
+			// fetchedCandles := fetchCandleData(ticker, period, cTime, fetchEndTime)
+			// retCandles = append(retCandles, fetchedCandles...)
+			// //start getting cache again from last fetch time
+			// cTime = fetchEndTime.Add(-periodDurationMap[period])
 		} else {
+			// fmt.Println("IN CACHE")
 			newCandle := Candlestick{}
 			newCandle.Create(cachedData)
 			retCandles = append(retCandles, newCandle)
@@ -262,40 +254,56 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time) {
 	var chunkCandles []Candlestick
 	var candlesNotInCache []time.Time
+	var candlesInCache []time.Time
 	//check if candles exist in cache
-	redisKeyPrefix := ticker + ":" + period + ":"
-	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
-	testRes, err := rdbChartmaster.HGetAll(ctx, testKey).Result()
-	if err != nil {
-		fmt.Printf("redis test fetch err %v\n", err)
-		return
-	}
-	if (testRes["open"] == "") || (testRes["close"] == "") {
-		fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
-		//if no data in cache, do fresh GET and save to cache
 
-		// From the requested time interval for fetch, check if there are candles that actually exists in redis
-		for i := 0; i < int(fetchCandlesEnd.Sub(fetchCandlesStart).Minutes()); i++ {
-			// fmt.Printf("\nLook here man: %v \n", fetchCandlesStart.Add(time.Minute*time.Duration(i)))
-			retCandles := getCachedCandleData(ticker, period, fetchCandlesStart.Add(time.Minute*time.Duration(i)), fetchCandlesStart.Add(time.Minute*time.Duration(i)))
-			if len(retCandles) == 0 {
-				candlesNotInCache = append(candlesNotInCache, fetchCandlesStart.Add(time.Minute*time.Duration(i)))
-			}
-			// fmt.Printf("\nretCandles: %v \n", retCandles)
+	fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
+
+	for i := 0; i < int(fetchCandlesEnd.Sub(fetchCandlesStart).Minutes()); i++ {
+		retCandles := getCachedCandleData(ticker, period, fetchCandlesStart.Add(time.Minute*time.Duration(i)), fetchCandlesStart.Add(time.Minute*time.Duration(i)))
+		if len(retCandles) == 0 {
+			candlesNotInCache = append(candlesNotInCache, fetchCandlesStart.Add(time.Minute*time.Duration(i)))
+		} else {
+			candlesInCache = append(candlesInCache, fetchCandlesStart.Add(time.Minute*time.Duration(i)))
 		}
-		fmt.Printf("\ncandlesNotInCache: %v \n", candlesNotInCache)
-
-		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
-	} else {
-		//otherwise, get data in cache
-		chunkCandles = getCachedCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	}
-	if len(chunkCandles) == 0 {
+	// fmt.Printf("\ncandlesNotInCache: %v \n", candlesNotInCache)
+	// fmt.Printf("\ncandlesInCache: %v \n", candlesInCache)
+
+	for i := 0; i < len(candlesNotInCache); i += 300 {
+		if len(candlesNotInCache) > i+300 {
+			chunkCandles = append(chunkCandles, fetchCandleData(ticker, period, candlesNotInCache[i], candlesNotInCache[i+299])...)
+		} else {
+			chunkCandles = append(chunkCandles, fetchCandleData(ticker, period, candlesNotInCache[i], candlesNotInCache[len(candlesNotInCache)-1])...)
+		}
+	}
+
+	if len(candlesInCache) > 0 {
+		chunkCandles = append(chunkCandles, getCachedCandleData(ticker, period, candlesInCache[0], candlesInCache[len(candlesInCache)-1])...)
+	}
+
+	var tempTimeArray []string
+	var sortedChunkCandles []Candlestick
+	for _, v := range chunkCandles {
+		tempTimeArray = append(tempTimeArray, v.PeriodStart)
+	}
+	sort.Strings(tempTimeArray)
+	for _, time := range tempTimeArray {
+		for _, candle := range chunkCandles {
+			if candle.PeriodStart == time {
+				sortedChunkCandles = append(sortedChunkCandles, candle)
+			}
+		}
+	}
+
+	// fmt.Printf("\nTotal: %v \n", sortedChunkCandles)
+
+	if len(sortedChunkCandles) == 0 {
 		fmt.Printf("chunkCandles fetch err %v\n", startTime.Format(httpTimeFormat))
 		return
 	}
 
-	*chunkSlice = chunkCandles
+	*chunkSlice = sortedChunkCandles
 }
 
 func concFetchCandleData(startTime, endTime time.Time, period, ticker string, packetSize int, chunksArr *[]*[]Candlestick) {
@@ -305,15 +313,14 @@ func concFetchCandleData(startTime, endTime time.Time, period, ticker string, pa
 			break
 		}
 
-		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * time.Duration(packetSize))
+		fetchCandlesEnd := fetchCandlesStart.Add(periodDurationMap[period] * 300)
 		if fetchCandlesEnd.After(endTime) {
 			fetchCandlesEnd = endTime
 		}
 		var chunkSlice []Candlestick
 
 		*chunksArr = append(*chunksArr, &chunkSlice)
-		go getChunkCandleData(&chunkSlice, packetSize, ticker, period,
-			startTime, endTime, fetchCandlesStart, fetchCandlesEnd)
+		go getChunkCandleData(&chunkSlice, 300, ticker, period, startTime, endTime, fetchCandlesStart, fetchCandlesEnd)
 
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
