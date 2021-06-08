@@ -10,7 +10,7 @@ import (
 )
 
 // logLiveStrategyExecution
-func logLiveStrategyExecution(execTimestamp, storageObj string) {
+func logLiveStrategyExecution(execTimestamp, storageObj, botStreamName string) {
 	// add new trade info into stream (triggers other services)
 	msgs := []string{}
 	msgs = append(msgs, "Timestamp")
@@ -18,7 +18,7 @@ func logLiveStrategyExecution(execTimestamp, storageObj string) {
 	msgs = append(msgs, "StorageObj")
 	msgs = append(msgs, storageObj)
 
-	msngr.AddToStream("activeBots", msgs)
+	msngr.AddToStream(botStreamName, msgs)
 }
 
 func minuteTicker(period string) *time.Ticker {
@@ -55,7 +55,7 @@ func minuteTicker(period string) *time.Ticker {
 // before exec strat on each iteration, check for ending command in trade stream
 
 func executeLiveStrategy(
-	ticker, period string,
+	bot Bot, ticker, period string,
 	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string) {
 	var fetchedCandles []Candlestick
 
@@ -93,7 +93,7 @@ func executeLiveStrategy(
 				if err != nil {
 					fmt.Printf(colorRed+"%v\n"+colorReset, err)
 				}
-				logLiveStrategyExecution(n.Format(httpTimeFormat), string(obj))
+				logLiveStrategyExecution(n.Format(httpTimeFormat), string(obj), fmt.Sprint(bot.K.ID))
 			}
 		}
 	}
