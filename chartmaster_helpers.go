@@ -52,6 +52,16 @@ func fetchCandleData(ticker, period string, start, end time.Time) []Candlestick 
 	fetchEndTime := end.Add(1 * periodDurationMap[period])
 	fmt.Printf("FETCHING from %v to %v\n", start.Format(httpTimeFormat), fetchEndTime.Format(httpTimeFormat))
 
+	// for _, candle := range int(end.Sub(start).Minutes()) {
+
+	// }
+
+	// for i := 0; i < int(end.Sub(start).Minutes()); i++ {
+	// 	fmt.Printf("\nLook here man: %v \n", start.Add(time.Minute*time.Duration(i)))
+	// 	retCandles := getCachedCandleData(ticker, period, start.Add(time.Minute*time.Duration(i)), start.Add(time.Minute*time.Duration(i)))
+	// 	fmt.Printf("\nretCandles: %v \n", retCandles)
+
+	// }
 	//send request
 	base := "https://rest.coinapi.io/v1/ohlcv/BINANCEFTS_PERP_BTC_USDT/history" //TODO: build dynamically based on ticker
 	full := fmt.Sprintf("%s?period_id=%s&time_start=%s&time_end=%s",
@@ -96,6 +106,7 @@ func getCachedCandleData(ticker, period string, start, end time.Time) []Candlest
 
 	var retCandles []Candlestick
 	checkEnd := end.Add(periodDurationMap[period])
+
 	for cTime := start; cTime.Before(checkEnd); cTime = cTime.Add(periodDurationMap[period]) {
 		key := ticker + ":" + period + ":" + cTime.Format(httpTimeFormat) + ".0000000Z"
 		cachedData, _ := rdbChartmaster.HGetAll(ctx, key).Result()
@@ -250,6 +261,7 @@ func saveDisplayData(cArr []CandlestickChartData, profitCurve *[]ProfitCurveData
 func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, period string,
 	startTime, endTime, fetchCandlesStart, fetchCandlesEnd time.Time) {
 	var chunkCandles []Candlestick
+	var candlesNotInCache []time.Time
 	//check if candles exist in cache
 	redisKeyPrefix := ticker + ":" + period + ":"
 	testKey := redisKeyPrefix + fetchCandlesStart.Format(httpTimeFormat) + ".0000000Z"
@@ -261,6 +273,18 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	if (testRes["open"] == "") || (testRes["close"] == "") {
 		fmt.Printf(colorRed+"Attempting to fetch candles %v to %v\n"+colorReset, fetchCandlesStart, fetchCandlesEnd)
 		//if no data in cache, do fresh GET and save to cache
+
+		// From the requested time interval for fetch, check if there are candles that actually exists in redis
+		for i := 0; i < int(fetchCandlesEnd.Sub(fetchCandlesStart).Minutes()); i++ {
+			// fmt.Printf("\nLook here man: %v \n", fetchCandlesStart.Add(time.Minute*time.Duration(i)))
+			retCandles := getCachedCandleData(ticker, period, fetchCandlesStart.Add(time.Minute*time.Duration(i)), fetchCandlesStart.Add(time.Minute*time.Duration(i)))
+			if len(retCandles) == 0 {
+				candlesNotInCache = append(candlesNotInCache, fetchCandlesStart.Add(time.Minute*time.Duration(i)))
+			}
+			// fmt.Printf("\nretCandles: %v \n", retCandles)
+		}
+		fmt.Printf("\ncandlesNotInCache: %v \n", candlesNotInCache)
+
 		chunkCandles = fetchCandleData(ticker, period, fetchCandlesStart, fetchCandlesEnd)
 	} else {
 		//otherwise, get data in cache
