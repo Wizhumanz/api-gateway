@@ -9,6 +9,24 @@ import (
 	"gitlab.com/myikaco/msngr"
 )
 
+func activateBot(bot Bot) {
+	// add new trade info into stream (triggers other services)
+	msgs := []string{}
+	msgs = append(msgs, "Timestamp")
+	msgs = append(msgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
+	msgs = append(msgs, "BotID")
+	msgs = append(msgs, fmt.Sprint(bot.K.ID))
+
+	botStreamMsgs := []string{}
+	botStreamMsgs = append(msgs, "Timestamp")
+	botStreamMsgs = append(msgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
+	botStreamMsgs = append(msgs, "CMD")
+	botStreamMsgs = append(msgs, "INIT")
+
+	msngr.AddToStream(fmt.Sprint(bot.K.ID), botStreamMsgs)
+	msngr.AddToStream("activeBots", msgs)
+}
+
 // logLiveStrategyExecution saves state of strategy execution loop to bot's dedicated stream in redis
 func logLiveStrategyExecution(execTimestamp, storageObj, botStreamName string) {
 	// add new trade info into stream (triggers other services)
@@ -46,7 +64,7 @@ func minuteTicker(period string) *time.Ticker {
 // b. strat-svc listen on trade streams, add msg on every iteration of live loop
 // c. strat-svc instances check unacknowledged entries in newTrades stream, then XAUTOCLAIM old msgs in trade stream
 
-// X 2. store state of storage obj + relIndex + OHLC for each running live strategy loop
+//X 2. store state of storage obj + relIndex + OHLC for each running live strategy loop
 // key:JSON in redis
 
 //3. how to stop running live strategy loop when bot status changed to inactive
