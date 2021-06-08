@@ -60,11 +60,11 @@ func minuteTicker(period string) *time.Ticker {
 }
 
 //1. store state of running strategy loops (across multiple instances)
-//X a. api-gateway XADD trade stream ID to newTrades stream
-// b. strat-svc listen on trade streams, add msg on every iteration of live loop
+//X a. api-gateway XADD trade stream ID to activeBots stream (waiting room)
+// b. strat-svc listen on specific bot's stream, adds msg on every iteration of live loop
 // c. strat-svc instances check unacknowledged entries in newTrades stream, then XAUTOCLAIM old msgs in trade stream
 
-//X 2. store state of storage obj + relIndex + OHLC for each running live strategy loop
+//2. store state of storage obj + relIndex + OHLC for each running live strategy loop
 // key:JSON in redis
 
 //3. how to stop running live strategy loop when bot status changed to inactive
@@ -92,7 +92,7 @@ func executeLiveStrategy(
 
 			//fetch candle and run live strat on every interval tick
 			for n := range minuteTicker(period).C {
-				//TODO: fetch saved storage obj for strategy from redis
+				//TODO: fetch saved storage obj for strategy from redis (using msngr.ReadStream())
 				var stratStore interface{}
 
 				fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
