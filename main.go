@@ -98,6 +98,14 @@ func main() {
 	// msngr.AddToStream("webhookTrades", msgs)
 	// fmt.Println(msgs)
 	// liveStrategyExecute("BINANCEFTS_PERP_BTC_USDT", "1MIN")
+	b := Bot{
+		AccountRiskPercPerTrade: "69.69",
+		AccountSizePercToTrade:  "42.420",
+		Leverage:                "69",
+		UserID:                  "696969420",
+		KEY:                     "788320881088308812",
+	}
+	activateBot(b)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
