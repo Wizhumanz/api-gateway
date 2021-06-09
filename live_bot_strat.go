@@ -30,6 +30,26 @@ func activateBot(bot Bot) {
 	msngr.AddToStream("activeBots", msgs)
 }
 
+func shutdownBot(bot Bot) {
+	// add new trade info into stream (triggers other services)
+	msgs := []string{}
+	msgs = append(msgs, "Timestamp")
+	msgs = append(msgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
+	msgs = append(msgs, "BotID")
+	msgs = append(msgs, fmt.Sprint(bot.KEY))
+	msgs = append(msgs, "Status")
+	msgs = append(msgs, "Deactivate")
+
+	botStreamMsgs := []string{}
+	botStreamMsgs = append(botStreamMsgs, "Timestamp")
+	botStreamMsgs = append(botStreamMsgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
+	botStreamMsgs = append(botStreamMsgs, "CMD")
+	botStreamMsgs = append(botStreamMsgs, "SHUTDOWN")
+
+	msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
+	msngr.AddToStream("activeBots", msgs)
+}
+
 // logLiveStrategyExecution saves state of strategy execution loop to bot's dedicated stream in redis
 func logLiveStrategyExecution(execTimestamp, storageObj, botStreamName string) {
 	// add new trade info into stream (triggers other services)
@@ -106,13 +126,19 @@ func executeLiveStrategy(
 				json.Unmarshal(byteData, &t)
 				fmt.Println(t[0].Messages[len(t[0].Messages)-1].Values["CMD"])
 
-				if t[0].Messages[len(t[0].Messages)-1].Values["CMD"] == "Shutdown" {
+				if t[0].Messages[len(t[0].Messages)-1].Values["CMD"] == "SHUTDOWN" {
 					fmt.Println("SHUTDOWN")
 					break
 				}
 
 				//TODO: fetch saved storage obj for strategy from redis (using msngr.ReadStream())
 				var stratStore interface{}
+				for i := len(t[0].Messages) - 1; i >= 0; i-- {
+					if t[0].Messages[i].Values["StorageObj"] != nil {
+						fmt.Println("storage")
+						stratStore = t[0].Messages[i].Values["StorageObj"]
+					}
+				}
 
 				fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
 				//TODO: get bot's real settings to pass to strategy
