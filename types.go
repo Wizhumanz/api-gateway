@@ -283,7 +283,7 @@ func (strat *StrategyExecutor) GetPosLongSize() float64 {
 }
 
 func (strat *StrategyExecutor) Buy(price, sl, orderSize float64, directionIsLong bool, cIndex int) {
-	fmt.Printf("buying %v at %v\n", orderSize, price)
+	// fmt.Printf("buying %v at %v\n", orderSize, price)
 
 	strat.availableEquity = strat.availableEquity - (orderSize * price)
 
@@ -301,8 +301,8 @@ func (strat *StrategyExecutor) Buy(price, sl, orderSize float64, directionIsLong
 	}
 }
 
-func (strat *StrategyExecutor) CloseLong(price, orderSize float64, cIndex int, action string) {
-	fmt.Printf("closing %v at %v, action = %v\n", orderSize, price, action)
+func (strat *StrategyExecutor) CloseLong(price, orderSize float64, cIndex int, action string, timestamp string) {
+	// fmt.Printf("<%v> closing %v at %v, action = %v\n", timestamp, orderSize, price, action)
 
 	//close entire long
 	closeSz := 0.0

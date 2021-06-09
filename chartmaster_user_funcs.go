@@ -49,9 +49,16 @@ func strat1(
 	newLabels, _ := findPivots(open, high, low, close, relCandleIndex, &(stored.PivotHighs), &(stored.PivotLows))
 
 	//TP cooldown labels
-	if relCandleIndex < (stored.TPIndex + tpTradeCooldownCandles) {
+	if relCandleIndex <= (stored.TPIndex + tpTradeCooldownCandles) {
 		newLabels["middle"] = map[int]string{
 			0: "й",
+		}
+	}
+
+	//SL cooldown labels
+	if relCandleIndex <= (stored.SLIndex + slTradeCooldownCandles) {
+		newLabels["middle"] = map[int]string{
+			0: "ч",
 		}
 	}
 
@@ -62,7 +69,7 @@ func strat1(
 
 			//check SL
 			if low[relCandleIndex] <= low[stored.EntryFirstPivotIndex] {
-				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
+				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL", candles[len(candles)-1].DateTime)
 				stored.MinSearchIndex = stored.EntrySecondPivotIndex
 				stored.SLIndex = relCandleIndex
 				stored.TPIndex = 0
@@ -77,7 +84,7 @@ func strat1(
 			//check TP
 			tpPrice := (1 + (tpPerc / 100)) * stored.LongEntryPrice
 			if high[relCandleIndex] >= tpPrice {
-				(*strategy).CloseLong(tpPrice, 0, relCandleIndex, "TP")
+				(*strategy).CloseLong(tpPrice, 0, relCandleIndex, "TP", candles[len(candles)-1].DateTime)
 				stored.MinSearchIndex = stored.EntrySecondPivotIndex
 				stored.TPIndex = relCandleIndex
 				stored.SLIndex = 0
@@ -160,7 +167,7 @@ func strat1(
 
 			//exit if exitWatch sufficient
 			if len(trendBreakPivots) >= exitWatchPivots {
-				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
+				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL", candles[len(candles)-1].DateTime)
 				stored.MinSearchIndex = stored.EntrySecondPivotIndex
 				stored.SLIndex = relCandleIndex
 				stored.TPIndex = 0
@@ -180,10 +187,10 @@ func strat1(
 			entryPivotsDiffPerc := ((latestPL - prevPL) / prevPL) * 100
 			if latestPL > prevPL && latestPLIndex > stored.MinSearchIndex && prevPLIndex > stored.MinSearchIndex && entryPivotsDiffPerc > minEntryPivotsDiffPerc && entryPivotsDiffPerc < maxEntryPivotsDiffPerc {
 				//check timeouts
-				if stored.TPIndex != 0 && relCandleIndex < (stored.TPIndex+tpTradeCooldownCandles) {
+				if stored.TPIndex != 0 && relCandleIndex <= (stored.TPIndex+tpTradeCooldownCandles) {
 					return nil
 				}
-				if stored.SLIndex != 0 && relCandleIndex < (stored.SLIndex+slTradeCooldownCandles) {
+				if stored.SLIndex != 0 && relCandleIndex <= (stored.SLIndex+slTradeCooldownCandles) {
 					return nil
 				}
 
