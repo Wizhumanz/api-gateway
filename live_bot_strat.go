@@ -111,6 +111,12 @@ func executeLiveStrategy(
 
 				//TODO: fetch saved storage obj for strategy from redis (using msngr.ReadStream())
 				var stratStore interface{}
+				for i := len(t[0].Messages) - 1; i >= 0; i-- {
+					if t[0].Messages[i].Values["StorageObj"] != nil {
+						fmt.Println("storage")
+						stratStore = t[0].Messages[i].Values["StorageObj"]
+					}
+				}
 
 				fetchedCandles = fetchCandleData(ticker, period, n.Add(-periodDurationMap[period]*1), n.Add(-periodDurationMap[period]*1))
 				//TODO: get bot's real settings to pass to strategy
