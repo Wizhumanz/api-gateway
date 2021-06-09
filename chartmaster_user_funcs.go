@@ -50,7 +50,10 @@ func strat1(
 
 			//check SL
 			if low[relCandleIndex] <= low[stored.EntryFirstPivotIndex] {
-				(*strategy).CloseLong(stored.LongSLPrice, 0, relCandleIndex, "SL")
+				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
+				stored.MinSearchIndex = stored.EntrySecondPivotIndex
+				stored.EntryFirstPivotIndex = 0
+				stored.EntrySecondPivotIndex = 0
 				stored.LongEntryPrice = 0
 				stored.LongSLPrice = 0
 				*storage = stored
@@ -61,6 +64,9 @@ func strat1(
 			tpPrice := (1 + (tpPerc / 100)) * stored.LongEntryPrice
 			if high[relCandleIndex] >= tpPrice {
 				(*strategy).CloseLong(tpPrice, 0, relCandleIndex, "TP")
+				stored.MinSearchIndex = stored.EntrySecondPivotIndex
+				stored.EntryFirstPivotIndex = 0
+				stored.EntrySecondPivotIndex = 0
 				stored.LongEntryPrice = 0
 				stored.LongSLPrice = 0
 				*storage = stored
@@ -139,6 +145,9 @@ func strat1(
 			//exit if exitWatch sufficient
 			if len(trendBreakPivots) >= exitWatchPivots {
 				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
+				stored.MinSearchIndex = stored.EntrySecondPivotIndex
+				stored.EntryFirstPivotIndex = 0
+				stored.EntrySecondPivotIndex = 0
 				stored.LongEntryPrice = 0
 				stored.LongSLPrice = 0
 			}
@@ -147,27 +156,32 @@ func strat1(
 
 			//find new trend to watch
 			latestPLIndex := stored.PivotLows[len(stored.PivotLows)-1]
-			latestPL := low[latestPLIndex]
 			prevPLIndex := stored.PivotLows[len(stored.PivotLows)-2]
+			latestPL := low[latestPLIndex]
 			prevPL := low[prevPLIndex]
 			entryPivotsDiffPerc := ((latestPL - prevPL) / prevPL) * 100
 			if latestPL > prevPL && latestPLIndex > stored.MinSearchIndex && prevPLIndex > stored.MinSearchIndex && entryPivotsDiffPerc > minEntryPivotsDiffPerc && entryPivotsDiffPerc < maxEntryPivotsDiffPerc {
 				//enter long
 				entryPrice := close[relCandleIndex-1]
-				stored.LongEntryPrice = entryPrice
 				slPrice := prevPL
-				stored.LongSLPrice = slPrice
 				rawRiskPerc := (entryPrice - slPrice) / entryPrice
-				accRiskedCap := (risk / 100) * float64(accSz)
+				if rawRiskPerc < 0 {
+					return nil
+				}
+				stored.LongSLPrice = slPrice
+				stored.LongEntryPrice = entryPrice
+				accRiskedCap := (risk / 100) * float64(strategy.GetAvailableEquity())
 				posCap := (accRiskedCap / rawRiskPerc) / float64(lev)
 				if posCap > (*strategy).GetAvailableEquity() {
 					posCap = (*strategy).GetAvailableEquity()
 				}
 				posSize := posCap / entryPrice
 
-				fmt.Println(entryPrice)
-				fmt.Println(posCap)
-				fmt.Println(posSize)
+				// if relCandleIndex > 298 {
+				// 	fmt.Printf(colorGreen+"%v <%v>\n"+colorReset, strategy.GetAvailableEquity(), relCandleIndex)
+				// 	fmt.Printf("prevPL = %v, latestPL = %v\n", candles[prevPLIndex].DateTime, candles[latestPLIndex].DateTime)
+				// 	fmt.Printf("[%v] entryPrice = %v,\nslPrice = %v,\nrawRiskPerc = %v,\nriskedCap = %v,\nposCap = %v\n", candles[len(candles)-1].DateTime, entryPrice, slPrice, rawRiskPerc, accRiskedCap, posCap)
+				// }
 
 				(*strategy).Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 				// newLabels["middle"] = map[int]string{
