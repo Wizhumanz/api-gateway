@@ -15,6 +15,8 @@ type PivotsStore struct {
 	MinSearchIndex        int
 	EntryFirstPivotIndex  int
 	EntrySecondPivotIndex int
+	TPIndex               int
+	SLIndex               int
 }
 
 //return signature: (label, bars back to add label, storage obj to pass to next func call/iteration)
@@ -28,6 +30,9 @@ func strat1(
 	checkTrendBreakFromStartingPivots := false
 	minEntryPivotsDiffPerc := float64(0)
 	maxEntryPivotsDiffPerc := 0.5
+
+	tpTradeCooldownCandles := 5
+	slTradeCooldownCandles := 9
 	tpPerc := 0.5
 
 	stored, ok := (*storage).(PivotsStore)
@@ -43,6 +48,13 @@ func strat1(
 
 	newLabels, _ := findPivots(open, high, low, close, relCandleIndex, &(stored.PivotHighs), &(stored.PivotLows))
 
+	//TP cooldown labels
+	if relCandleIndex < (stored.TPIndex + tpTradeCooldownCandles) {
+		newLabels["middle"] = map[int]string{
+			0: "й",
+		}
+	}
+
 	if len(stored.PivotLows) >= 2 {
 		if strategy.GetPosLongSize() > 0 {
 			//manage/watch ongoing trend
@@ -52,6 +64,8 @@ func strat1(
 			if low[relCandleIndex] <= low[stored.EntryFirstPivotIndex] {
 				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
 				stored.MinSearchIndex = stored.EntrySecondPivotIndex
+				stored.SLIndex = relCandleIndex
+				stored.TPIndex = 0
 				stored.EntryFirstPivotIndex = 0
 				stored.EntrySecondPivotIndex = 0
 				stored.LongEntryPrice = 0
@@ -65,6 +79,8 @@ func strat1(
 			if high[relCandleIndex] >= tpPrice {
 				(*strategy).CloseLong(tpPrice, 0, relCandleIndex, "TP")
 				stored.MinSearchIndex = stored.EntrySecondPivotIndex
+				stored.TPIndex = relCandleIndex
+				stored.SLIndex = 0
 				stored.EntryFirstPivotIndex = 0
 				stored.EntrySecondPivotIndex = 0
 				stored.LongEntryPrice = 0
@@ -146,6 +162,8 @@ func strat1(
 			if len(trendBreakPivots) >= exitWatchPivots {
 				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
 				stored.MinSearchIndex = stored.EntrySecondPivotIndex
+				stored.SLIndex = relCandleIndex
+				stored.TPIndex = 0
 				stored.EntryFirstPivotIndex = 0
 				stored.EntrySecondPivotIndex = 0
 				stored.LongEntryPrice = 0
@@ -161,6 +179,14 @@ func strat1(
 			prevPL := low[prevPLIndex]
 			entryPivotsDiffPerc := ((latestPL - prevPL) / prevPL) * 100
 			if latestPL > prevPL && latestPLIndex > stored.MinSearchIndex && prevPLIndex > stored.MinSearchIndex && entryPivotsDiffPerc > minEntryPivotsDiffPerc && entryPivotsDiffPerc < maxEntryPivotsDiffPerc {
+				//check timeouts
+				if stored.TPIndex != 0 && relCandleIndex < (stored.TPIndex+tpTradeCooldownCandles) {
+					return nil
+				}
+				if stored.SLIndex != 0 && relCandleIndex < (stored.SLIndex+slTradeCooldownCandles) {
+					return nil
+				}
+
 				//enter long
 				entryPrice := close[relCandleIndex-1]
 				slPrice := prevPL
@@ -190,6 +216,8 @@ func strat1(
 
 				stored.EntryFirstPivotIndex = prevPLIndex
 				stored.EntrySecondPivotIndex = latestPLIndex
+				stored.TPIndex = 0 //reset
+				stored.SLIndex = 0
 
 				newLabels["middle"] = map[int]string{
 					relCandleIndex - latestPLIndex: "L2",
