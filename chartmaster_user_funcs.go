@@ -13,7 +13,6 @@ type PivotsStore struct {
 	LongPosSize    float64
 
 	MinSearchIndex        int
-	WatchingTrend         bool
 	EntryFirstPivotIndex  int
 	EntrySecondPivotIndex int
 }
@@ -29,7 +28,7 @@ func strat1(
 	checkTrendBreakFromStartingPivots := false
 	minEntryPivotsDiffPerc := float64(0)
 	maxEntryPivotsDiffPerc := 0.5
-	// tpPerc := 0.5
+	tpPerc := 0.5
 
 	stored, ok := (*storage).(PivotsStore)
 	if !ok {
@@ -45,13 +44,23 @@ func strat1(
 	newLabels, _ := findPivots(open, high, low, close, relCandleIndex, &(stored.PivotHighs), &(stored.PivotLows))
 
 	if len(stored.PivotLows) >= 2 {
-		if stored.WatchingTrend {
+		if strategy.GetPosLongSize() > 0 {
 			//manage/watch ongoing trend
 			// fmt.Printf(colorYellow+"checking existing trend %v %v\n"+colorReset, relCandleIndex, candles[len(candles)-1].DateTime)
 
-			//check sl
+			//check SL
 			if low[relCandleIndex] <= low[stored.EntryFirstPivotIndex] {
 				(*strategy).CloseLong(stored.LongSLPrice, 0, relCandleIndex, "SL")
+				stored.LongEntryPrice = 0
+				stored.LongSLPrice = 0
+				*storage = stored
+				return nil
+			}
+
+			//check TP
+			tpPrice := (1 + (tpPerc / 100)) * stored.LongEntryPrice
+			if high[relCandleIndex] >= tpPrice {
+				(*strategy).CloseLong(tpPrice, 0, relCandleIndex, "TP")
 				stored.LongEntryPrice = 0
 				stored.LongSLPrice = 0
 				*storage = stored
@@ -129,7 +138,7 @@ func strat1(
 
 			//exit if exitWatch sufficient
 			if len(trendBreakPivots) >= exitWatchPivots {
-				(*strategy).CloseLong(stored.LongSLPrice, 0, relCandleIndex, "SL")
+				(*strategy).CloseLong(close[relCandleIndex-1], 0, relCandleIndex, "SL")
 				stored.LongEntryPrice = 0
 				stored.LongSLPrice = 0
 			}
@@ -143,6 +152,7 @@ func strat1(
 			prevPL := low[prevPLIndex]
 			entryPivotsDiffPerc := ((latestPL - prevPL) / prevPL) * 100
 			if latestPL > prevPL && latestPLIndex > stored.MinSearchIndex && prevPLIndex > stored.MinSearchIndex && entryPivotsDiffPerc > minEntryPivotsDiffPerc && entryPivotsDiffPerc < maxEntryPivotsDiffPerc {
+				//enter long
 				entryPrice := close[relCandleIndex-1]
 				stored.LongEntryPrice = entryPrice
 				slPrice := prevPL
@@ -155,6 +165,10 @@ func strat1(
 				}
 				posSize := posCap / entryPrice
 
+				fmt.Println(entryPrice)
+				fmt.Println(posCap)
+				fmt.Println(posSize)
+
 				(*strategy).Buy(close[relCandleIndex], slPrice, posSize, true, relCandleIndex)
 				// newLabels["middle"] = map[int]string{
 				// 	0: fmt.Sprintf("%v|SL %v, TP %v", relCandleIndex, slPrice, ((1 + (tpPerc / 100)) * stored.LongEntryPrice)),
@@ -162,7 +176,6 @@ func strat1(
 
 				stored.EntryFirstPivotIndex = prevPLIndex
 				stored.EntrySecondPivotIndex = latestPLIndex
-				stored.WatchingTrend = true
 
 				newLabels["middle"] = map[int]string{
 					relCandleIndex - latestPLIndex: "L2",
