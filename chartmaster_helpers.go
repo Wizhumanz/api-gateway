@@ -319,7 +319,7 @@ func computeBacktest(
 	packetSize int,
 	userID, rid string,
 	startTime, endTime time.Time,
-	userStrat func(Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string,
+	userStrat func([]Candlestick, float64, float64, float64, []float64, []float64, []float64, []float64, int, *StrategyExecutor, *interface{}) map[string]map[int]string,
 	packetSender func(string, string, []CandlestickChartData, []ProfitCurveData, []SimulatedTradeData),
 ) ([]CandlestickChartData, []ProfitCurveData, []SimulatedTradeData) {
 	var store interface{} //save state between strategy executions on each candle
@@ -343,6 +343,7 @@ func computeBacktest(
 	allHighs := []float64{}
 	allLows := []float64{}
 	allCloses := []float64{}
+	allCandles := []Candlestick{}
 	relIndex := 0
 	stratComputeStartIndex := 0
 	for {
@@ -366,8 +367,9 @@ func computeBacktest(
 			allHighs = append(allHighs, candle.High)
 			allLows = append(allLows, candle.Low)
 			allCloses = append(allCloses, candle.Close)
+			allCandles = append(allCandles, candle)
 			//TODO: build results and run for different param sets
-			labels = userStrat(candle, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
+			labels = userStrat(allCandles, risk, lev, accSz, allOpens, allHighs, allLows, allCloses, relIndex, &strategySim, &store)
 
 			//build display data using strategySim
 			var pcData ProfitCurveDataPoint

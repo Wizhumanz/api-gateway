@@ -89,24 +89,6 @@ func main() {
 	periodDurationMap["1DAY"] = 24 * time.Hour
 	periodDurationMap["2DAY"] = 48 * time.Hour
 
-	// botStrategy("BINANCEFTS_PERP_BTC_USDT", "6MIN")
-	// msgs := []string{}
-	// msgs = append(msgs, "TradeStreamName")
-	// msgs = append(msgs, "Test")
-	// msgs = append(msgs, "CMD")
-	// msgs = append(msgs, "EXIT")
-	// msngr.AddToStream("webhookTrades", msgs)
-	// fmt.Println(msgs)
-	// liveStrategyExecute("BINANCEFTS_PERP_BTC_USDT", "1MIN")
-	b := Bot{
-		AccountRiskPercPerTrade: "69.69",
-		AccountSizePercToTrade:  "42.420",
-		Leverage:                "69",
-		UserID:                  "696969420",
-		KEY:                     "788320881088308812",
-	}
-	activateBot(b)
-
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
