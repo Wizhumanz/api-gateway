@@ -141,6 +141,13 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
+type upwardTrend struct {
+	// EntryTime  string  `json:"EntryTime"`
+	// ExtentTime string  `json:"ExtentTime"`
+	Duration int     `json:"Duration"`
+	Growth   float64 `json:"Growth"`
+}
+
 type CoinAPITicker struct {
 	ID         string `json:"symbol_id"`
 	ExchangeID string `json:"symbol_id_exchange"`
@@ -177,6 +184,14 @@ type ComputeRequest struct {
 	Risk             string `json:"risk"`
 	Leverage         string `json:"leverage"`
 	Size             string `json:"size"`
+}
+
+type ShareResult struct {
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	ResultFileName string `json:"resultFileName"`
+	ShareID        string `json:"shareID"`
+	UserID         string `json:"userID"`
 }
 
 type ProfitCurveDataPoint struct {
