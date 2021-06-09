@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"gitlab.com/myikaco/msngr"
 )
 
@@ -94,6 +95,22 @@ func executeLiveStrategy(
 
 			//fetch candle and run live strat on every interval tick
 			for n := range minuteTicker(period).C {
+				msg := make(map[string]string)
+				msg["streamName"] = bot.KEY
+				msg["start"] = "0"
+				msg["count"] = "999999999"
+
+				_, ret, _ := msngr.ReadStream(msg)
+				byteData, _ := json.Marshal(ret)
+				var t []redis.XStream
+				json.Unmarshal(byteData, &t)
+				fmt.Println(t[0].Messages[len(t[0].Messages)-1].Values["CMD"])
+
+				if t[0].Messages[len(t[0].Messages)-1].Values["CMD"] == "Shutdown" {
+					fmt.Println("SHUTDOWN")
+					break
+				}
+
 				//TODO: fetch saved storage obj for strategy from redis (using msngr.ReadStream())
 				var stratStore interface{}
 
@@ -113,6 +130,7 @@ func executeLiveStrategy(
 				}
 				logLiveStrategyExecution(n.Format(httpTimeFormat), string(obj), fmt.Sprint(bot.K.ID))
 			}
+			break
 		}
 	}
 }
