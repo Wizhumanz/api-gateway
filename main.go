@@ -66,11 +66,8 @@ func main() {
 	initRedis()
 	initDatastore()
 
-	// http.Handle("/", http.FileServer(http.Dir(".")))
-	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
-	// addr := "localhost:4243"
-	// log.Printf("Listening on %s", addr)
-	// log.Fatal(http.ListenAndServe(addr, nil))
+	msngr.GoogleProjectID = "myika-anastasia"
+	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
 	periodDurationMap["2MIN"] = 2 * time.Minute
@@ -91,6 +88,24 @@ func main() {
 	periodDurationMap["12HRS"] = 12 * time.Hour
 	periodDurationMap["1DAY"] = 24 * time.Hour
 	periodDurationMap["2DAY"] = 48 * time.Hour
+
+	// botStrategy("BINANCEFTS_PERP_BTC_USDT", "6MIN")
+	// msgs := []string{}
+	// msgs = append(msgs, "TradeStreamName")
+	// msgs = append(msgs, "Test")
+	// msgs = append(msgs, "CMD")
+	// msgs = append(msgs, "EXIT")
+	// msngr.AddToStream("webhookTrades", msgs)
+	// fmt.Println(msgs)
+	// liveStrategyExecute("BINANCEFTS_PERP_BTC_USDT", "1MIN")
+	b := Bot{
+		AccountRiskPercPerTrade: "69.69",
+		AccountSizePercToTrade:  "42.420",
+		Leverage:                "69",
+		UserID:                  "696969420",
+		KEY:                     "788320881088308812",
+	}
+	activateBot(b)
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
@@ -126,9 +141,6 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/getChartmasterTickers").HandlerFunc(getTickersHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory").HandlerFunc(getBacktestHistoryHandler)
 	router.Methods("GET", "OPTIONS").Path("/backtestHistory/{id}").HandlerFunc(getBacktestResHandler)
-
-	msngr.GoogleProjectID = "myika-anastasia"
-	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)
