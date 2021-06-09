@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"time"
 )
 
@@ -20,8 +21,41 @@ func runBacktest(
 	//fetch all candle data concurrently
 	concFetchCandleData(startTime, endTime, period, ticker, packetSize, &chunksArr)
 
+	temp := [][]Candlestick{}
+	for _, g := range chunksArr {
+		temp = append(temp, *g)
+	}
+	fmt.Println(reflect.DeepEqual(temp[0], *chunksArr[0]))
+
+	// var fetchedTotal int
 	//wait for all candle data fetch complete before running strategy
 	for {
+		boolean := true
+		for i, c := range chunksArr {
+			if !reflect.DeepEqual(temp[i], *c) {
+				boolean = false
+				// fmt.Println(boolean)
+				break
+			}
+		}
+
+		// if len(*chunksArr[0]) == 300 {
+		// 	fmt.Printf("\ntemp: %v\n", temp[0])
+		// 	fmt.Printf("\nchunksArr: %v\n", *chunksArr[0])
+		// }
+
+		if !boolean {
+			for _, e := range chunksArr {
+				if len(*e) != 0 {
+					fmt.Println(len(*e))
+				}
+			}
+			temp = nil
+			for _, g := range chunksArr {
+				temp = append(temp, *g)
+			}
+		}
+
 		allChunksFilled := true
 		for _, e := range chunksArr {
 			if len(*e) <= 0 {
@@ -30,6 +64,7 @@ func runBacktest(
 			}
 		}
 		if allChunksFilled {
+			// fmt.Println(len(*chunksArr[len(chunksArr)-1]))
 			break
 		}
 	}

@@ -321,6 +321,8 @@ func getChunkCandleData(chunkSlice *[]Candlestick, packetSize int, ticker, perio
 	}
 
 	*chunkSlice = sortedChunkCandles
+
+	fmt.Printf("\ngo: %v\n", sortedChunkCandles)
 }
 
 func concFetchCandleData(startTime, endTime time.Time, period, ticker string, packetSize int, chunksArr *[]*[]Candlestick) {
@@ -339,9 +341,12 @@ func concFetchCandleData(startTime, endTime time.Time, period, ticker string, pa
 		*chunksArr = append(*chunksArr, &chunkSlice)
 		go getChunkCandleData(&chunkSlice, 300, ticker, period, startTime, endTime, fetchCandlesStart, fetchCandlesEnd)
 
+		// progressBar(userID, rid, len(allCandleData), startTime, endTime)
+
 		//increment
 		fetchCandlesStart = fetchCandlesEnd.Add(periodDurationMap[period])
 	}
+
 }
 
 func computeBacktest(
