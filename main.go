@@ -66,11 +66,8 @@ func main() {
 	initRedis()
 	initDatastore()
 
-	// http.Handle("/", http.FileServer(http.Dir(".")))
-	// http.HandleFunc("/create-checkout-session", createCheckoutSession)
-	// addr := "localhost:4243"
-	// log.Printf("Listening on %s", addr)
-	// log.Fatal(http.ListenAndServe(addr, nil))
+	msngr.GoogleProjectID = "myika-anastasia"
+	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
 	periodDurationMap["2MIN"] = 2 * time.Minute
@@ -96,6 +93,8 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/").HandlerFunc(indexHandler)
 	router.Methods("POST", "OPTIONS").Path("/login").HandlerFunc(loginHandler)
 	router.Methods("POST", "OPTIONS").Path("/user").HandlerFunc(createNewUserHandler)
+	router.Methods("GET", "OPTIONS").Path("/getUser").HandlerFunc(getUser)
+	router.Methods("PUT", "OPTIONS").Path("/user/{id}").HandlerFunc(updateUser)
 	router.Methods("POST", "OPTIONS").Path("/trade").HandlerFunc(createNewTradeHandler)
 	router.Methods("GET", "OPTIONS").Path("/trades").HandlerFunc(getAllTradesHandler)
 	router.Methods("GET", "OPTIONS").Path("/bots").HandlerFunc(getAllBotsHandler)
@@ -109,7 +108,12 @@ func main() {
 	router.Methods("GET", "OPTIONS").Path("/exchanges").HandlerFunc(getAllExchangeConnectionsHandler)
 	router.Methods("POST", "OPTIONS").Path("/exchange").HandlerFunc(createNewExchangeConnectionHandler)
 	router.Methods("DELETE", "OPTIONS").Path("/exchange/{id}").HandlerFunc(deleteExchangeConnectionHandler)
-	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(createCheckoutSession)
+	// router.Methods("POST", "OPTIONS").Path("/payment-second").HandlerFunc(createCheckoutSessionSecondTier)
+	// router.Methods("POST", "OPTIONS").Path("/payment-third").HandlerFunc(createCheckoutSessionThirdTier)
+	router.Methods("POST", "OPTIONS").Path("/create-checkout-session").HandlerFunc(handleCreateCheckoutSession)
+	router.Methods("GET", "OPTIONS").Path("/checkout-session").HandlerFunc(handleCheckoutSession)
+	router.Methods("POST", "OPTIONS").Path("/customer-portal").HandlerFunc(handleCustomerPortal)
+	router.Methods("POST", "OPTIONS").Path("/webhook-payment").HandlerFunc(handleWebhook)
 
 	router.Methods("POST", "OPTIONS").Path("/webhook/{id}").HandlerFunc(tvWebhookHandler)
 	router.Methods("GET", "OPTIONS").Path("/ws/{id}").HandlerFunc(wsConnectHandler)
@@ -122,13 +126,6 @@ func main() {
 	// router.Methods("GET", "OPTIONS").Path("/candlestick").HandlerFunc(indexChartmasterHandler)
 	// router.Methods("GET", "OPTIONS").Path("/profitCurve").HandlerFunc(profitCurveHandler)
 	// router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
-	router.Methods("POST", "OPTIONS").Path("/backtest").HandlerFunc(backtestHandler)
-	router.Methods("GET", "OPTIONS").Path("/getChartmasterTickers").HandlerFunc(getTickersHandler)
-	router.Methods("GET", "OPTIONS").Path("/backtestHistory").HandlerFunc(getBacktestHistoryHandler)
-	router.Methods("GET", "OPTIONS").Path("/backtestHistory/{id}").HandlerFunc(getBacktestResHandler)
-
-	msngr.GoogleProjectID = "myika-anastasia"
-	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	port := os.Getenv("PORT")
 	fmt.Println("api-gateway listening on port " + port)

@@ -29,6 +29,16 @@ func deleteElement(sli []Bot, del Bot) []Bot {
 	return rSli
 }
 
+func deleteElementUser(sli []User, del User) []User {
+	var rSli []User
+	for _, e := range sli {
+		if e.K.ID != del.K.ID {
+			rSli = append(rSli, e)
+		}
+	}
+	return rSli
+}
+
 func deleteExchangeConnection(sli []ExchangeConnection, del ExchangeConnection) []ExchangeConnection {
 	var rSli []ExchangeConnection
 	for _, e := range sli {
