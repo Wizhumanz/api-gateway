@@ -232,14 +232,6 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("\nBot active: %v\n", reqBotData.IsActive)
-	// if reqBotData.IsActive {
-	activateBot(reqBotData)
-	// } else {
-	// 	shutdownBot(reqBotData)
-	// }
-	editBot(reqBotData)
-
 	if reqBotData.AggregateID != 0 {
 		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}
 		w.WriteHeader(http.StatusBadRequest)
@@ -297,6 +289,29 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 	//must assign aggregate ID from existing bot
 	reqBotData.AggregateID = botsResp[len(botsResp)-1].AggregateID
+
+	newQuery := datastore.NewQuery("Bot").Filter("AggregateID =", reqBotData.AggregateID)
+	g := client.Run(ctx, newQuery)
+	previousBot := parseBotsQueryRes(g)
+
+	if previousBot[0].IsActive != reqBotData.IsActive {
+		if reqBotData.IsActive {
+			activateBot(reqBotData)
+			fmt.Println("activate")
+		} else {
+			shutdownBot(reqBotData)
+			fmt.Println("shutdown")
+		}
+	}
+
+	if previousBot[0].AccountRiskPercPerTrade != reqBotData.AccountRiskPercPerTrade ||
+		previousBot[0].AccountSizePercToTrade != reqBotData.AccountSizePercToTrade ||
+		previousBot[0].Leverage != reqBotData.Leverage ||
+		previousBot[0].Ticker != reqBotData.Ticker ||
+		previousBot[0].ExchangeConnection != reqBotData.ExchangeConnection {
+		editBot(reqBotData)
+		fmt.Println("edit")
+	}
 
 	addBot(w, r, true, reqBotData, reqUser)
 }
