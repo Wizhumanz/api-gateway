@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 
 func activateBot(bot Bot) {
 	// add new trade info into stream (triggers other services)
+	jsonBot, _ := json.Marshal(bot)
+
 	msgs := []string{}
 	msgs = append(msgs, "Timestamp")
 	msgs = append(msgs, time.Now().Format("2006-01-02_15:04:05_-0700"))
@@ -16,6 +19,8 @@ func activateBot(bot Bot) {
 	msgs = append(msgs, fmt.Sprint(bot.KEY))
 	msgs = append(msgs, "CMD")
 	msgs = append(msgs, "Activate")
+	msgs = append(msgs, "Bot")
+	msgs = append(msgs, string(jsonBot))
 
 	botStreamMsgs := []string{}
 	botStreamMsgs = append(botStreamMsgs, "Timestamp")
