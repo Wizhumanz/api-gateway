@@ -147,6 +147,13 @@ type ScatterData struct {
 	Time     int     `json:"Time"`
 }
 
+type upwardTrend struct {
+	// EntryTime  string  `json:"EntryTime"`
+	// ExtentTime string  `json:"ExtentTime"`
+	Duration int     `json:"Duration"`
+	Growth   float64 `json:"Growth"`
+}
+
 type CoinAPITicker struct {
 	ID         string `json:"symbol_id"`
 	ExchangeID string `json:"symbol_id_exchange"`
@@ -167,10 +174,13 @@ type CandlestickChartData struct {
 	Close           float64 `json:"Close"`
 	StratEnterPrice float64 `json:"StratEnterPrice"`
 	StratExitPrice  float64 `json:"StratExitPrice"`
-	Label           string  `json:"Label"`
+	LabelTop        string  `json:"LabelTop"`
+	LabelMiddle     string  `json:"LabelMiddle"`
+	LabelBottom     string  `json:"LabelBottom"`
 }
 
-type Backtest struct {
+type ComputeRequest struct {
+	Operation        string `json:"operation"`
 	Ticker           string `json:"ticker"`
 	Period           string `json:"period"`
 	TimeStart        string `json:"time_start"`
@@ -180,6 +190,14 @@ type Backtest struct {
 	Risk             string `json:"risk"`
 	Leverage         string `json:"leverage"`
 	Size             string `json:"size"`
+}
+
+type ShareResult struct {
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	ResultFileName string `json:"resultFileName"`
+	ShareID        string `json:"shareID"`
+	UserID         string `json:"userID"`
 }
 
 type ProfitCurveDataPoint struct {
@@ -250,46 +268,53 @@ func (c *Candlestick) Create(redisData map[string]string) {
 	c.DateTime = t.Format(httpTimeFormat)
 }
 
-type StrategySimulatorAction struct {
+type StrategyExecutorAction struct {
 	Action  string
 	Price   float64
 	SL      float64
 	PosSize float64
 }
 
-type StrategySimulator struct {
-	PosLongSize     float64
-	PosShortSize    float64
+type StrategyExecutor struct {
+	posLongSize     float64
+	posShortSize    float64
 	totalEquity     float64
 	availableEquity float64
-	Actions         map[int]StrategySimulatorAction //map bar index to action that occured at that index
+	Actions         map[int]StrategyExecutorAction //map bar index to action that occured at that index
+	LiveTrade       bool
 }
 
-func (strat *StrategySimulator) Init(e float64) {
+func (strat *StrategyExecutor) Init(e float64, liveTrade bool) {
 	strat.totalEquity = e
 	strat.availableEquity = e
-	strat.Actions = map[int]StrategySimulatorAction{}
+	strat.Actions = map[int]StrategyExecutorAction{}
+	strat.LiveTrade = liveTrade
 }
 
-func (strat *StrategySimulator) GetEquity() float64 {
+func (strat *StrategyExecutor) GetTotalEquity() float64 {
 	return strat.totalEquity
 }
 
-func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLong bool, cIndex int) {
-	// if (orderSize * price) > strat.availableEquity {
-	// 	log.Fatal(colorRed + "Order size exceeds available equity" + colorReset)
-	// 	return
-	// }
+func (strat *StrategyExecutor) GetAvailableEquity() float64 {
+	return strat.availableEquity
+}
+
+func (strat *StrategyExecutor) GetPosLongSize() float64 {
+	return strat.posLongSize
+}
+
+func (strat *StrategyExecutor) Buy(price, sl, orderSize float64, directionIsLong bool, cIndex int) {
+	// fmt.Printf("buying %v at %v\n", orderSize, price)
 
 	strat.availableEquity = strat.availableEquity - (orderSize * price)
 
 	if directionIsLong {
-		strat.PosLongSize = orderSize
+		strat.posLongSize = orderSize
 	} else {
-		strat.PosShortSize = orderSize
+		strat.posShortSize = orderSize
 	}
 
-	strat.Actions[cIndex] = StrategySimulatorAction{
+	strat.Actions[cIndex] = StrategyExecutorAction{
 		Action:  "ENTER",
 		Price:   price,
 		SL:      sl,
@@ -297,41 +322,24 @@ func (strat *StrategySimulator) Buy(price, sl, orderSize float64, directionIsLon
 	}
 }
 
-func (strat *StrategySimulator) CloseLong(price, orderSize float64, cIndex int) {
+func (strat *StrategyExecutor) CloseLong(price, orderSize float64, cIndex int, action string, timestamp string) {
+	// fmt.Printf("<%v> closing %v at %v, action = %v\n", timestamp, orderSize, price, action)
+
 	//close entire long
+	closeSz := 0.0
 	if orderSize == 0 {
-		strat.totalEquity = strat.availableEquity + (strat.PosLongSize * price)
-		strat.PosLongSize = 0
+		closeSz = strat.posLongSize
+		strat.totalEquity = strat.availableEquity + (strat.posLongSize * price)
+		strat.posLongSize = 0
 	} else {
 		strat.totalEquity = strat.availableEquity + (orderSize * price)
-		strat.PosLongSize = strat.PosLongSize - orderSize
+		strat.posLongSize = strat.posLongSize - orderSize
 	}
 	strat.availableEquity = strat.totalEquity
 
-	strat.Actions[cIndex] = StrategySimulatorAction{
-		Action: "SL",
-		Price:  price,
+	strat.Actions[cIndex] = StrategyExecutorAction{
+		Action:  action,
+		Price:   price,
+		PosSize: closeSz,
 	}
-}
-
-func (strat *StrategySimulator) CheckPositions(open, high, low, close float64, cIndex int) float64 {
-	var sl float64
-	if strat.PosLongSize > 0 {
-		//get SL
-		for _, act := range strat.Actions {
-			if act.Action == "ENTER" {
-				sl = act.SL
-				break
-			}
-		}
-		//check SL
-		if low <= sl || close <= sl || open <= sl || high <= sl {
-			strat.CloseLong(close, 0, cIndex)
-			// fmt.Printf("SL EXIT %v\n", close)
-		}
-
-		//TODO: check TP
-	}
-
-	return sl
 }
