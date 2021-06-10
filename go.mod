@@ -4,7 +4,6 @@ go 1.16
 
 require (
 	cloud.google.com/go/datastore v1.5.0
-	cloud.google.com/go/storage v1.10.0
 	github.com/go-redis/redis/v8 v8.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
