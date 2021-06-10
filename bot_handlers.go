@@ -231,12 +231,14 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("\nBot active: %v", reqBotData.IsActive)
+
+	fmt.Printf("\nBot active: %v\n", reqBotData.IsActive)
 	// if reqBotData.IsActive {
-	// 	activateBot(reqBotData)
+	activateBot(reqBotData)
 	// } else {
 	// 	shutdownBot(reqBotData)
 	// }
+	editBot(reqBotData)
 
 	if reqBotData.AggregateID != 0 {
 		data := jsonResponse{Msg: "ID property of Bot is immutable.", Body: "Do not pass ID property in request body, instead pass in URL."}

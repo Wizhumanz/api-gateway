@@ -43,7 +43,6 @@ func getWebhookConnectionHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       r.URL.Query().Get("user"),
 		Password: auth,
 	}
-	fmt.Println("auth working man")
 	authSuccess, _ := authenticateUser(authReq)
 	if len(r.URL.Query()["isActive"]) == 0 && !authSuccess {
 		data := jsonResponse{Msg: "Authorization Invalid", Body: "Go away."}
