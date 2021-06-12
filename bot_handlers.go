@@ -296,10 +296,10 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 
 	if previousBot[0].IsActive != reqBotData.IsActive {
 		if reqBotData.IsActive {
-			activateBot(reqBotData)
+			// activateBot(reqBotData)
 			fmt.Println("activate")
 		} else {
-			shutdownBot(reqBotData)
+			// shutdownBot(reqBotData)
 			fmt.Println("shutdown")
 		}
 	}
@@ -309,7 +309,7 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		previousBot[0].Leverage != reqBotData.Leverage ||
 		previousBot[0].Ticker != reqBotData.Ticker ||
 		previousBot[0].ExchangeConnection != reqBotData.ExchangeConnection {
-		editBot(reqBotData)
+		// editBot(reqBotData)
 		fmt.Println("edit")
 	}
 
