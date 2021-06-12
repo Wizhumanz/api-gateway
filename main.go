@@ -15,7 +15,6 @@ import (
 	"cloud.google.com/go/datastore"
 	"gitlab.com/myikaco/msngr"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
@@ -33,11 +32,6 @@ var googleProjectID = "myika-anastasia"
 var redisHostMsngr = os.Getenv("REDISHOST_MSNGR")
 var redisPortMsngr = os.Getenv("REDISPORT_MSNGR")
 var redisPassMsngr = os.Getenv("REDISPASS_MSNGR")
-var rdbMsngr *redis.Client
-var redisHostChartmaster = os.Getenv("REDISHOST_CM")
-var redisPortChartmaster = os.Getenv("REDISPORT_CM")
-var redisPassChartmaster = os.Getenv("REDISPASS_CM")
-var rdbChartmaster *redis.Client
 var client *datastore.Client
 var ctx context.Context
 

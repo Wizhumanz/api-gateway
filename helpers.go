@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
-	"github.com/go-redis/redis/v8"
-	"gitlab.com/myikaco/msngr"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/iterator"
 )
@@ -75,45 +73,6 @@ func generateRandomID(n int) string {
 		b[i] = nums[rand.Intn(len(nums))]
 	}
 	return string(b)
-}
-
-func initRedis() {
-	// msngr redis streams
-	if redisHostMsngr == "" {
-		redisHostMsngr = "127.0.0.1"
-	}
-	if redisPortMsngr == "" {
-		redisPortMsngr = "6379"
-	}
-	fmt.Println("api-gateway connecting to Redis on " + redisHostMsngr + ":" + redisPortMsngr + " - " + redisPassMsngr)
-	rdbMsngr = redis.NewClient(&redis.Options{
-		Addr:        redisHostMsngr + ":" + redisPortMsngr,
-		Password:    redisPassMsngr,
-		IdleTimeout: -1,
-	})
-
-	ctx := context.Background()
-	rdbMsngr.Do(ctx, "AUTH", redisPassMsngr)
-	rdbMsngr.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
-	rdbMsngr.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
-
-	// chartmaster
-	if redisHostChartmaster == "" {
-		redisHostMsngr = "127.0.0.1"
-	}
-	if redisPortChartmaster == "" {
-		redisPortMsngr = "6379"
-	}
-	fmt.Println("api-gateway connecting to Redis on " + redisHostChartmaster + ":" + redisPortChartmaster + " - " + redisPassChartmaster)
-	rdbChartmaster = redis.NewClient(&redis.Options{
-		Addr:        redisHostChartmaster + ":" + redisPortChartmaster,
-		Password:    redisPassChartmaster,
-		IdleTimeout: -1,
-	})
-
-	rdbChartmaster.Do(ctx, "AUTH", redisPassChartmaster)
-	rdbChartmaster.Do(ctx, "CLIENT", "SET", "TIMEOUT", "999999999999")
-	rdbChartmaster.Do(ctx, "CLIENT", "SETNAME", msngr.GenerateNewConsumerID("api-gateway"))
 }
 
 func initDatastore() {
