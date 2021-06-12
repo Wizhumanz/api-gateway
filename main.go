@@ -63,10 +63,15 @@ func main() {
 	wsConnections = make(map[string]*websocket.Conn)
 	wsConnectionsChartmaster = make(map[string]*websocket.Conn)
 
-	initRedis()
+	// initRedis()
 	initDatastore()
 
 	msngr.GoogleProjectID = "myika-anastasia"
+
+	fmt.Println(redisHostMsngr)
+	fmt.Println(redisPortMsngr)
+	fmt.Println(redisPassMsngr)
+
 	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
