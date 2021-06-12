@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"gitlab.com/myikaco/msngr"
 )
 
 func activateBot(bot Bot) {
@@ -28,8 +26,8 @@ func activateBot(bot Bot) {
 	botStreamMsgs = append(botStreamMsgs, "CMD")
 	botStreamMsgs = append(botStreamMsgs, "INIT")
 
-	msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
-	msngr.AddToStream("activeBots", msgs)
+	// msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
+	// msngr.AddToStream("activeBots", msgs)
 }
 
 func shutdownBot(bot Bot) {
@@ -48,8 +46,8 @@ func shutdownBot(bot Bot) {
 	botStreamMsgs = append(botStreamMsgs, "CMD")
 	botStreamMsgs = append(botStreamMsgs, "SHUTDOWN")
 
-	msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
-	msngr.AddToStream("activeBots", msgs)
+	// msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
+	// msngr.AddToStream("activeBots", msgs)
 }
 
 func editBot(bot Bot) {
@@ -69,5 +67,5 @@ func editBot(bot Bot) {
 	botStreamMsgs = append(botStreamMsgs, bot.Ticker)
 	botStreamMsgs = append(botStreamMsgs, "Exchange")
 	botStreamMsgs = append(botStreamMsgs, bot.ExchangeConnection)
-	msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
+	// msngr.AddToStream(fmt.Sprint(bot.KEY), botStreamMsgs)
 }
