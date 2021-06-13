@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"time"
 
 	"gitlab.com/myikaco/msngr"
@@ -12,7 +13,8 @@ func activateBot(bot Bot) {
 	// add new trade info into stream (triggers other services)
 	jsonBot, err := json.Marshal(bot)
 	if err != nil {
-		fmt.Printf("\nJSON ERROR: %v\n", err)
+		_, file, line, _ := runtime.Caller(0)
+		go Log(fmt.Sprintf("activateBot JSON marshall error %v", err), fmt.Sprintf("<%v> %v", line, file))
 	}
 
 	msgs := []string{}

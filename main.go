@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"math/rand"
+	"runtime"
 	"time"
 
 	"fmt"
@@ -66,6 +67,10 @@ func main() {
 	fmt.Println(redisPortMsngr)
 	fmt.Println(redisPassMsngr)
 
+	msngr.LoggerFunc = func(log string) {
+		_, file, line, _ := runtime.Caller(0)
+		go Log(log, fmt.Sprintf("<%v> %v", line, file))
+	}
 	msngr.InitRedis(redisHostMsngr, redisPortMsngr, redisPassMsngr)
 
 	periodDurationMap["1MIN"] = 1 * time.Minute
