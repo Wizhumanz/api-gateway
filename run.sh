@@ -8,6 +8,8 @@ export REDISPASS_CM=chartm@\$terGainzSoW0W1828738701082877673617969420
 
 export ISTERMINAL=true
 
+export PRINTLOGS=true
+
 go build -o build/api .
 
 build/api
