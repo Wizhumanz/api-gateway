@@ -63,10 +63,6 @@ func main() {
 
 	msngr.GoogleProjectID = "myika-anastasia"
 
-	fmt.Println(redisHostMsngr)
-	fmt.Println(redisPortMsngr)
-	fmt.Println(redisPassMsngr)
-
 	msngr.LoggerFunc = func(log string) {
 		_, file, line, _ := runtime.Caller(0)
 		go Log(log, fmt.Sprintf("<%v> %v", line, file))
