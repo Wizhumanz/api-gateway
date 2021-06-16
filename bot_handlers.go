@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -297,10 +298,12 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 	if previousBot[0].IsActive != reqBotData.IsActive {
 		if reqBotData.IsActive {
 			activateBot(reqBotData)
-			fmt.Println("activate")
+			_, file, line, _ := runtime.Caller(0)
+			go Log("activate", fmt.Sprintf("<%v> %v", line, file))
 		} else {
 			shutdownBot(reqBotData)
-			fmt.Println("shutdown")
+			_, file, line, _ := runtime.Caller(0)
+			go Log("shutdown", fmt.Sprintf("<%v> %v", line, file))
 		}
 	}
 
@@ -310,7 +313,8 @@ func updateBotHandler(w http.ResponseWriter, r *http.Request) {
 		previousBot[0].Ticker != reqBotData.Ticker ||
 		previousBot[0].ExchangeConnection != reqBotData.ExchangeConnection {
 		editBot(reqBotData)
-		fmt.Println("edit")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("edit", fmt.Sprintf("<%v> %v", line, file))
 	}
 
 	addBot(w, r, true, reqBotData, reqUser)

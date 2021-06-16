@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -201,12 +202,14 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	var allBots []Bot
 	var botQuery *datastore.Query
 	if webhookReq.User == "" {
-		fmt.Println("PUBLIC strat")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("PUBLIC strat", fmt.Sprintf("<%v> %v", line, file))
 		//public strategy
 		botQuery = datastore.NewQuery("Bot").
 			Filter("WebhookConnectionID =", theWebConn.KEY)
 	} else {
-		fmt.Println("PRIVATE strat")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("PRIVATE strat", fmt.Sprintf("<%v> %v", line, file))
 		//private strategy (custom webhookURL)
 		botQuery = datastore.NewQuery("Bot").
 			Filter("UserID =", webhookReq.User).
@@ -272,9 +275,12 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 			x.Action = "ENTERIntentSubmitted"
 		case "EXIT", "SL", "TP":
 			// use previous aggr ID from existing trade
-			fmt.Println(botToUse.UserID)
-			fmt.Println(fmt.Sprint(botToUse.K.ID))
-			fmt.Println(fmt.Sprint(x.Ticker))
+			_, file, line, _ := runtime.Caller(0)
+			go Log(botToUse.UserID, fmt.Sprintf("<%v> %v", line, file))
+			_, file, line, _ = runtime.Caller(0)
+			go Log(fmt.Sprint(botToUse.K.ID), fmt.Sprintf("<%v> %v", line, file))
+			_, file, line, _ = runtime.Caller(0)
+			go Log(fmt.Sprint(x.Ticker), fmt.Sprintf("<%v> %v", line, file))
 			var taCalc []TradeAction
 			//NOTE: one bot can only be in one trade at any one time
 			query := datastore.NewQuery("TradeAction").
@@ -289,7 +295,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 				if err == iterator.Done {
 					break
 				}
-				fmt.Println(x)
 				taCalc = append(taCalc, x)
 			}
 
@@ -306,8 +311,6 @@ func tvWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//add row to DB
-		fmt.Println("---")
-		fmt.Println(x)
 		kind := "TradeAction"
 		newKey := datastore.IncompleteKey(kind, nil)
 		if _, err := client.Put(ctx, newKey, &x); err != nil {

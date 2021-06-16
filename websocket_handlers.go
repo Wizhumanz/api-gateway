@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -17,7 +16,6 @@ func readIncomingWsMsg(conn *websocket.Conn) {
 			log.Println(err)
 			return
 		}
-		fmt.Println(string(p))
 		// fmt.Printf("Msg type: %v\n", messageType)
 	}
 }

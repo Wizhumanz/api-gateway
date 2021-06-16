@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -121,7 +122,8 @@ func authenticateUser(req loginReq) (bool, User) {
 	t := client.Run(ctx, query)
 	_, error := t.Next(&userWithEmail)
 	if error != nil {
-		fmt.Println(error.Error())
+		_, file, line, _ := runtime.Caller(0)
+		go Log(error.Error(), fmt.Sprintf("<%v> %v", line, file))
 	}
 	// check password hash and return
 	return CheckPasswordHash(req.Password, userWithEmail.Password), userWithEmail

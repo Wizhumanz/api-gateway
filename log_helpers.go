@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -40,6 +41,7 @@ func Log(data, location string) {
 			log.Fatalf("Failed to save LogData: %v", err)
 		}
 	} else {
-		fmt.Printf("%v\n"+colorCyan+"%v\n"+colorReset, data, location)
+		_, file, line, _ := runtime.Caller(0)
+		go Log(fmt.Sprintf("%v\n"+colorCyan+"%v\n"+colorReset, data, location), fmt.Sprintf("<%v> %v", line, file))
 	}
 }

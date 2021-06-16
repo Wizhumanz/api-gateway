@@ -134,6 +134,7 @@ func main() {
 	// router.Methods("GET", "OPTIONS").Path("/simulatedTrades").HandlerFunc(simulatedTradesHandler)
 
 	port := os.Getenv("PORT")
-	fmt.Println("api-gateway listening on port " + port)
+	_, file, line, _ := runtime.Caller(0)
+	go Log("api-gateway listening on port "+port, fmt.Sprintf("<%v> %v", line, file))
 	log.Fatal(http.ListenAndServe(":"+port, router))
 }

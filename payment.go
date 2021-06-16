@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -133,8 +134,6 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("1")
-
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	setupCORS(&w, r)
@@ -185,8 +184,6 @@ func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("2")
-
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	setupCORS(&w, r)
@@ -204,7 +201,6 @@ func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("3")
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
 
 	setupCORS(&w, r)
@@ -252,7 +248,6 @@ func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
 
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
-	fmt.Println("4")
 
 	if r.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -276,31 +271,37 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	case "checkout.session.completed":
 		// Payment is successful and the subscription is created.
 		// You should provision the subscription and save the customer ID to your database.
-		fmt.Println("checkout session completed")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("checkout session completed", fmt.Sprintf("<%v> %v", line, file))
 	case "invoice.paid":
 		// Continue to provision the subscription as payments continue to be made.
 		// Store the status in your database and check when a user accesses your service.
 		// This approach helps you avoid hitting rate limits.
-		fmt.Println("invoive paid")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("invoive paid", fmt.Sprintf("<%v> %v", line, file))
 	case "invoice.payment_failed":
 		// The payment failed or the customer does not have a valid payment method.
 		// The subscription becomes past_due. Notify your customer and send them to the
 		// customer portal to update their payment information.
-		fmt.Println("invoice payment failed")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("invoice payment failed", fmt.Sprintf("<%v> %v", line, file))
 	case "customer.subscription.updated":
-		fmt.Println("customer.subscription.updated")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("customer.subscription.updated", fmt.Sprintf("<%v> %v", line, file))
 
 		if event.Data.Object["cancel_at_period_end"] == false {
 			updateUserTier(event.Data.Object["items"].(map[string]interface{})["data"].([]interface{})[0].(map[string]interface{})["plan"].(map[string]interface{})["amount"].(float64))
 		}
 
 	case "customer.subscription.deleted":
-		fmt.Println("customer.subscription.deleted")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("customer.subscription.deleted", fmt.Sprintf("<%v> %v", line, file))
 		updateUserCancellation(true)
 
 	default:
 		// unhandled event type
-		fmt.Println("default")
+		_, file, line, _ := runtime.Caller(0)
+		go Log("default", fmt.Sprintf("<%v> %v", line, file))
 	}
 }
 
