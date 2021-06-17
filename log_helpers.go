@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -21,6 +20,8 @@ type LogData struct {
 func Log(data, location string) {
 	//print to console if in dev mode
 	if os.Getenv("PRINTLOGS") == "" {
+		fmt.Println("log")
+
 		newLog := LogData{
 			Timestamp: time.Now().UTC().Format(httpTimeFormat),
 			Log:       data,
@@ -41,7 +42,6 @@ func Log(data, location string) {
 			log.Fatalf("Failed to save LogData: %v", err)
 		}
 	} else {
-		_, file, line, _ := runtime.Caller(0)
-		go Log(fmt.Sprintf("%v\n"+colorCyan+"%v\n"+colorReset, data, location), fmt.Sprintf("<%v> %v", line, file))
+		fmt.Printf("%v\n"+colorCyan+"%v\n"+colorReset, data, location)
 	}
 }
