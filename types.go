@@ -94,6 +94,7 @@ type Bot struct {
 	Leverage                string         `json:"Leverage"`
 	Timestamp               string         `json:"Timestamp"`
 	Ticker                  string         `json:"Ticker"`
+	Period                  string         `json:"Period"`
 	WebhookConnectionID     string         `json:"WebhookConnectionID"`
 	CreationDate            string         `json:"CreationDate"`
 }
