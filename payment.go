@@ -22,7 +22,7 @@ import (
 
 // func createCheckoutSessionSecondTier(w http.ResponseWriter, req *http.Request) {
 // 	//Payment processing
-// 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+// 	stripe.Key = "none"
 
 // 	setupCORS(&w, req)
 // 	if (*req).Method == "OPTIONS" {
@@ -69,7 +69,7 @@ import (
 
 // func createCheckoutSessionThirdTier(w http.ResponseWriter, req *http.Request) {
 // 	//Payment processing
-// 	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+// 	stripe.Key = "none"
 
 // 	setupCORS(&w, req)
 // 	if (*req).Method == "OPTIONS" {
@@ -134,7 +134,7 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+	stripe.Key = "none"
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -184,7 +184,7 @@ func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
-	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+	stripe.Key = "none"
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -201,7 +201,7 @@ func handleCheckoutSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
-	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+	stripe.Key = "none"
 
 	setupCORS(&w, r)
 	if (*r).Method == "OPTIONS" {
@@ -247,7 +247,7 @@ func handleCustomerPortal(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
-	stripe.Key = "sk_test_51IDiEqIjS4SHzVxyreZ8FjYJLU9DkBhK0ilRjCDJ9q4pTzHNJZ3rE79E0RY8rZzAJVsqMzhaki83AbHO4zOYvtFB00FxM7Tid0"
+	stripe.Key = "none"
 
 	if r.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
